@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+.tox/
+*.egg-info/
+build/
+
+doc/_build/
+doc/_static/
+doc/_templates/
+
+.vscode/
+*.code-workspace
+
+.notes/
