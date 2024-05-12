@@ -113,7 +113,6 @@ class BaseTestPyGrister(unittest.TestCase):
         total_apicalls.append(self.g.apicalls)
 
 
-#@unittest.skip
 class TestVarious(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
@@ -127,7 +126,6 @@ class TestVarious(BaseTestPyGrister):
         self.assertGreaterEqual(st, 300)
 
 
-#@unittest.skip
 class TestTeamSites(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
@@ -143,7 +141,6 @@ class TestTeamSites(BaseTestPyGrister):
         with self.assertRaises(HTTPError):
             st, res = self.g.see_team('bogus')
 
-    @unittest.skip
     def test_update_team(self):
         self.g.reconfig({'GRIST_SAFEMODE': 'Y'})
         with self.assertRaises(api.GristApiInSafeMode):
@@ -166,7 +163,6 @@ class TestTeamSites(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
 
-@unittest.skip
 class TestWorkspaces(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
@@ -232,7 +228,6 @@ class TestWorkspaces(BaseTestPyGrister):
         st, res = self.g.add_workspace(name, self.team_id)
         self.assertEqual(st, 200)
 
-@unittest.skip
 class TestDocs(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
@@ -340,7 +335,6 @@ class TestDocs(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
 
-@unittest.skip
 class TestRecordAccess(BaseTestPyGrister): 
     # we test "/records", "/data" and "/sql" endpoints here
     @classmethod
@@ -439,7 +433,6 @@ class TestRecordAccess(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
 
-@unittest.skip
 class TestTables(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
@@ -479,7 +472,6 @@ class TestTables(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
 
-@unittest.skip
 class TestCols(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
@@ -544,7 +536,6 @@ class TestCols(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
 
-@unittest.skip
 class TestAttachments(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
@@ -585,7 +576,6 @@ class TestAttachments(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
 
-@unittest.skip
 class TestWebhooks(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):

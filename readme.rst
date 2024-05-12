@@ -28,7 +28,9 @@ Basic usage goes as follows::
     status_code, response = grist.add_cols('Table1', cols) 
 
 Right now, Pygrister is in early alpha stage, not even published on PyPI. 
-A first evaluation wheel is available on Github. 
+For now, you may install it directly from the GitHub repo::
+
+    python -m pip install git+https://github.com/ricpol/pygrister
 
 You should read the docs first (for now, browse the files on this repository... 
 ReadTheDocs will come soon!), and then take a look at the test suite for 
