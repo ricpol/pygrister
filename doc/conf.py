@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 import os.path
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join('..', 'src', 'pygrister')))
+sys.path.insert(0, os.path.abspath(os.path.join('..', 'src')))
 
 project = 'Pygrister'
 copyright = '2024, Riccardo Polignieri'

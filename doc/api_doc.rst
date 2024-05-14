@@ -1,13 +1,13 @@
 API reference.
 ==============
 
-.. automodule:: api
+.. automodule:: pygrister.api
     :members:
 
 
 The main ``GristApi`` class.
 ----------------------------
 
-.. autoclass:: api.GristApi
+.. autoclass:: pygrister.api.GristApi
     :members:
     
