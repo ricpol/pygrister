@@ -319,7 +319,10 @@ class GristApi:
 
     @check_safemode
     def add_workspace(self, name: str, team_id: str = '') -> Apiresp:
-        """Implement POST ``/{orgId}/workspaces``."""
+        """Implement POST ``/{orgId}/workspaces``.
+        
+        If successful, response will be the workspace id as an ``int``.
+        """
         team_id = team_id or 'current'
         url = f'{self.server}/orgs/{team_id}/workspaces'
         json = {'name': name}
@@ -378,7 +381,10 @@ class GristApi:
     @check_safemode
     def add_doc(self, name: str, pinned: bool = False, 
                 ws_id: int = 0) -> Apiresp:
-        """Implement POST ``/workspaces/{workspaceId}/docs``."""
+        """Implement POST ``/workspaces/{workspaceId}/docs``.
+        
+        If successful, response will be the doc id as a ``str``.
+        """
         ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
         json = {'name': name, 'isPinned': pinned}
         url = f'{self.server}/workspaces/{ws_id}/docs'
@@ -526,12 +532,19 @@ class GristApi:
     def add_records(self, table_id: str, records: list[dict], 
                     noparse: bool = False, doc_id: str = '', 
                     team_id: str = '') -> Apiresp:
-        """Implement POST ``/docs/{docId}/tables/{tableId}/records``."""
+        """Implement POST ``/docs/{docId}/tables/{tableId}/records``.
+        
+        If successful, response will be a ``list[int]`` of added record ids.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
         params = {'noparse': noparse}
         json = {'records': records}
-        return self.apicall(url, 'POST', params=params, json=json)
+        st, res = self.apicall(url, 'POST', params=params, json=json)
+        try:
+            return st, [i['id'] for i in res['records']]
+        except KeyError:
+            return st, res
 
     @check_safemode
     def update_records(self, table_id: str, records: list[dict], 
@@ -550,7 +563,10 @@ class GristApi:
                            noadd: bool = False, noupdate: bool = False, 
                            allow_empty_require: bool = False, 
                            doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement PUT ``/docs/{docId}/tables/{tableId}/records``."""
+        """Implement PUT ``/docs/{docId}/tables/{tableId}/records``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
         params = {'noparse': noparse, 'onmany': onmany, 'noadd': noadd, 
@@ -577,12 +593,19 @@ class GristApi:
     @check_safemode
     def add_tables(self, tables: list[dict], doc_id: str = '', 
                    team_id: str = '') -> Apiresp:
-        """Implement POST ``/docs/{docId}/tables``."""
+        """Implement POST ``/docs/{docId}/tables``.
+        
+        If successful, response will be a ``list[str]`` of added table ids.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables'
         json = {'tables': tables}
-        return self.apicall(url, 'POST', json=json)
-
+        st, res = self.apicall(url, 'POST', json=json)
+        try:
+            return st, [i['id'] for i in res['tables']]
+        except KeyError:
+            return st, res
+        
     @check_safemode
     def update_tables(self, tables: list[dict], doc_id: str = '', 
                       team_id: str = '') -> Apiresp:
@@ -626,12 +649,19 @@ class GristApi:
     @check_safemode
     def add_cols(self, table_id: str, cols: list[dict], 
                  doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement POST ``/docs/{docId}/tables/{tableId}/columns``."""
+        """Implement POST ``/docs/{docId}/tables/{tableId}/columns``.
+        
+        If successful, response will be a ``list[str]`` of added col ids.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns'
         cols = self._jsonize_col_options(cols)
         json = {'columns': cols}
-        return self.apicall(url, 'POST', json=json)
+        st, res = self.apicall(url, 'POST', json=json)
+        try:
+            return st, [i['id'] for i in res['columns']]
+        except KeyError:
+            return st, res
 
     @check_safemode
     def update_cols(self, table_id: str, cols: list[dict], 
@@ -648,7 +678,10 @@ class GristApi:
                         noadd: bool = True, noupdate: bool = True, 
                         replaceall: bool = False, doc_id: str = '', 
                         team_id: str = '') -> Apiresp:
-        """Implement PUT ``/docs/{docId}/tables/{tableId}/columns``."""
+        """Implement PUT ``/docs/{docId}/tables/{tableId}/columns``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns'
         params = {'noadd': noadd, 'noupdate': noupdate, 'replaceall': replaceall}
@@ -760,10 +793,17 @@ class GristApi:
     @check_safemode
     def add_webhooks(self, webhooks: list[dict], doc_id: str = '',
                      team_id: str = '') -> Apiresp:
-        """Implement POST ``/docs/{docId}/webhooks``."""
+        """Implement POST ``/docs/{docId}/webhooks``.
+        
+        If successful, response will be a ``list[str]`` of added webhook ids.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks'
-        return self.apicall(url, 'POST', json={'webhooks': webhooks})
+        st, res = self.apicall(url, 'POST', json={'webhooks': webhooks})
+        try:
+            return st, [i['id'] for i in res['webhooks']]
+        except KeyError:
+            return st, res
 
     @check_safemode
     def update_webhook(self, webhook_id: str, webhook: dict, 
