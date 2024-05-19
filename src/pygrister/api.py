@@ -287,10 +287,17 @@ class GristApi:
         return self.apicall(url, method='PATCH', json=json)
 
     def list_team_users(self, team_id: str = '') -> Apiresp:
-        """Implement GET ``/orgs/{orgId}/access``."""
+        """Implement GET ``/orgs/{orgId}/access``.
+        
+        If successful, return the users as a ``list[dict]``.
+        """
         team_id = team_id or 'current'
         url = f'{self.server}/orgs/{team_id}/access'
-        return self.apicall(url)
+        st, res = self.apicall(url)
+        try:
+            return st, res['users']
+        except KeyError:
+            return st, res
 
     @check_safemode
     def update_team_users(self, users: dict[str, str], 
@@ -340,10 +347,18 @@ class GristApi:
         return self.apicall(url, method='DELETE')
 
     def list_workspace_users(self, ws_id: int = 0) -> Apiresp:
-        """Implement GET ``/workspaces/{workspaceId}/access``."""
+        """Implement GET ``/workspaces/{workspaceId}/access``.
+        
+        If successful, return users as ``list[dict]``.
+        """
         ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
         url = f'{self.server}/workspaces/{ws_id}/access'
-        return self.apicall(url)
+        st, res = self.apicall(url)
+        try:
+            # note: we leave out the 'maxInheritedRole' information here!
+            return st, res['users']
+        except KeyError:
+            return st, res
 
     @check_safemode
     def update_workspace_users(self, users: dict[str, str], 
@@ -399,10 +414,18 @@ class GristApi:
         return self.apicall(url, method='PATCH', json=json)
 
     def list_doc_users(self, doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/access``."""
+        """Implement GET ``/docs/{docId}/access``.
+        
+        If successful, return users as ``list[dict]``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/access'
-        return self.apicall(url)
+        st, res = self.apicall(url)
+        try:
+            # note: we leave out the 'maxInheritedRole' information here!
+            return st, res['users']
+        except KeyError:
+            return st, res
 
     @check_safemode
     def update_doc_users(self, users: dict[str, str], max: str = 'owners', 
@@ -471,7 +494,10 @@ class GristApi:
     def see_records(self, table_id: str, filter: dict|None = None, 
                     sort: str = '', limit: int = 0, hidden: bool = False, 
                     doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/tables/{tableId}/records``."""
+        """Implement GET ``/docs/{docId}/tables/{tableId}/records``.
+        
+        If successful, return records as ``list[dict]``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
         headers = {'X-Sort': sort, 'X-Limit': str(limit)}
@@ -480,10 +506,15 @@ class GristApi:
             # instead, so we need to skip Request and manually compose the url
             params = {'hidden': hidden, 'filter': modjson.dumps(filter)}
             encoded_params = urlencode(params, quote_via=quote)
-            return self.apicall(url+'?'+encoded_params, headers=headers)
+            st, res = self.apicall(url+'?'+encoded_params, headers=headers)
         else:
             # the usual way
-            return self.apicall(url, headers=headers, params={'hidden': hidden})
+            st, res = self.apicall(url, headers=headers, 
+                                   params={'hidden': hidden})
+        try:
+            return st, res['records']
+        except KeyError:
+            return st, res
 
     @check_safemode
     def add_records(self, table_id: str, records: list[dict], 
@@ -525,10 +556,17 @@ class GristApi:
     # ------------------------------------------------------------------
 
     def list_tables(self, doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/tables``."""
+        """Implement GET ``/docs/{docId}/tables``.
+        
+        If successful, return tables as ``list[dict]``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables'
-        return self.apicall(url)
+        st, res = self.apicall(url)
+        try:
+            return st, res['tables']
+        except KeyError:
+            return st, res
     
     @check_safemode
     def add_tables(self, tables: list[dict], doc_id: str = '', 
@@ -553,11 +591,18 @@ class GristApi:
 
     def list_cols(self, table_id: str, hidden: bool = False, 
                   doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/tables/{tableId}/columns``."""
+        """Implement GET ``/docs/{docId}/tables/{tableId}/columns``.
+        
+        If successful, return columns as ``list[dict]``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns'
         params = {'hidden': hidden}
-        return self.apicall(url, params=params)
+        st, res = self.apicall(url, params=params)
+        try:
+            return st, res['columns']
+        except KeyError:
+            return st, res
 
     @staticmethod
     def _jsonize_col_options(cols: list[dict]) -> list[dict]:
@@ -633,7 +678,10 @@ class GristApi:
     def list_attachments(self, filter: dict|None = None, sort: str = '', 
                          limit: int = 0, doc_id: str = '', 
                          team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/attachments``."""
+        """Implement GET ``/docs/{docId}/attachments``.
+        
+        If successful, return attachments as ``list[dict]``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments'
         params = dict()
@@ -648,10 +696,14 @@ class GristApi:
             # so they are not really useful I'm afraid
             params.update({'filter': modjson.dumps(filter)})
             encoded_params = urlencode(params, quote_via=quote)
-            return self.apicall(url+'?'+encoded_params)
+            st, res = self.apicall(url+'?'+encoded_params)
         else:
             # the usual way
-            return self.apicall(url, params=params)
+            st, res = self.apicall(url, params=params)
+        try:
+            return st, res['records']
+        except KeyError:
+            return st, res
         
     @check_safemode
     def upload_attachment(self, filename: str, doc_id: str = '', 
@@ -681,11 +733,18 @@ class GristApi:
     # ------------------------------------------------------------------
  
     def list_webhooks(self, doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement ``GET /docs/{docId}/webhooks``."""
+        """Implement ``GET /docs/{docId}/webhooks``.
+        
+        If successful, return webhooks as ``list[dict]``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks'
-        return self.apicall(url)
-    
+        st, res = self.apicall(url)
+        try:
+            return st, res['webhooks']
+        except KeyError:
+            return st, res
+        
     @check_safemode
     def add_webhooks(self, webhooks: list[dict], doc_id: str = '',
                      team_id: str = '') -> Apiresp:
@@ -726,17 +785,30 @@ class GristApi:
     # compare and contrast: the filters in list_attachments and see_records
 
     def run_sql(self, sql: str, doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/sql``."""
+        """Implement GET ``/docs/{docId}/sql``.
+        
+        If successful, return records as ``list[dict]``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/sql'
         params = {'q': sql}
-        return self.apicall(url, params=params)
+        st, res = self.apicall(url, params=params)
+        try:
+            return st, res['records']
+        except KeyError:
+            return st, res
 
     def run_sql_with_args(self, sql: str, qargs: list, timeout: int = 1000,
                           doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement POST ``/docs/{docId}/sql``."""
+        """Implement POST ``/docs/{docId}/sql``.
+        
+        If successful, return records as ``list[dict]``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/sql'
         json = {'sql': sql, 'args': qargs, 'timeout': timeout}
-        return self.apicall(url, method='POST', json=json)
-
+        st, res = self.apicall(url, method='POST', json=json)
+        try:
+            return st, res['records']
+        except KeyError:
+            return st, res
