@@ -341,7 +341,10 @@ class GristApi:
 
     @check_safemode
     def delete_workspace(self, ws_id: int = 0) -> Apiresp:
-        """Implement DELETE ``/workspaces/{workspaceId}``."""
+        """Implement DELETE ``/workspaces/{workspaceId}``.
+        
+        If successful, response will be ``None``.
+        """
         # note: it's safer to ask for a workspace id here
         url = f'{self.server}/workspaces/{ws_id}'
         return self.apicall(url, method='DELETE')
@@ -398,7 +401,10 @@ class GristApi:
 
     @check_safemode
     def delete_doc(self, doc_id: str, team_id: str = '') -> Apiresp:
-        """Implement DELETE ``/docs/{docId}``."""
+        """Implement DELETE ``/docs/{docId}``.
+        
+        If successful, response will be ``None``.
+        """
         # note: it's safer to ask for a doc id here
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}'
@@ -653,7 +659,10 @@ class GristApi:
     @check_safemode
     def delete_column(self, table_id: str, col_id: str, doc_id: str, 
                       team_id: str = '') -> Apiresp:
-        """Implement DELETE ``/docs/{docId}/tables/{tableId}/columns/{colId}``."""
+        """Implement DELETE ``/docs/{docId}/tables/{tableId}/columns/{colId}``.
+        
+        If successful, response will be ``None``.
+        """
         # note: it's safer to ask for a doc id here
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns/{col_id}'
@@ -665,7 +674,10 @@ class GristApi:
     @check_safemode
     def delete_rows(self, table_id: str, rows: list[int], doc_id: str, 
                     team_id: str = '') -> Apiresp:
-        """Implement POST ``/docs/{docId}/tables/{tableId}/data/delete``."""
+        """Implement POST ``/docs/{docId}/tables/{tableId}/data/delete``.
+        
+        If successful, response will be ``None``.
+        """
         # unclear if deprecated... seems the only way to delete a row though
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/data/delete'
@@ -764,18 +776,32 @@ class GristApi:
     @check_safemode
     def delete_webhook(self, webhook_id: str, doc_id: str = '', 
                        team_id: str = '') -> Apiresp:
-        """Implement DELETE ``/docs/{docId}/webhooks/{webhookId}``."""
+        """Implement DELETE ``/docs/{docId}/webhooks/{webhookId}``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks/{webhook_id}'
-        return self.apicall(url, 'DELETE')
+        st, res = self.apicall(url, 'DELETE')
+        if st <= 200:
+            return st, None # Grist api returns "{success: true}" here
+        else:
+            return st, res
 
     @check_safemode
     def empty_payloads_queue(self, doc_id: str = '', 
                              team_id: str = '') -> Apiresp:
-        """Implement DELETE ``/docs/{docId}/webhooks/queue``."""
+        """Implement DELETE ``/docs/{docId}/webhooks/queue``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks/queue'
-        return self.apicall(url, 'DELETE')
+        st, res = self.apicall(url, 'DELETE')
+        if st <= 200:
+            return st, None # Grist api returns "{success: true}" here
+        else:
+            return st, res
 
     # SQL
     # ------------------------------------------------------------------
