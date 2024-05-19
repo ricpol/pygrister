@@ -289,7 +289,7 @@ class GristApi:
     def list_team_users(self, team_id: str = '') -> Apiresp:
         """Implement GET ``/orgs/{orgId}/access``.
         
-        If successful, return the users as a ``list[dict]``.
+        If successful, response will be a ``list[dict]`` of users.
         """
         team_id = team_id or 'current'
         url = f'{self.server}/orgs/{team_id}/access'
@@ -349,7 +349,7 @@ class GristApi:
     def list_workspace_users(self, ws_id: int = 0) -> Apiresp:
         """Implement GET ``/workspaces/{workspaceId}/access``.
         
-        If successful, return users as ``list[dict]``.
+        If successful, response will be a ``list[dict]`` of users.
         """
         ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
         url = f'{self.server}/workspaces/{ws_id}/access'
@@ -416,7 +416,7 @@ class GristApi:
     def list_doc_users(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/access``.
         
-        If successful, return users as ``list[dict]``.
+        If successful, response will be a ``list[dict]`` of users.
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/access'
@@ -478,8 +478,8 @@ class GristApi:
                         team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/download/table-schema``.
         
-        The schema will be returned as json; pass the `filename` param to 
-        have it downloaded as a json file instead.
+        If successful, schema will be returned as json; pass the `filename` 
+        param to have it downloaded as a json file instead.
         """
         doc_id, server = self._select_params(doc_id, team_id)
         params = {'tableId': table_id, 'header': header}
@@ -496,7 +496,7 @@ class GristApi:
                      doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/tables/{tableId}/records``.
         
-        If successful, return records as ``list[dict]``.
+        If successful, response will be a ``list[dict]`` of records.
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
@@ -558,7 +558,7 @@ class GristApi:
     def list_tables(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/tables``.
         
-        If successful, return tables as ``list[dict]``.
+        If successful, response will be a ``list[dict]`` of tables.
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables'
@@ -593,7 +593,7 @@ class GristApi:
                   doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/tables/{tableId}/columns``.
         
-        If successful, return columns as ``list[dict]``.
+        If successful, response will be a ``list[dict]`` of columns.
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns'
@@ -680,7 +680,7 @@ class GristApi:
                          team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/attachments``.
         
-        If successful, return attachments as ``list[dict]``.
+        If successful, response will be a ``list[dict]`` of attachments.
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments'
@@ -735,7 +735,7 @@ class GristApi:
     def list_webhooks(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement ``GET /docs/{docId}/webhooks``.
         
-        If successful, return webhooks as ``list[dict]``.
+        If successful, response will be a ``list[dict]`` of webhooks.
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks'
@@ -787,7 +787,7 @@ class GristApi:
     def run_sql(self, sql: str, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/sql``.
         
-        If successful, return records as ``list[dict]``.
+        If successful, response will be a ``list[dict]`` of records.
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/sql'
@@ -802,7 +802,7 @@ class GristApi:
                           doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/sql``.
         
-        If successful, return records as ``list[dict]``.
+        If successful, response will be a ``list[dict]`` of records.
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/sql'
