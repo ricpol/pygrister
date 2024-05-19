@@ -491,9 +491,9 @@ class GristApi:
     # RECORDS
     # ------------------------------------------------------------------
 
-    def see_records(self, table_id: str, filter: dict|None = None, 
-                    sort: str = '', limit: int = 0, hidden: bool = False, 
-                    doc_id: str = '', team_id: str = '') -> Apiresp:
+    def list_records(self, table_id: str, filter: dict|None = None, 
+                     sort: str = '', limit: int = 0, hidden: bool = False, 
+                     doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/tables/{tableId}/records``.
         
         If successful, return records as ``list[dict]``.

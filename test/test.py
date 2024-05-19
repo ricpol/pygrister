@@ -352,7 +352,7 @@ class TestRecordAccess(BaseTestPyGrister):
         cls.table_id = res['tables'][0]['id']
         total_apicalls.append(gristapi.apicalls)
     
-    def test_see_records(self):
+    def test_list_records(self):
         records = [{'fields': {'Astr': 'test 1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True}},
                    {'fields': {'Astr': 'test 2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}}, 
                    {'fields': {'Astr': 'test 3', 'Bnum': 3.3, 'Cint': 3, 'Dbol': False}},
@@ -360,16 +360,16 @@ class TestRecordAccess(BaseTestPyGrister):
         st, res = self.g.add_records(self.table_id, records, 
                                      doc_id=self.doc_id, team_id=self.team_id)
         self.assertEqual(st, 200)
-        st, res = self.g.see_records(self.table_id, 
-                                     doc_id=self.doc_id, team_id=self.team_id)
+        st, res = self.g.list_records(self.table_id, 
+                                      doc_id=self.doc_id, team_id=self.team_id)
         self.assertEqual(st, 200)
-        st, res = self.g.see_records(self.table_id, sort='-Cint', limit=2, 
-                                     doc_id=self.doc_id, team_id=self.team_id)
+        st, res = self.g.list_records(self.table_id, sort='-Cint', limit=2, 
+                                      doc_id=self.doc_id, team_id=self.team_id)
         self.assertEqual(st, 200)
     
-    def test_see_records_with_filter(self):
-        st, res = self.g.see_records(self.table_id, filter={'Astr': ['test 3']}, 
-                                     doc_id=self.doc_id, team_id=self.team_id)
+    def test_list_records_with_filter(self):
+        st, res = self.g.list_records(self.table_id, filter={'Astr': ['test 3']}, 
+                                      doc_id=self.doc_id, team_id=self.team_id)
         self.assertEqual(st, 200)
 
     def test_add_and_update_records(self):
