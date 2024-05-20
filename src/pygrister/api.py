@@ -278,7 +278,8 @@ class GristApi:
     @check_safemode
     def update_team(self, new_name: str, team_id: str = '') -> Apiresp:
         """Implement PATCH ``/orgs/{orgId}``.
-        
+       
+        If successful, response will be ``None``.
         Note that renaming a team will *not* change the subdomain too!
         """
         team_id = team_id or 'current'
@@ -302,7 +303,10 @@ class GristApi:
     @check_safemode
     def update_team_users(self, users: dict[str, str], 
                           team_id: str = '') -> Apiresp:
-        """Implement PATCH ``/orgs/{orgId}/access``."""
+        """Implement PATCH ``/orgs/{orgId}/access``.
+        
+        If successful, response will be ``None``.
+        """
         team_id = team_id or 'current'
         json = {'delta': {'users': users}}
         url = f'{self.server}/orgs/{team_id}/access'
@@ -336,7 +340,10 @@ class GristApi:
 
     @check_safemode
     def update_workspace(self, new_name: str, ws_id: int = 0) -> Apiresp: 
-        """Implement PATCH ``/workspaces/{workspaceId}``."""
+        """Implement PATCH ``/workspaces/{workspaceId}``.
+        
+        If successful, response will be ``None``.
+        """
         ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
         url = f'{self.server}/workspaces/{ws_id}'
         json = {'name': new_name}
@@ -369,7 +376,10 @@ class GristApi:
     @check_safemode
     def update_workspace_users(self, users: dict[str, str], 
                                ws_id: int = 0) -> Apiresp:
-        """Implement PATCH ``/workspaces/{workspaceId}/access``."""
+        """Implement PATCH ``/workspaces/{workspaceId}/access``.
+        
+        If successful, response will be ``None``.
+        """
         ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
         json = {'delta': {'users': users}}
         url = f'{self.server}/workspaces/{ws_id}/access'
@@ -399,7 +409,10 @@ class GristApi:
     @check_safemode
     def update_doc(self, new_name: str, pinned: bool = False, 
                    doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement PATCH ``/docs/{docId}``."""
+        """Implement PATCH ``/docs/{docId}``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}'
         json = {'name': new_name, 'isPinned': pinned}
@@ -442,7 +455,10 @@ class GristApi:
     @check_safemode
     def update_doc_users(self, users: dict[str, str], max: str = 'owners', 
                          doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement PATCH ``/docs/{docId}/access``."""
+        """Implement PATCH ``/docs/{docId}/access``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         json = {'delta': {'maxInheritedRole': max, 'users': users}}
         url = f'{server}/docs/{doc_id}/access'
@@ -550,7 +566,10 @@ class GristApi:
     def update_records(self, table_id: str, records: list[dict], 
                        noparse: bool = False, doc_id: str = '', 
                        team_id: str = '') -> Apiresp:
-        """Implement PATCH ``/docs/{docId}/tables/{tableId}/records``."""
+        """Implement PATCH ``/docs/{docId}/tables/{tableId}/records``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
         params = {'noparse': noparse}
@@ -609,7 +628,10 @@ class GristApi:
     @check_safemode
     def update_tables(self, tables: list[dict], doc_id: str = '', 
                       team_id: str = '') -> Apiresp:
-        """Implement PATCH ``/docs/{docId}/tables``."""
+        """Implement PATCH ``/docs/{docId}/tables``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables'
         json = {'tables': tables}
@@ -666,7 +688,10 @@ class GristApi:
     @check_safemode
     def update_cols(self, table_id: str, cols: list[dict], 
                     doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement PATCH ``/docs/{docId}/tables/{tableId}/columns``."""
+        """Implement PATCH ``/docs/{docId}/tables/{tableId}/columns``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns'
         cols = self._jsonize_col_options(cols)
@@ -808,10 +833,17 @@ class GristApi:
     @check_safemode
     def update_webhook(self, webhook_id: str, webhook: dict, 
                        doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement PATCH ``/docs/{docId}/webhooks/{webhookId}``."""
+        """Implement PATCH ``/docs/{docId}/webhooks/{webhookId}``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks/{webhook_id}'
-        return self.apicall(url, 'PATCH', json=webhook)
+        st, res = self.apicall(url, 'PATCH', json=webhook)
+        if st <= 200:
+            return st, None # Grist api returns "{success: true}" here
+        else:
+            return st, res
 
     @check_safemode
     def delete_webhook(self, webhook_id: str, doc_id: str = '', 
