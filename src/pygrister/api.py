@@ -265,12 +265,18 @@ class GristApi:
     # ------------------------------------------------------------------
 
     def list_team_sites(self) -> Apiresp:
-        """Implement GET ``/orgs``."""
+        """Implement GET ``/orgs``.
+        
+        If successful, response will be a ``list[dict]`` of site details.
+        """
         url = f'{self.server}/orgs'
         return self.apicall(url)
     
     def see_team(self, team_id: str = '') -> Apiresp:
-        """Implement GET ``/orgs/{orgId}``."""
+        """Implement GET ``/orgs/{orgId}``.
+        
+        If successful, response will be a ``dict`` of site details.
+        """
         team_id = team_id or 'current'
         url = f'{self.server}/orgs/{team_id}'
         return self.apicall(url)
@@ -316,7 +322,10 @@ class GristApi:
     # ------------------------------------------------------------------
 
     def list_workspaces(self, team_id: str = '') -> Apiresp:
-        """Implement GET ``/{orgId}/workspaces``."""
+        """Implement GET ``/{orgId}/workspaces``.
+        
+        If successful, response will be a ``list[dict]`` of workspaces.
+        """
         team_id = team_id or 'current'
         url = f'{self.server}/orgs/{team_id}/workspaces'
         return self.apicall(url)
@@ -333,7 +342,10 @@ class GristApi:
         return self.apicall(url, method='POST', json=json)
 
     def see_workspace(self, ws_id: int = 0) -> Apiresp: 
-        """Implement GET ``/workspaces/{workspaceId}``."""
+        """Implement GET ``/workspaces/{workspaceId}``.
+        
+        If successful, response will be a ``dict`` of workspace details.
+        """
         ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
         url = f'{self.server}/workspaces/{ws_id}'
         return self.apicall(url)
@@ -401,7 +413,10 @@ class GristApi:
         return self.apicall(url, method='POST', json=json)
 
     def see_doc(self, doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}``."""
+        """Implement GET ``/docs/{docId}``.
+        
+        If successful, response will be a ``dict`` of doc details.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}'
         return self.apicall(url)
@@ -432,7 +447,10 @@ class GristApi:
     @check_safemode
     def move_doc(self, ws_id: int, doc_id: str = '', 
                  team_id: str = '') -> Apiresp:
-        """Implement PATCH ``/docs/{docId}/move``."""
+        """Implement PATCH ``/docs/{docId}/move``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/move'
         json = {'workspace': ws_id}
@@ -467,7 +485,10 @@ class GristApi:
     def download_sqlite(self, filename: str, nohistory: bool = False, 
                         template: bool = False, doc_id: str = '', 
                         team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/download``."""
+        """Implement GET ``/docs/{docId}/download``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/download'
         headers = {'Accept': 'application/x-sqlite3'}
@@ -478,7 +499,10 @@ class GristApi:
     def download_excel(self, filename: str, table_id: str, 
                        header: str = 'label', doc_id: str = '', 
                        team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/download/xlsx``."""
+        """Implement GET ``/docs/{docId}/download/xlsx``.
+        
+        If successful, response will be ``None``.
+        """
         #TODO: table_id param is actually undocumented and possibly a mistake
         # it should be possible to get the entire db in excel format, via the api?
         doc_id, server = self._select_params(doc_id, team_id)
@@ -491,7 +515,10 @@ class GristApi:
     def download_csv(self, filename: str, table_id: str, 
                      header: str = 'label', doc_id: str = '', 
                      team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/download/csv``."""
+        """Implement GET ``/docs/{docId}/download/csv``.
+        
+        If successful, response will be ``None``.
+        """
         # note: the grist api also puts the data in the response body...
         # we just download the file and return None instead
         doc_id, server = self._select_params(doc_id, team_id)
@@ -778,7 +805,10 @@ class GristApi:
     @check_safemode
     def upload_attachment(self, filename: str, doc_id: str = '', 
                           team_id: str = '') -> Apiresp:
-        """Implement POST ``/docs/{docId}/attachments``."""
+        """Implement POST ``/docs/{docId}/attachments``.
+        
+        If successful, response will be a ``list[int]`` of attachments ids.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments'
         headers = dict()
@@ -786,14 +816,20 @@ class GristApi:
 
     def see_attachment(self, attachment_id: int, doc_id: str = '',
                        team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/attachments/{attachmentId}``."""
+        """Implement GET ``/docs/{docId}/attachments/{attachmentId}``.
+        
+        If successful, response will be a ``dict`` of attachment metadata.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/{attachment_id}'
         return self.apicall(url)
 
     def download_attachment(self, filename: str, attachment_id: int, 
                             doc_id: str = '', team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/attachments/{attachmentId}/download``."""
+        """Implement GET ``/docs/{docId}/attachments/{attachmentId}/download``.
+        
+        If successful, response will be ``None``.
+        """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/{attachment_id}/download'
         headers = {'accept': '*/*'}
