@@ -460,6 +460,9 @@ class TestRecordAccess(BaseTestPyGrister):
         records = [{'Astr': 'test sql1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True},
                    {'Astr': 'test sql2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}, 
                    {'Astr': 'test sql3', 'Bnum': 3.3, 'Cint': 3, 'Dbol': False}]
+        st, res = self.g.add_records(self.table_id, records, 
+                                     doc_id=self.doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
         sql = f'select * from {self.table_id}'  # no trailing ";" !
         st, res = self.g.run_sql(sql, doc_id=self.doc_id, team_id=self.team_id)
         self.assertIsInstance(res, list)
