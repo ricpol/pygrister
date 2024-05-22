@@ -582,7 +582,7 @@ class GristApi:
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
         params = {'noparse': noparse}
-        json = {'records': records}
+        json = {'records': [{'fields': r} for r in records]}
         st, res = self.apicall(url, 'POST', params=params, json=json)
         try:
             return st, [i['id'] for i in res['records']]

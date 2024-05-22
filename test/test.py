@@ -377,10 +377,10 @@ class TestRecordAccess(BaseTestPyGrister):
         total_apicalls.append(gristapi.apicalls)
     
     def test_list_records(self):
-        records = [{'fields': {'Astr': 'test 1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True}},
-                   {'fields': {'Astr': 'test 2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}}, 
-                   {'fields': {'Astr': 'test 3', 'Bnum': 3.3, 'Cint': 3, 'Dbol': False}},
-                   {'fields': {'Astr': 'test 4', 'Bnum': 4.4, 'Cint': 4, 'Dbol': True}},]
+        records = [{'Astr': 'test 1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True},
+                   {'Astr': 'test 2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}, 
+                   {'Astr': 'test 3', 'Bnum': 3.3, 'Cint': 3, 'Dbol': False},
+                   {'Astr': 'test 4', 'Bnum': 4.4, 'Cint': 4, 'Dbol': True},]
         st, res = self.g.add_records(self.table_id, records, 
                                      doc_id=self.doc_id, team_id=self.team_id)
         self.assertIsInstance(res, list)
@@ -402,8 +402,8 @@ class TestRecordAccess(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
     def test_add_and_update_records(self):
-        records = [{'fields': {'Astr': 'test1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True}},
-                   {'fields': {'Astr': 'test2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}}]
+        records = [{'Astr': 'test1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True},
+                   {'Astr': 'test2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}]
         st, res = self.g.add_records(self.table_id, records, 
                                      doc_id=self.doc_id, team_id=self.team_id)
         self.assertIsInstance(res, list)
@@ -418,7 +418,7 @@ class TestRecordAccess(BaseTestPyGrister):
     @unittest.skip  # not really our fault, I guess
     def test_add_records_noparse(self):
         # the "noparse" param is not enforced?
-        records = [{'fields': {'Cint': 'not a number'}}]
+        records = [{'Cint': 'not a number'}]
         st, res = self.g.add_records(self.table_id, records, noparse=False,
                                      doc_id=self.doc_id, team_id=self.team_id)
         self.assertIsInstance(res, list)
@@ -429,8 +429,8 @@ class TestRecordAccess(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
     def test_add_update_records(self):
-        records = [{'fields': {'Astr': 'toupdate1', 'Bnum': 5.1, 'Cint': 5, 'Dbol': True}},
-                   {'fields': {'Astr': 'toupdate2', 'Bnum': 6.2, 'Cint': 6, 'Dbol': False}}]
+        records = [{'Astr': 'toupdate1', 'Bnum': 5.1, 'Cint': 5, 'Dbol': True},
+                   {'Astr': 'toupdate2', 'Bnum': 6.2, 'Cint': 6, 'Dbol': False}]
         st, res = self.g.add_records(self.table_id, records, 
                                      doc_id=self.doc_id, team_id=self.team_id)
         self.assertIsInstance(res, list)
@@ -444,9 +444,9 @@ class TestRecordAccess(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
     def test_data_delete(self): # the only non-deprecated /data endpoint
-        records = [{'fields': {'Astr': 'test1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True}},
-                   {'fields': {'Astr': 'test2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}}, 
-                   {'fields': {'Astr': 'test3', 'Bnum': 3.3, 'Cint': 3, 'Dbol': False}}]
+        records = [{'Astr': 'test1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True},
+                   {'Astr': 'test2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}, 
+                   {'Astr': 'test3', 'Bnum': 3.3, 'Cint': 3, 'Dbol': False}]
         st, res = self.g.add_records(self.table_id, records, 
                                      doc_id=self.doc_id, team_id=self.team_id)
         self.assertIsInstance(res, list)
@@ -457,9 +457,9 @@ class TestRecordAccess(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
     def test_sql_and_sql_with_params(self): 
-        records = [{'fields': {'Astr': 'test sql1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True}},
-                   {'fields': {'Astr': 'test sql2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}}, 
-                   {'fields': {'Astr': 'test sql3', 'Bnum': 3.3, 'Cint': 3, 'Dbol': False}}]
+        records = [{'Astr': 'test sql1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True},
+                   {'Astr': 'test sql2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}, 
+                   {'Astr': 'test sql3', 'Bnum': 3.3, 'Cint': 3, 'Dbol': False}]
         sql = f'select * from {self.table_id}'  # no trailing ";" !
         st, res = self.g.run_sql(sql, doc_id=self.doc_id, team_id=self.team_id)
         self.assertIsInstance(res, list)
