@@ -408,8 +408,8 @@ class TestRecordAccess(BaseTestPyGrister):
                                      doc_id=self.doc_id, team_id=self.team_id)
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
-        records = [{'id': 1, 'fields': {'Astr': 'modified', 'Bnum': 1.12}},
-                   {'id': 2, 'fields': {'Astr': 'mod!!', 'Bnum': 2.22}}]
+        records = [{1: {'Astr': 'modified', 'Bnum': 1.12}},
+                   {2: {'Astr': 'mod!!', 'Bnum': 2.22}}]
         st, res = self.g.update_records(self.table_id, records, 
                                         doc_id=self.doc_id, team_id=self.team_id)
         self.assertIsNone(res)
