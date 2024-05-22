@@ -13,19 +13,14 @@ then provide some env variables in your shell:
 - provide your api key as a ``GRIST_API_KEY`` env variable;
 - set up a ``GRIST_TEAM_SITE`` env variable, with the name of your 
   team site in it (actually, it's the *url subdomain*: if you have 
-  ``https://myteam.getgrist.com``, then it is ``myteam``);
-- optionally, if you have created the secondary team site, provide its 
-  name as a ``GRIST_SECONDARY_SITE`` env variable. 
+  ``https://myteam.getgrist.com``, then it is ``myteam``).
 
 Remember, the test suite *will not make use* of your regular configuration 
 files (eg., ``~/.gristapi/config.json``): everything must be provided as 
 environment variables. 
 
-The secondary team site is only needed for a few tests involving "cross-site" 
-operations. If you don't create one, those tests will be skipped. 
-
-The test suite will leave several objects (workspaces and docs) in both 
-team sites. The objects created have unique names, so it should be safe 
+The test suite will leave several objects (workspaces and docs) in your 
+team site. The objects created have unique names, so it should be safe 
 re-running the test suite with the same sites: however, you may want 
 to clean up eventually. 
 
@@ -56,12 +51,11 @@ from requests import HTTPError
 
 from pygrister import api
 
-# either provide the following 2 keys (and, optionally, the 3rd) as env vars, 
+# either provide the following 2 keys as env vars, 
 # or de-comment these lines and fill in the values here:
 
 # os.environ['GRIST_API_KEY'] = '<your api key here>'
 # os.environ['GRIST_TEAM_SITE'] = '<your grist team ID here'
-# os.environ['GRIST_SECONDARY_SITE'] = '<your optional grist secondary site>'
 
 try:
     os.environ['GRIST_API_KEY']
@@ -71,8 +65,6 @@ try:
     os.environ['GRIST_TEAM_SITE']
 except KeyError:
     raise AssertionError("Can't run tests: no GRIST_TEAM_SITE env variable found.")
-
-SECONDARY_SITE = os.environ.get('GRIST_SECONDARY_SITE', None)
 
 os.environ['GRIST_SERVER_PROTOCOL'] = 'https://'
 os.environ['GRIST_API_SERVER'] = 'getgrist.com/api'
@@ -229,10 +221,8 @@ class TestWorkspaces(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
     def test_workspace_cross_site(self):
-        # see/add workspace in our site "from" the secondary site
-        if not SECONDARY_SITE:
-            self.skipTest('No secondary team site, skipping...')
-        self.g.reconfig({'GRIST_TEAM_SITE': SECONDARY_SITE})
+        # see/add workspace in our site "from" another site
+        self.g.reconfig({'GRIST_TEAM_SITE': 'docs'})
         st, res = self.g.see_workspace(self.workspace_id)
         self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
@@ -262,10 +252,8 @@ class TestDocs(BaseTestPyGrister):
             self.g.add_doc(name, self.workspace_id)
 
     def test_create_delete_doc_cross_site(self):
-        if not SECONDARY_SITE:
-            self.skipTest('No secondary team site, skipping...')
         # fun fact: cross-site doc creation is allowed...
-        self.g.reconfig({'GRIST_TEAM_SITE': SECONDARY_SITE})
+        self.g.reconfig({'GRIST_TEAM_SITE': 'docs'})
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
         self.assertIsInstance(res, str)
