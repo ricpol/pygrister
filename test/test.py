@@ -134,10 +134,12 @@ class TestTeamSites(BaseTestPyGrister):
     def test_list_team_sites(self):
         st, res = self.g.list_team_sites()
         self.assertEqual(st, 200)
+        self.assertIsInstance(res, list)
     
     def test_see_team(self):
         st, res = self.g.see_team(TestTeamSites.team_id)
         self.assertEqual(st, 200)
+        self.assertIsInstance(res, dict)
         with self.assertRaises(HTTPError):
             st, res = self.g.see_team('bogus')
 
@@ -150,9 +152,11 @@ class TestTeamSites(BaseTestPyGrister):
         self.assertEqual(st, 200)
         st, res = self.g.update_team('apitestteam', TestTeamSites.team_id)
         self.assertEqual(st, 200)
+        self.assertIsNone(res)
 
     def test_list_team_users(self):
         st, res = self.g.list_team_users(TestTeamSites.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
     def test_update_team_users(self):
@@ -160,6 +164,7 @@ class TestTeamSites(BaseTestPyGrister):
         users = {f'u{name}a@example.com': 'editors', 
                  f'u{name}b@example.com': 'owners'}
         st, res = self.g.update_team_users(users, self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
 
@@ -175,10 +180,12 @@ class TestWorkspaces(BaseTestPyGrister):
 
     def test_list_workspaces(self):
         st, res = self.g.list_workspaces(self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
     def test_see_workspace(self):
         st, res = self.g.see_workspace(self.workspace_id)
+        self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
 
     def test_add_delete_workspace(self):
@@ -189,22 +196,24 @@ class TestWorkspaces(BaseTestPyGrister):
         self.g.reconfig({'GRIST_SAFEMODE': 'N'})
         name = str(time.time_ns())
         st, ws_id = self.g.add_workspace(name, self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
-        if st == 200:
-            st, res = self.g.delete_workspace(ws_id)
-            self.assertEqual(st, 200)
-        else:
-            self.skipTest("Won't attempt destroying workspace, skipping...")
+        st, res = self.g.delete_workspace(ws_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
         
     def test_update_workspace(self):
         name = str(time.time_ns())
         st, res = self.g.update_workspace(name, self.workspace_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
         st, res = self.g.update_workspace(self.workspace_name, self.workspace_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_list_workspace_users(self):
         st, res = self.g.list_workspace_users(self.workspace_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
     
     def test_update_workspace_users(self):
@@ -213,8 +222,10 @@ class TestWorkspaces(BaseTestPyGrister):
                  f'u{name}b@example.com': 'owners'}
         # note: must be added as team users first!
         st, res = self.g.update_team_users(users, self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
         st, res = self.g.update_workspace_users(users, self.workspace_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_workspace_cross_site(self):
@@ -223,9 +234,11 @@ class TestWorkspaces(BaseTestPyGrister):
             self.skipTest('No secondary team site, skipping...')
         self.g.reconfig({'GRIST_TEAM_SITE': SECONDARY_SITE})
         st, res = self.g.see_workspace(self.workspace_id)
+        self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
         name = str(time.time_ns())
         st, res = self.g.add_workspace(name, self.team_id)
+        self.assertIsInstance(res, int)
         self.assertEqual(st, 200)
 
 class TestDocs(BaseTestPyGrister):
@@ -237,8 +250,10 @@ class TestDocs(BaseTestPyGrister):
     def test_create_delete_doc(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         st, res = self.g.delete_doc(doc_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
         # shouldn't be possible in safemode
         self.g.reconfig({'GRIST_SAFEMODE': 'Y'})
@@ -253,6 +268,7 @@ class TestDocs(BaseTestPyGrister):
         self.g.reconfig({'GRIST_TEAM_SITE': SECONDARY_SITE})
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         # ...but deletion is not
         with self.assertRaises(HTTPError):
@@ -261,77 +277,97 @@ class TestDocs(BaseTestPyGrister):
     def test_see_doc(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         st, res = self.g.see_doc(doc_id, self.team_id)
+        self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
 
     def test_update_doc(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         st, res = self.g.update_doc('new'+name, doc_id=doc_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_move_doc(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         st, ws_id = self.g.add_workspace('ws'+name, self.team_id)
+        self.assertIsInstance(res, int)
         self.assertEqual(st, 200)
         st, res = self.g.move_doc(ws_id, doc_id, self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_list_doc_users(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         st, res = self.g.list_doc_users(doc_id, self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
     def test_update_doc_users(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         users = {f'u{name[-5:]}a@example.com': 'editors', 
                  f'u{name[-5:]}b@example.com': 'owners'}
         # note: no need to add these to your team/workspace first
         st, res = self.g.update_doc_users(users, doc_id=doc_id, 
                                           team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_download_sqlite(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         st, res = self.g.download_sqlite(name+'.sqlite', 
             nohistory=True, template=True, doc_id=doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_download_excel(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         st, res = self.g.download_excel(name+'.xls', table_id='Table1',
                                         doc_id=doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
     
     def test_download_csv(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         st, res = self.g.download_csv(name+'.csv', table_id='Table1',
                                       doc_id=doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_download_schema(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(res, str)
         self.assertEqual(st, 200)
         st, res = self.g.download_schema('Table1', doc_id=doc_id, 
                                           team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
         st, res = self.g.download_schema('Table1', filename=name+'.json', 
                                          doc_id=doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
 
 
@@ -359,17 +395,22 @@ class TestRecordAccess(BaseTestPyGrister):
                    {'fields': {'Astr': 'test 4', 'Bnum': 4.4, 'Cint': 4, 'Dbol': True}},]
         st, res = self.g.add_records(self.table_id, records, 
                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
+        self.assertEqual(len(res), 4)
         self.assertEqual(st, 200)
         st, res = self.g.list_records(self.table_id, 
                                       doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         st, res = self.g.list_records(self.table_id, sort='-Cint', limit=2, 
                                       doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
     
     def test_list_records_with_filter(self):
         st, res = self.g.list_records(self.table_id, filter={'Astr': ['test 3']}, 
                                       doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
     def test_add_and_update_records(self):
@@ -377,11 +418,13 @@ class TestRecordAccess(BaseTestPyGrister):
                    {'fields': {'Astr': 'test2', 'Bnum': 2.2, 'Cint': 2, 'Dbol': False}}]
         st, res = self.g.add_records(self.table_id, records, 
                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         records = [{'id': 1, 'fields': {'Astr': 'modified', 'Bnum': 1.12}},
                    {'id': 2, 'fields': {'Astr': 'mod!!', 'Bnum': 2.22}}]
         st, res = self.g.update_records(self.table_id, records, 
                                         doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
     
     @unittest.skip  # not really our fault, I guess
@@ -390,9 +433,11 @@ class TestRecordAccess(BaseTestPyGrister):
         records = [{'fields': {'Cint': 'not a number'}}]
         st, res = self.g.add_records(self.table_id, records, noparse=False,
                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         st, res = self.g.add_records(self.table_id, records, noparse=True,
                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
     def test_add_update_records(self):
@@ -400,12 +445,14 @@ class TestRecordAccess(BaseTestPyGrister):
                    {'fields': {'Astr': 'toupdate2', 'Bnum': 6.2, 'Cint': 6, 'Dbol': False}}]
         st, res = self.g.add_records(self.table_id, records, 
                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         records = [{'require': {'Astr': 'toupdate1'}, 'fields': {'Cint': 55}}, 
                    {'require': {'Astr': 'toupdate2'}, 'fields': {'Bnum': 6.3}},
                    {'require': {'Astr': 'new rec'}, 'fields': {'Dbol': True}}]
         st, res = self.g.add_update_records(self.table_id, 
                         records, doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_data_delete(self): # the only non-deprecated /data endpoint
@@ -414,9 +461,11 @@ class TestRecordAccess(BaseTestPyGrister):
                    {'fields': {'Astr': 'test3', 'Bnum': 3.3, 'Cint': 3, 'Dbol': False}}]
         st, res = self.g.add_records(self.table_id, records, 
                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         st, res = self.g.delete_rows(self.table_id, [1, 2], doc_id=self.doc_id, 
                                      team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_sql_and_sql_with_params(self): 
@@ -425,11 +474,13 @@ class TestRecordAccess(BaseTestPyGrister):
                    {'fields': {'Astr': 'test sql3', 'Bnum': 3.3, 'Cint': 3, 'Dbol': False}}]
         sql = f'select * from {self.table_id}'  # no trailing ";" !
         st, res = self.g.run_sql(sql, doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         sql = f'select * from {self.table_id} where Cint>?'
         qargs = [1]
         st, res = self.g.run_sql_with_args(sql, qargs, doc_id=self.doc_id, 
                                            team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
 
@@ -442,6 +493,7 @@ class TestTables(BaseTestPyGrister):
 
     def test_list_tables(self):
         st, res = self.g.list_tables(self.doc_id, self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
     
     def test_add_tables(self):
@@ -449,6 +501,7 @@ class TestTables(BaseTestPyGrister):
         tables = [{'id': name, 'columns': 
                    [{'id': 'col1', 'fields': {'label': 'Col 1'}}]}]
         st, res = self.g.add_tables(tables, self.doc_id, self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
     @unittest.expectedFailure
@@ -457,6 +510,7 @@ class TestTables(BaseTestPyGrister):
         tables = [{'id': name, 'columns': 
                    [{'id': 'col1', 'fields': {'label': 'Col 1'}}]}]
         st, res = self.g.add_tables(tables, self.doc_id, self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         tables = [{'id': name, 'columns': 
                    [{'id': 'col1', 'fields': {'label': 'Col 1bis'}}]}]
@@ -469,6 +523,7 @@ class TestTables(BaseTestPyGrister):
         # This will need a few more rounds of trial/error I'm afraid...
         # of course none of this is actually documented
         st, res = self.g.update_tables(tables, self.doc_id, self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
 
@@ -483,6 +538,7 @@ class TestCols(BaseTestPyGrister):
     def test_list_cols(self):
         st, res = self.g.list_cols(self.table_id, doc_id=self.doc_id, 
                                    team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
     
     def test_add_update_delete_cols(self):
@@ -492,18 +548,21 @@ class TestCols(BaseTestPyGrister):
                                              'type': 'Int'}}]
         st, res = self.g.add_cols(self.table_id, cols=cols, 
                                   doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
+        self.assertEqual(len(res), 2)
         self.assertEqual(st, 200)
-        self.assertEqual(len(res['columns']), 2)
         cols = [{'id': name+'_a', 'fields': {'label': name+'_newa'}},
                 {'id': name+'_b', 'fields': {'label': name+'_newb'}}]
         st, res = self.g.update_cols(self.table_id, cols=cols, 
                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
         st, res = self.g.delete_column(self.table_id, name+'_newa', 
                                        doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
     
-    def test_update_cols_with_options(self):
+    def test_add_cols_with_options(self):
         name = 'col'+str(time.time_ns())[-5:]
         # this is the example from the Grist api console
         cols = [{'id': name+'_opts', 
@@ -518,6 +577,7 @@ class TestCols(BaseTestPyGrister):
                                 'textColor': '#FFFFFF'}}}}}]
         st, res = self.g.add_cols(self.table_id, cols=cols, 
                                   doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
     def test_add_update_cols(self):
@@ -527,12 +587,14 @@ class TestCols(BaseTestPyGrister):
                                              'type': 'Int'}}]
         st, res = self.g.add_cols(self.table_id, cols=cols, doc_id=self.doc_id, 
                                   team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         cols = [{'id': name+'_a', 'fields': {'label': name+'_newa'}}, # updated
                 {'id': name+'_c', 'fields': {'label': name+'_c'}}]    # added
         st, res = self.g.add_update_cols(self.table_id, cols=cols, noadd=False, 
                                          noupdate=False, doc_id=self.doc_id, 
                                          team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
 
@@ -545,12 +607,14 @@ class TestAttachments(BaseTestPyGrister):
 
     def test_list_attachments(self):
         st, res = self.g.list_attachments(doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
     
     def test_list_attachment_with_filter(self):
         filter = {'fileName': ['cat', 'dog']}
         st, res = self.g.list_attachments(filter=filter, doc_id=self.doc_id, 
                                           team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
     def test_upload_download_attachments(self):
@@ -558,10 +622,12 @@ class TestAttachments(BaseTestPyGrister):
         try: st, res = self.g.upload_attachment(f, doc_id=self.doc_id, 
                                            team_id=self.team_id)
         except HTTPError: print(self.g.inspect())
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
         name = 'att_'+str(time.time_ns())+'.jpg'
         st, res = self.g.download_attachment(name, 1, doc_id=self.doc_id, 
                                              team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_see_attachment(self):
@@ -569,10 +635,12 @@ class TestAttachments(BaseTestPyGrister):
         f = os.path.join(HERE, 'imgtest.jpg')
         st, res = self.g.upload_attachment(f, doc_id=self.doc_id, 
                                            team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
         # maybe id=1 is not the one we just uploaded... 
         st, res = self.g.see_attachment(1, doc_id=self.doc_id, 
                                         team_id=self.team_id)
+        self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
 
 
@@ -586,6 +654,7 @@ class TestWebhooks(BaseTestPyGrister):
 
     def test_list_webhooks(self):
         st, res = self.g.list_webhooks(doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
     def test_add_update_delete_webhooks(self):
@@ -595,19 +664,23 @@ class TestWebhooks(BaseTestPyGrister):
               'tableId': 'Table1'}}
         st, res = self.g.add_webhooks(webhooks=[wh], doc_id=self.doc_id, 
                                       team_id=self.team_id)
+        self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         wh_id = res['webhooks'][0]['id']
         wh['fields']['memo'] = 'memo updated!'
         st, res = self.g.update_webhook(wh_id, wh, doc_id=self.doc_id, 
                                         team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
         st, res = self.g.delete_webhook(wh_id, doc_id=self.doc_id, 
                                         team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
     def test_empty_payloads_queue(self):
         st, res = self.g.empty_payloads_queue(doc_id=self.doc_id, 
                                               team_id=self.team_id)
+        self.assertIsNone(res)
         self.assertEqual(st, 200)
 
 
