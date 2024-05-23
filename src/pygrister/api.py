@@ -551,7 +551,8 @@ class GristApi:
                      doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/tables/{tableId}/records``.
         
-        If successful, response will be a ``list[dict]`` of records.
+        If successful, response will be a list of "Pygrister records with id" 
+        (see docs). 
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
@@ -567,7 +568,7 @@ class GristApi:
             st, res = self.apicall(url, headers=headers, 
                                    params={'hidden': hidden})
         try:
-            return st, res['records']
+            return st, [{'id': r['id']}|r['fields'] for r in res['records']]
         except KeyError:
             return st, res
 
@@ -577,6 +578,7 @@ class GristApi:
                     team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/tables/{tableId}/records``.
         
+        ``records``: a list of "Pygrister records without id" (see docs).
         If successful, response will be a ``list[int]`` of added record ids.
         """
         doc_id, server = self._select_params(doc_id, team_id)
@@ -594,14 +596,15 @@ class GristApi:
                        noparse: bool = False, doc_id: str = '', 
                        team_id: str = '') -> Apiresp:
         """Implement PATCH ``/docs/{docId}/tables/{tableId}/records``.
-        
+
+        ``records``: a list of "Pygrister records with id" (see docs).
         If successful, response will be ``None``.
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
         params = {'noparse': noparse}
-        json = {'records': [{'id': id, 'fields': fields} for r in records 
-                            for (id, fields) in r.items()]}
+        json = {'records': [{'id': rec.pop('id'), 'fields': rec} 
+                            for rec in records]}
         return self.apicall(url, 'PATCH', params=params, json=json)
 
     @check_safemode
@@ -922,14 +925,15 @@ class GristApi:
     def run_sql(self, sql: str, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/sql``.
         
-        If successful, response will be a ``list[dict]`` of records.
+        If successful, response will be a list of "Pygrister records" (see docs) 
+        with or without id, depending on the query. 
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/sql'
         params = {'q': sql}
         st, res = self.apicall(url, params=params)
         try:
-            return st, res['records']
+            return st, [r['fields'] for r in res['records']]
         except KeyError:
             return st, res
 
@@ -937,13 +941,14 @@ class GristApi:
                           doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/sql``.
         
-        If successful, response will be a ``list[dict]`` of records.
+        If successful, response will be a list of "Pygrister records" (see docs) 
+        with or without id, depending on the query. 
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/sql'
         json = {'sql': sql, 'args': qargs, 'timeout': timeout}
         st, res = self.apicall(url, method='POST', json=json)
         try:
-            return st, res['records']
+            return st, [r['fields'] for r in res['records']]
         except KeyError:
             return st, res
