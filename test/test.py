@@ -292,6 +292,9 @@ class TestDocs(BaseTestPyGrister):
         st, res = self.g.update_doc('new'+name, doc_id=doc_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
+        st, res = self.g.update_doc(pinned=True, doc_id=doc_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
 
     def test_move_doc(self):
         name = str(time.time_ns())

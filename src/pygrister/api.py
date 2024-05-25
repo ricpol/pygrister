@@ -426,7 +426,7 @@ class GristApi:
         return self.apicall(url)
 
     @check_safemode
-    def update_doc(self, new_name: str, pinned: bool = False, 
+    def update_doc(self, new_name: str = '', pinned: bool = False, 
                    doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement PATCH ``/docs/{docId}``.
         
@@ -434,7 +434,9 @@ class GristApi:
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}'
-        json = {'name': new_name, 'isPinned': pinned}
+        json = {'isPinned': pinned}
+        if new_name:
+            json.update({'name': new_name}) # type:ignore
         return self.apicall(url, method='PATCH', json=json)
 
     @check_safemode
