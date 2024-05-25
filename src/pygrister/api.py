@@ -127,6 +127,7 @@ class GristApi:
     def __init__(self, config: dict[str, str]|None = None):
         self.reconfig(config)
         self.apicalls: int = 0            #: total number of API calls
+        self.ok: bool = True              #: if an HTTPError occurred
         self.req_url: str = ''            #: last request url
         self.req_body: str = ''           #: last request body
         self.req_headers: dict = dict()   #: last request headers
@@ -193,6 +194,7 @@ class GristApi:
         if not filename:  # ordinary request
             resp = request(method, url, headers=headers, params=params, 
                            json=json) 
+            self.ok = resp.ok
             self._save_request_data(resp)
             # TODO the old grist_api.py went to great lengths to retry in case 
             # of an SQLITE_BUSY error. Maybe this is best left to the caller?
@@ -203,6 +205,7 @@ class GristApi:
             if method == 'GET': # download mode
                 with request(method, url, headers=headers, params=params, 
                              stream=True) as resp:
+                    self.ok = resp.ok
                     self._save_request_data(resp)
                     if self.raise_option:
                         resp.raise_for_status()
@@ -220,6 +223,7 @@ class GristApi:
                 with open(filename, 'rb') as f:
                     resp = request(method, url, headers=headers, 
                                    files={'upload': f})
+                self.ok = resp.ok
                 self._save_request_data(resp)
                 if self.raise_option:
                     resp.raise_for_status()

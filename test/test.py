@@ -117,6 +117,15 @@ class TestVarious(BaseTestPyGrister):
         st, res = self.g.list_workspaces('_bogus_team_id_')
         self.assertGreaterEqual(st, 300)
 
+    def test_ok(self):
+        try:
+            st, res = self.g.see_workspace(1) # hopefully, not a valid ws id!
+        except HTTPError:
+            pass
+        self.assertFalse(self.g.ok)
+        st, res = self.g.see_team()
+        self.assertTrue(self.g.ok)
+
 
 class TestTeamSites(BaseTestPyGrister):
     @classmethod
