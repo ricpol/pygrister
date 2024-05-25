@@ -42,7 +42,7 @@ Pygrister configuration is a set of key/value pairs stored
   to put here just the values you want to modify;
 - finally, you may supply your values as environment variables.
 
-Note that a value declared in a location will override those in the lower 
+Note that a value declared in a place will override those in the lower 
 layers. For instance, if you do nothing, the value for the ``GRIST_TEAM_SITE`` 
 key will default to ``docs``; if you write something like 
 ``"GRIST_TEAM_SITE": "myteam"`` in your json file, then it will be ``myteam``; 
