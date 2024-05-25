@@ -11,7 +11,8 @@ Pygrister is a Grist client that covers all the documented APIs.
 Pygrister keeps track of basic configuration for you, remembering your 
 team site, workspace, working document, so that you don't have to type in 
 the boring stuff every time. Apart from this and little else, Pygrister 
-is rather low-level: it will call the api and retrieve the response "as is". 
+is rather low-level: it will call the api and retrieve the response, with 
+only minor changes. 
 If the api call is malformed, you will simply receive a bad HTTP status code. 
 
 Basic usage goes as follows::
@@ -22,7 +23,7 @@ Basic usage goes as follows::
     # list users/permissions for the current document
     status_code, response = grist.list_doc_users()
     # fetch all rows in a table
-    status_code, response = grist.see_records('Table1') 
+    status_code, response = grist.list_records('Table1') 
     # add a column to a table
     cols = [{'id': 'age', 'fields': {'label':'age', 'type': 'Int'}}]
     status_code, response = grist.add_cols('Table1', cols) 

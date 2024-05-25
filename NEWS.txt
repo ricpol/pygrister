@@ -1,0 +1,20 @@
+NEWS
+====
+
+v0.2.0, 2024.05.25
+------------------
+
+- uniform and simplify responses returned by function API calls 
+  (eg, now all list_* function will return a list of dictionaries)
+- uniform and simplify the record APIs: now records are always expressed 
+  as lists of dictionaries, across all record APIs
+- new GristApi.ok attribute
+- GristApi.see_records is now GristApi.list_records
+- get rid of many None defaults in parameters
+- the "new_name" parameter is now optional in GristApi.update_doc
+- tests, documentation
+
+v0.1.0, 2024.05.12
+------------------
+
+Initial alpha release.
