@@ -147,10 +147,35 @@ class GristApi:
             grist.reconfig({'GRIST_TEAM_SITE': 'newteam'})
 
         now all future api calls will be directed to the new team site. 
+
+        Note: this will re-build your configuration from scratch, then appy 
+        the ``config`` parameter on top. To edit your *existent* configuration 
+        instead, use the ``update_config`` function.
         """
         self.config = get_config()
         if config is not None:
             self.config.update(config)
+        self._post_reconfig()
+
+    def update_config(self, config: dict[str, str]) -> None:
+        """Edit the configuration options.
+        
+        Call this function to edit your current runtime configuration: 
+        pass a dictionary to the ``config`` parameter to override existing 
+        config keys for the time being, eg.::
+
+            grist.reconfig({'GRIST_TEAM_SITE': 'newteam'})
+
+        now all future api calls will be directed to the new team site. 
+
+        Note: this will apply the ``config`` parameter on top of your 
+        existing configuration. To re-build the configuration from scratch, 
+        use the ``reconfig`` function instead.
+        """
+        self.config.update(config)
+        self._post_reconfig()
+
+    def _post_reconfig(self): # check and cleanup after config is changed
         if not self.config or not all(self.config.values()):
             msg = f'Missing config values.\n{config2output(self.config)}'
             raise GristApiNotConfigured(msg)
