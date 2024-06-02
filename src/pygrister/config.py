@@ -5,6 +5,7 @@ PYGRISTER_CONFIG = {
     'GRIST_API_KEY': '<your_api_key_here>',
     'GRIST_SELF_MANAGED': 'N',
     'GRIST_SELF_MANAGED_HOME': 'http://localhost:8484',
+    'GRIST_SELF_MANAGED_SINGLE_ORG': 'Y',
     'GRIST_SERVER_PROTOCOL': 'https://',
     'GRIST_API_SERVER': 'getgrist.com',
     'GRIST_API_ROOT': 'api',

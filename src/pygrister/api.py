@@ -197,11 +197,11 @@ class GristApi:
             return f'{cf["GRIST_SERVER_PROTOCOL"]}{the_team}.' + \
                 f'{cf["GRIST_API_SERVER"]}/{cf["GRIST_API_ROOT"]}'
         else:
-            if os.getenv('GRIST_SINGLE_ORG'):
+            if cf['GRIST_SELF_MANAGED_SINGLE_ORG'] == 'Y':
                 # self-managed, mono-team: "https://mygrist.com/api"
                 return f'{cf["GRIST_SELF_MANAGED_HOME"]}/{cf["GRIST_API_ROOT"]}'
             else:
-                # self-managed: "https://mygrist.com/myteam/api"
+                # self-managed: "https://mygrist.com/o/myteam/api"
                 return f'{cf["GRIST_SELF_MANAGED_HOME"]}/o/{the_team}' + \
                     f'/{cf["GRIST_API_ROOT"]}'
 
