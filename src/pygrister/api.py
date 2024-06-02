@@ -154,31 +154,38 @@ class GristApi:
         if not self.config or not all(self.config.values()):
             msg = f'Missing config values.\n{config2output(self.config)}'
             raise GristApiNotConfigured(msg)
-        self.server = self.make_server(self.config['GRIST_SERVER_PROTOCOL'],
-                                       self.config['GRIST_TEAM_SITE'],
-                                       self.config["GRIST_API_SERVER"])
+        self.server = self.make_server()
         self.raise_option = (self.config['GRIST_RAISE_ERROR'] == 'Y')
         self.safemode = (self.config['GRIST_SAFEMODE'] == 'Y')
 
-    def make_server(self, protocol: str = '', subdomain: str = '', 
-                    domain: str = '') -> str:
-        """Construct a server url from prefix, sub(team)-domain and domain. 
+    def make_server(self, team_name: str = '') -> str:
+        """Construct the "server" part of the API url, up to "/api". 
         
-        Pass an empty string to any parameter to default to the 
-        corresponding configuration key.
+        A few options are possible, depending on the type of Grist hosting.
+        The only moving part, as far as the GristApi class is concerned, 
+        is the team name.
         """
-        #TODO we need support for custom domains too
-        protocol = protocol or self.config['GRIST_SERVER_PROTOCOL']
-        subdomain = subdomain or self.config['GRIST_TEAM_SITE']
-        domain = domain or self.config['GRIST_API_SERVER']
-        return f'{protocol}{subdomain}.{domain}'
+        cf = self.config
+        the_team = team_name or cf['GRIST_TEAM_SITE']
+        if cf['GRIST_SELF_MANAGED'] == 'N':
+            # the usual SaaS Grist: "https://myteam.getgrist.com/api"
+            return f'{cf["GRIST_SERVER_PROTOCOL"]}{the_team}.' + \
+                f'{cf["GRIST_API_SERVER"]}/{cf["GRIST_API_ROOT"]}'
+        else:
+            if os.getenv('GRIST_SINGLE_ORG'):
+                # self-managed, mono-team: "https://mygrist.com/api"
+                return f'{cf["GRIST_SELF_MANAGED_HOME"]}/{cf["GRIST_API_ROOT"]}'
+            else:
+                # self-managed: "https://mygrist.com/myteam/api"
+                return f'{cf["GRIST_SELF_MANAGED_HOME"]}/o/{the_team}' + \
+                    f'/{cf["GRIST_API_ROOT"]}'
 
     def _select_params(self, doc_id: str = '', team_id: str = ''):
         doc = doc_id or self.config['GRIST_DOC_ID']
         if not team_id:
             server = self.server
         else:
-            server = self.make_server(subdomain=team_id)
+            server = self.make_server(team_name=team_id)
         return doc, server
 
     def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
