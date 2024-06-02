@@ -113,7 +113,7 @@ def check_safemode(funct):
     def wrapper(self, *a, **k):
         if self.safemode:
             msg = 'GristApi is in safe mode: you cannot write to db. '
-            msg += f'Configuration:\n{config2output(self.config, True)}'
+            msg += f'Configuration:\n{config2output(self._config, True)}'
             raise GristApiInSafeMode(msg)
         return funct(self, *a, **k)
     return wrapper
@@ -152,9 +152,9 @@ class GristApi:
         the ``config`` parameter on top. To edit your *existent* configuration 
         instead, use the ``update_config`` function.
         """
-        self.config = get_config()
+        self._config = get_config()
         if config is not None:
-            self.config.update(config)
+            self._config.update(config)
         self._post_reconfig()
 
     def update_config(self, config: dict[str, str]) -> None:
@@ -172,16 +172,16 @@ class GristApi:
         existing configuration. To re-build the configuration from scratch, 
         use the ``reconfig`` function instead.
         """
-        self.config.update(config)
+        self._config.update(config)
         self._post_reconfig()
 
     def _post_reconfig(self): # check and cleanup after config is changed
-        if not self.config or not all(self.config.values()):
-            msg = f'Missing config values.\n{config2output(self.config)}'
+        if not self._config or not all(self._config.values()):
+            msg = f'Missing config values.\n{config2output(self._config)}'
             raise GristApiNotConfigured(msg)
         self.server = self.make_server()
-        self.raise_option = (self.config['GRIST_RAISE_ERROR'] == 'Y')
-        self.safemode = (self.config['GRIST_SAFEMODE'] == 'Y')
+        self.raise_option = (self._config['GRIST_RAISE_ERROR'] == 'Y')
+        self.safemode = (self._config['GRIST_SAFEMODE'] == 'Y')
 
     def make_server(self, team_name: str = '') -> str:
         """Construct the "server" part of the API url, up to "/api". 
@@ -190,7 +190,7 @@ class GristApi:
         The only moving part, as far as the GristApi class is concerned, 
         is the team name.
         """
-        cf = self.config
+        cf = self._config
         the_team = team_name or cf['GRIST_TEAM_SITE']
         if cf['GRIST_SELF_MANAGED'] == 'N':
             # the usual SaaS Grist: "https://myteam.getgrist.com/api"
@@ -206,7 +206,7 @@ class GristApi:
                     f'/{cf["GRIST_API_ROOT"]}'
 
     def _select_params(self, doc_id: str = '', team_id: str = ''):
-        doc = doc_id or self.config['GRIST_DOC_ID']
+        doc = doc_id or self._config['GRIST_DOC_ID']
         if not team_id:
             server = self.server
         else:
@@ -221,7 +221,7 @@ class GristApi:
             headers = {'Content-Type': 'application/json',
                        'Accept': 'application/json'}
         headers.update(
-            {'Authorization': f'Bearer {self.config["GRIST_API_KEY"]}'})
+            {'Authorization': f'Bearer {self._config["GRIST_API_KEY"]}'})
 
         if not filename:  # ordinary request
             resp = request(method, url, headers=headers, params=params, 
@@ -294,7 +294,7 @@ class GristApi:
         txt += f'->Response: {self.resp_code}, {self.resp_reason}\n'
         txt += f'->Resp. headers: {self.resp_headers}\n'
         txt += f'->Resp. content: {self.resp_content}\n'
-        txt += f'->Config: {config2output(self.config)}'
+        txt += f'->Config: {config2output(self._config)}'
         return txt
 
     # TEAM SITES (organisations)  # always cross-site allowed, of course
@@ -382,7 +382,7 @@ class GristApi:
         
         If successful, response will be a ``dict`` of workspace details.
         """
-        ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
+        ws_id = ws_id or int(self._config['GRIST_WORKSPACE_ID'])
         url = f'{self.server}/workspaces/{ws_id}'
         return self.apicall(url)
 
@@ -392,7 +392,7 @@ class GristApi:
         
         If successful, response will be ``None``.
         """
-        ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
+        ws_id = ws_id or int(self._config['GRIST_WORKSPACE_ID'])
         url = f'{self.server}/workspaces/{ws_id}'
         json = {'name': new_name}
         return self.apicall(url, method='PATCH', json=json)
@@ -412,7 +412,7 @@ class GristApi:
         
         If successful, response will be a ``list[dict]`` of users.
         """
-        ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
+        ws_id = ws_id or int(self._config['GRIST_WORKSPACE_ID'])
         url = f'{self.server}/workspaces/{ws_id}/access'
         st, res = self.apicall(url)
         try:
@@ -428,7 +428,7 @@ class GristApi:
         
         If successful, response will be ``None``.
         """
-        ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
+        ws_id = ws_id or int(self._config['GRIST_WORKSPACE_ID'])
         json = {'delta': {'users': users}}
         url = f'{self.server}/workspaces/{ws_id}/access'
         return self.apicall(url, 'PATCH', json=json)
@@ -443,7 +443,7 @@ class GristApi:
         
         If successful, response will be the doc id as a ``str``.
         """
-        ws_id = ws_id or int(self.config['GRIST_WORKSPACE_ID'])
+        ws_id = ws_id or int(self._config['GRIST_WORKSPACE_ID'])
         json = {'name': name, 'isPinned': pinned}
         url = f'{self.server}/workspaces/{ws_id}/docs'
         return self.apicall(url, method='POST', json=json)
