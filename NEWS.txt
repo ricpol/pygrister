@@ -1,6 +1,16 @@
 NEWS
 ====
 
+v0.3.0, 2024.06.02
+------------------
+
+- support for the self-hosted version of Grist
+- new GristApi.update_config to update config keys incrementally, without 
+  re-building the configuration from scratch
+- new configuration schema for the test suite, based on a config_test.json 
+  file
+- tests, documentation
+
 v0.2.0, 2024.05.25
 ------------------
 
