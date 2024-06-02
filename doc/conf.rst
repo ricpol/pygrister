@@ -70,10 +70,11 @@ constructor, to override any "static" configuration previously defined::
 
     grist = GristApi(config={'GRIST_TEAM_SITE': 'mysite'})
 
-Second, at any time you may call ``GristApi.reconfig`` to change the 
-configuration::
+Second, at any time you may call either ``GristApi.reconfig`` or 
+``GristApi.update_config`` to change the configuration (the difference 
+between the two is explained below)::
 
-    grist.reconfig(config={'GRIST_TEAM_SITE': 'mysite'})
+    grist.update_config(config={'GRIST_TEAM_SITE': 'mysite'})
 
 This will affect all the API calls from now on. 
 
@@ -92,9 +93,34 @@ will do the trick.
 
 The function ``api.get_config`` returns the current "static" configuration, 
 i.e. taking into account only the json files and environment variables. At 
-runtime, you may inspect the variable ``GristApi.config`` to know the "real", 
+runtime, you may inspect the variable ``GristApi._config`` to know the "real", 
 actual configuration in use. 
 
+Changing the configuration at runtime.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As mentioned earlier, you may call ``GristApi.reconfig`` or 
+``GristApi.update_config`` to change the configuration at runtime. 
+
+The difference between the two is that ``reconfig`` will re-build your 
+configuration from scratch (ie., from the config file and/or environment 
+variables), *then* apply your modifications, if any; ``update_config`` 
+will apply your changes on top of the existing (runtime) configuration, 
+incrementally. ::
+
+    >>> g = GristApi()
+    >>> g.update_config({'GRIST_TEAM_SITE': 'mysite'})
+    >>> g.update_config({'GRIST_SAFEMODE': 'Y'})
+    >>> # incremental modifications are applied as expected
+    >>> g._config['GRIST_TEAM_SITE'], g._config['GRIST_SAFEMODE']
+    ('mysite', 'Y')
+    >>> g.reconfig({'GRIST_SAFEMODE': 'N'})
+    >>> # reconfig re-builts configuration, so here team site is "docs" again
+    >>> g._config['GRIST_TEAM_SITE'], g._config['GRIST_SAFEMODE']
+    ('docs', 'N')
+
+You may call ``reconfig`` without arguments to revert to the original "static" 
+configuration.
 
 Configuration keys.
 -------------------
@@ -102,16 +128,20 @@ Configuration keys.
 This is the content of the ``config.py`` file, listing all the config keys 
 currently defined, and their default values::
 
-    {
-        "GRIST_API_KEY": "<your key here>",
-        "GRIST_SERVER_PROTOCOL": "https://",
-        "GRIST_TEAM_SITE": "docs",
-        "GRIST_API_SERVER": "getgrist.com/api",
-        "GRIST_WORKSPACE_ID": "<your ws id here>",
-        "GRIST_DOC_ID": "<your doc id here>",
-        "GRIST_RAISE_ERROR": "Y",
-        "GRIST_SAFEMODE": "N"
-    }
+{
+    'GRIST_API_KEY': '<your_api_key_here>',
+    'GRIST_SELF_MANAGED': 'N',
+    'GRIST_SELF_MANAGED_HOME': 'http://localhost:8484',
+    'GRIST_SELF_MANAGED_SINGLE_ORG': 'Y',
+    'GRIST_SERVER_PROTOCOL': 'https://',
+    'GRIST_API_SERVER': 'getgrist.com',
+    'GRIST_API_ROOT': 'api',
+    'GRIST_TEAM_SITE': 'docs',
+    'GRIST_WORKSPACE_ID': '<your_ws_id_here>',
+    'GRIST_DOC_ID': '<your_doc_id_here>',
+    'GRIST_RAISE_ERROR': 'Y',
+    'GRIST_SAFEMODE': 'N',
+}
 
 **Please note**: configuration values *must* be non-empty strings. If you 
 don't need a config key, just leave the default value as it is: do not 
@@ -119,6 +149,10 @@ override it with an empty string!
 
 ``GRIST_API_KEY`` is your secret API key. You may want to provide it only 
 as an environment variable, for added security.
+
+``GRIST_SELF_MANAGED``, ``GRIST_SELF_MANAGED_HOME`` and 
+``GRIST_SELF_MANAGED_SINGLE_ORG`` are intended for self-hosted Grist, and 
+detailed separately below. 
 
 ``GRIST_TEAM_SITE`` is your team ID. The ``docs`` default points to your 
 personal site (the "@my-name" one). 
@@ -144,6 +178,44 @@ no writing API calls will be allowed.
 *Note*: extensions and subclasses may add other config keys as needed. 
 Pygrister will incorporate them in the design explained here.
 
+Support for the self-hosted Grist.
+----------------------------------
+
+The Grist API works the same way for both the regular Grist SaaS and the 
+self-managed version - and so does Pygrister. 
+
+If you want to use Pygrister with a self-hosted Grist instance, you need to 
+set up a few more configuration options. 
+
+First, set ``GRIST_SELF_MANAGED`` to ``Y``. Then, you need to set 
+``GRIST_SELF_MANAGED_HOME`` to the "home page" url of your Grist server, eg. 
+``https://grist.mysite.com``. The suggested default ``http://localhost:8484`` 
+is the usual access point of a test instance running locally. 
+
+Please note: if you are serving Grist from a public host, then Pygrister's 
+``GRIST_SELF_MANAGED_HOME`` must be set to the same url of the ``APP_HOME_URL`` 
+variable that you will provide to the Grist environment. 
+
+Finally, if you are running the single-team flavour of Grist, you need to 
+set ``GRIST_SELF_MANAGED_SINGLE_ORG`` to ``Y`` (the default). The name of 
+the team must then be specified in ``GRIST_TEAM_SITE`` (which you should never 
+change at runtime, of course).
+
+Again, remember that you will still need to provide a ``GRIST_SINGLE_ORG`` 
+variable to the Grist environment, set to the same team name as in Pygrister's 
+``GRIST_TEAM_SITE``.
+
+(A little duplication here is inevitable, since Pygrister and Grist 
+will usually run in completely separate environments, and they can't access 
+each other's variables.)
+
+When ``GRIST_SELF_MANAGED`` is set ``Y`` and the self-hosted Grist support is 
+enabled in Pygrister, the configuration keys ``GRIST_SERVER_PROTOCOL`` and 
+``GRIST_API_SERVER`` will be ignored, and ``GRIST_SELF_MANAGED_HOME`` 
+will be used instead. The remaining configuration keys will work as usual. 
+
+To learn about the self-hosted version of Grist read the 
+`Grist documentation <https://support.getgrist.com/self-managed>`_.
 
 App-specific configuration.
 ---------------------------
