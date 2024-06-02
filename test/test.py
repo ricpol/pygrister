@@ -3,21 +3,25 @@
 This is the Pygrister test suite.
 =================================
 
-Before running the tests, you must set up a few things on the Grist side, 
-then provide some env variables in your shell: 
-
-- visit the Grist website and find out (or create) your API key;
-- create an empty team site (that is, only the "Home" workspace should 
-  be present): a free site will do;
-- optionally, create a second empty team site;
-- provide your api key as a ``GRIST_API_KEY`` env variable;
-- set up a ``GRIST_TEAM_SITE`` env variable, with the name of your 
-  team site in it (actually, it's the *url subdomain*: if you have 
-  ``https://myteam.getgrist.com``, then it is ``myteam``).
+Before running the tests, you must set up a few things on the Grist side.
+Either if you plan to run the tests against the standard SaaS Grist 
+or against a self-managed instance of Grist, 
+- find out or create your API key;
+- create an empty team site - that is, only the "Home" workspace should 
+  be present: in SaaS Grist, a free site will do;
+  - (but, if you are running a self-managed "mono-site" Grist, then of course 
+    the team site will be the one indicated by the ``GRIST_SINGLE_ORG`` 
+    env variable that you will provide separately.)
 
 Remember, the test suite *will not make use* of your regular configuration 
-files (eg., ``~/.gristapi/config.json``): everything must be provided as 
-environment variables. 
+files (eg., ``~/.gristapi/config.json``). 
+Everything *must* be provided in a separate ``config_test.json`` in the same 
+directory as this file. Edit the already present json file as follows:
+- "GRIST_API_KEY": your api key
+- "GRIST_TEAM_SITE": your team site (you may ignore if running a mono-site Grist)
+- "GRIST_SELF_MANAGED": set to "Y" if you are running a self-managed Grist
+- "GRIST_SELF_MANAGED_HOME": the main url of your self-managed Grist
+Note: no other config key should be configured for the test suite. 
 
 The test suite will leave several objects (workspaces and docs) in your 
 team site. The objects created have unique names, so it should be safe 
@@ -46,35 +50,27 @@ in normal usage it's just ``<grist>.add_records(<table>, records)``.
 
 import os, os.path
 import time
+import json
 import unittest
 from requests import HTTPError
 
 from pygrister import api
 
-# either provide the following 2 keys as env vars, 
-# or de-comment these lines and fill in the values here:
-
-# os.environ['GRIST_API_KEY'] = '<your api key here>'
-# os.environ['GRIST_TEAM_SITE'] = '<your grist team ID here'
-
-try:
-    os.environ['GRIST_API_KEY']
-except KeyError:
-    raise AssertionError("Can't run tests: no GRIST_API_KEY env variable found.")
-try:
-    os.environ['GRIST_TEAM_SITE']
-except KeyError:
-    raise AssertionError("Can't run tests: no GRIST_TEAM_SITE env variable found.")
-
-os.environ['GRIST_SERVER_PROTOCOL'] = 'https://'
-os.environ['GRIST_API_SERVER'] = 'getgrist.com/api'
-os.environ['GRIST_SAFEMODE'] = 'N'
-os.environ['GRIST_RAISE_ERROR'] = 'Y'
-# if we reach these two, something is wrong and we should fail
-os.environ["GRIST_WORKSPACE_ID"] = "_bogus_default_ws_id_"
-os.environ["GRIST_DOC_ID"] = "_bogus_default_doc_id_"
+# standard config values used by tests
+default_config = {
+    "GRIST_SERVER_PROTOCOL": "https://",
+    "GRIST_API_SERVER": "getgrist.com",
+    "GRIST_API_ROOT": "api",
+    "GRIST_RAISE_ERROR": "Y",
+    "GRIST_SAFEMODE": "N",
+    "GRIST_WORKSPACE_ID": "_bogus_", # no test should ever hit this
+    "GRIST_DOC_ID": "_bogus_",       # no test should ever hit this
+}
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+with open(os.path.join(HERE, 'config_test.json')) as f:
+    TEST_CONFIGURATION = json.loads(f.read())
+TEST_CONFIGURATION.update(default_config)
 
 total_apicalls = [] # behold, the hack of the mutable global!
 def tearDownModule():
@@ -83,14 +79,14 @@ def tearDownModule():
 
 # two helper functions to prepare playground worspaces and documents
 def _make_ws(team_id):
-    gristapi = api.GristApi()
+    gristapi = api.GristApi(config=TEST_CONFIGURATION)
     name = 'ws'+str(time.time_ns())
     st, ws_id = gristapi.add_workspace(name, team_id)
     total_apicalls.append(gristapi.apicalls)
     return ws_id, name
 
 def _make_doc(ws_id):
-    gristapi = api.GristApi()
+    gristapi = api.GristApi(config=TEST_CONFIGURATION)
     name = 'doc'+str(time.time_ns())
     st, doc_id = gristapi.add_doc(name, ws_id=ws_id)
     total_apicalls.append(gristapi.apicalls)
@@ -99,7 +95,7 @@ def _make_doc(ws_id):
 
 class BaseTestPyGrister(unittest.TestCase):
     def setUp(self):
-        self.g = api.GristApi()
+        self.g = api.GristApi(config=TEST_CONFIGURATION)
     
     def tearDown(self):
         total_apicalls.append(self.g.apicalls)
@@ -108,12 +104,12 @@ class BaseTestPyGrister(unittest.TestCase):
 class TestVarious(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
-        cls.team_id = os.environ['GRIST_TEAM_SITE']
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
 
     def test_raise_error(self):
         with self.assertRaises(HTTPError):
             self.g.list_workspaces('_bogus_team_id_')
-        self.g.reconfig({'GRIST_RAISE_ERROR': 'N'})
+        self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
         st, res = self.g.list_workspaces('_bogus_team_id_')
         self.assertGreaterEqual(st, 300)
 
@@ -125,12 +121,27 @@ class TestVarious(BaseTestPyGrister):
         self.assertFalse(self.g.ok)
         st, res = self.g.see_team()
         self.assertTrue(self.g.ok)
+    
+    def test_reconfig(self):
+        self.assertEqual(self.g._config['GRIST_RAISE_ERROR'], 'Y')
+        self.assertEqual(self.g._config['GRIST_SAFEMODE'], 'N')
+        # update_config is for incremental changes
+        self.g.update_config({'GRIST_SAFEMODE': 'Y'})
+        self.assertEqual(self.g._config['GRIST_RAISE_ERROR'], 'Y')
+        self.assertEqual(self.g._config['GRIST_SAFEMODE'], 'Y')
+        self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
+        self.assertEqual(self.g._config['GRIST_RAISE_ERROR'], 'N')
+        self.assertEqual(self.g._config['GRIST_SAFEMODE'], 'Y')
+        # reconfig is for re-building from scratch
+        self.g.reconfig({'GRIST_RAISE_ERROR': 'Y'})
+        self.assertEqual(self.g._config['GRIST_RAISE_ERROR'], 'Y')
+        self.assertEqual(self.g._config['GRIST_SAFEMODE'], 'N')
 
 
 class TestTeamSites(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
-        cls.team_id = os.environ['GRIST_TEAM_SITE']
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
      
     def test_list_team_sites(self):
         st, res = self.g.list_team_sites()
@@ -145,10 +156,10 @@ class TestTeamSites(BaseTestPyGrister):
             st, res = self.g.see_team('bogus')
 
     def test_update_team(self):
-        self.g.reconfig({'GRIST_SAFEMODE': 'Y'})
+        self.g.update_config({'GRIST_SAFEMODE': 'Y'})
         with self.assertRaises(api.GristApiInSafeMode):
             self.g.update_team('bogus', TestTeamSites.team_id)
-        self.g.reconfig({'GRIST_SAFEMODE': 'N'})
+        self.g.update_config({'GRIST_SAFEMODE': 'N'})
         st, res = self.g.update_team('apitestrenamed', TestTeamSites.team_id)
         self.assertEqual(st, 200)
         st, res = self.g.update_team('apitestteam', TestTeamSites.team_id)
@@ -172,8 +183,8 @@ class TestTeamSites(BaseTestPyGrister):
 class TestWorkspaces(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
-        cls.team_id = os.environ['GRIST_TEAM_SITE']
-        gristapi = api.GristApi()
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
+        gristapi = api.GristApi(config=TEST_CONFIGURATION)
         st, res = gristapi.list_workspaces(cls.team_id) # should work :)
         cls.workspace_id = res[0]['id']
         cls.workspace_name = res[0]['name']
@@ -190,11 +201,11 @@ class TestWorkspaces(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
     def test_add_delete_workspace(self):
-        self.g.reconfig({'GRIST_SAFEMODE': 'Y'})
+        self.g.update_config({'GRIST_SAFEMODE': 'Y'})
         name = str(time.time_ns())
         with self.assertRaises(api.GristApiInSafeMode):
             self.g.add_workspace(name, self.team_id)
-        self.g.reconfig({'GRIST_SAFEMODE': 'N'})
+        self.g.update_config({'GRIST_SAFEMODE': 'N'})
         name = str(time.time_ns())
         st, ws_id = self.g.add_workspace(name, self.team_id)
         self.assertEqual(st, 200)
@@ -230,7 +241,7 @@ class TestWorkspaces(BaseTestPyGrister):
 
     def test_workspace_cross_site(self):
         # see/add workspace in our site "from" another site
-        self.g.reconfig({'GRIST_TEAM_SITE': 'docs'})
+        self.g.update_config({'GRIST_TEAM_SITE': 'docs'})
         st, res = self.g.see_workspace(self.workspace_id)
         self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
@@ -243,7 +254,7 @@ class TestWorkspaces(BaseTestPyGrister):
 class TestDocs(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
-        cls.team_id = os.environ['GRIST_TEAM_SITE']
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
         cls.workspace_id, cls.workspace_name = _make_ws(cls.team_id)
 
     def test_create_delete_doc(self):
@@ -255,7 +266,7 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
         # shouldn't be possible in safemode
-        self.g.reconfig({'GRIST_SAFEMODE': 'Y'})
+        self.g.update_config({'GRIST_SAFEMODE': 'Y'})
         name = str(time.time_ns())
         with self.assertRaises(api.GristApiInSafeMode):
             self.g.add_doc(name, self.workspace_id)
@@ -263,7 +274,7 @@ class TestDocs(BaseTestPyGrister):
     @unittest.expectedFailure
     def test_create_delete_doc_cross_site(self):
         # fun fact: cross-site doc creation is allowed...
-        self.g.reconfig({'GRIST_TEAM_SITE': 'docs'})
+        self.g.update_config({'GRIST_TEAM_SITE': 'docs'})
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
         self.assertIsInstance(doc_id, str)
@@ -379,7 +390,7 @@ class TestRecordAccess(BaseTestPyGrister):
     # we test "/records", "/data" and "/sql" endpoints here
     @classmethod
     def setUpClass(cls):
-        cls.team_id = os.environ['GRIST_TEAM_SITE']
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
         ws_id, name = _make_ws(cls.team_id)
         cls.doc_id = _make_doc(ws_id)
         cols = [{'id': 'Astr', 'fields': {'label': 'Astr', 'type': 'Text'}},
@@ -387,7 +398,7 @@ class TestRecordAccess(BaseTestPyGrister):
                 {'id': 'Cint', 'fields': {'label': 'Cint', 'type': 'Int'}},
                 {'id': 'Dbol', 'fields': {'label': 'Dbol', 'type': 'Bool'}},]
         tables = [{'id': 'T'+name, 'columns': cols}]
-        gristapi = api.GristApi()
+        gristapi = api.GristApi(config=TEST_CONFIGURATION)
         st, res = gristapi.add_tables(tables, cls.doc_id, cls.team_id)
         cls.table_id = res[0]
         total_apicalls.append(gristapi.apicalls)
@@ -494,7 +505,7 @@ class TestRecordAccess(BaseTestPyGrister):
 class TestTables(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
-        cls.team_id = os.environ['GRIST_TEAM_SITE']
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
         ws_id, name = _make_ws(cls.team_id)
         cls.doc_id = _make_doc(ws_id)
 
@@ -537,7 +548,7 @@ class TestTables(BaseTestPyGrister):
 class TestCols(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
-        cls.team_id = os.environ['GRIST_TEAM_SITE']
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
         ws_id, name = _make_ws(cls.team_id)
         cls.doc_id = _make_doc(ws_id)
         cls.table_id = 'Table1' # we trust this to be always present in new docs
@@ -608,7 +619,7 @@ class TestCols(BaseTestPyGrister):
 class TestAttachments(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
-        cls.team_id = os.environ['GRIST_TEAM_SITE']
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
         ws_id, name = _make_ws(cls.team_id)
         cls.doc_id = _make_doc(ws_id)
 
@@ -653,7 +664,7 @@ class TestAttachments(BaseTestPyGrister):
 class TestWebhooks(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
-        cls.team_id = os.environ['GRIST_TEAM_SITE']
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
         ws_id, name = _make_ws(cls.team_id)
         cls.doc_id = _make_doc(ws_id)
         cls.table_id = 'Table1' # we trust this to be always present in new docs
@@ -663,9 +674,13 @@ class TestWebhooks(BaseTestPyGrister):
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
+    @unittest.skipIf(TEST_CONFIGURATION['GRIST_GRIST_SELF_MANAGED'] == 'Y')
     def test_add_update_delete_webhooks(self):
+        # with my basic self-managed setup, this will fail with an Http 403
+        # it's problably just a matter of proper configuration of the container...
         name = 'wh'+str(time.time_ns())
-        wh = {'fields': {'name': name, 'memo': 'memo!', 'url': 'https://example.com/',
+        wh = {'fields': {'name': name, 'memo': 'memo!', 
+              'url': 'https://www.example.com',
               'enabled': True, 'eventTypes': ['add'], 'isReadyColumn': None, 
               'tableId': 'Table1'}}
         st, res = self.g.add_webhooks(webhooks=[wh], doc_id=self.doc_id, 
