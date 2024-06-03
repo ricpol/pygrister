@@ -33,9 +33,8 @@ For now, you may install it directly from the GitHub repo::
 
     python -m pip install git+https://github.com/ricpol/pygrister
 
-You should read the docs first (for now, browse the files on this repository... 
-ReadTheDocs will come soon!), and then take a look at the test suite for 
-more usage examples. 
+You should `read the docs first <https://pygrister.readthedocs.io>`_, 
+and then take a look at the test suite for more usage examples. 
 
 Any feedback and contribution is *very welcome* at this stage! 
 

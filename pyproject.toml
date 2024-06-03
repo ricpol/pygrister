@@ -27,3 +27,4 @@ classifiers = [
 
 [project.urls]
 Repository = "https://github.com/ricpol/pygrister"
+Documentation = "https://pygrister.readthedocs.io"

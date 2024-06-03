@@ -128,20 +128,20 @@ Configuration keys.
 This is the content of the ``config.py`` file, listing all the config keys 
 currently defined, and their default values::
 
-{
-    'GRIST_API_KEY': '<your_api_key_here>',
-    'GRIST_SELF_MANAGED': 'N',
-    'GRIST_SELF_MANAGED_HOME': 'http://localhost:8484',
-    'GRIST_SELF_MANAGED_SINGLE_ORG': 'Y',
-    'GRIST_SERVER_PROTOCOL': 'https://',
-    'GRIST_API_SERVER': 'getgrist.com',
-    'GRIST_API_ROOT': 'api',
-    'GRIST_TEAM_SITE': 'docs',
-    'GRIST_WORKSPACE_ID': '<your_ws_id_here>',
-    'GRIST_DOC_ID': '<your_doc_id_here>',
-    'GRIST_RAISE_ERROR': 'Y',
-    'GRIST_SAFEMODE': 'N',
-}
+    {
+        'GRIST_API_KEY': '<your_api_key_here>',
+        'GRIST_SELF_MANAGED': 'N',
+        'GRIST_SELF_MANAGED_HOME': 'http://localhost:8484',
+        'GRIST_SELF_MANAGED_SINGLE_ORG': 'Y',
+        'GRIST_SERVER_PROTOCOL': 'https://',
+        'GRIST_API_SERVER': 'getgrist.com',
+        'GRIST_API_ROOT': 'api',
+        'GRIST_TEAM_SITE': 'docs',
+        'GRIST_WORKSPACE_ID': '<your_ws_id_here>',
+        'GRIST_DOC_ID': '<your_doc_id_here>',
+        'GRIST_RAISE_ERROR': 'Y',
+        'GRIST_SAFEMODE': 'N',
+    }
 
 **Please note**: configuration values *must* be non-empty strings. If you 
 don't need a config key, just leave the default value as it is: do not 
@@ -157,9 +157,9 @@ detailed separately below.
 ``GRIST_TEAM_SITE`` is your team ID. The ``docs`` default points to your 
 personal site (the "@my-name" one). 
 
-``GRIST_SERVER_PROTOCOL`` and ``GRIST_API_SERVER`` are the remaining components 
-of the Grist Api url: do not override the default values. Support for 
-self-hosting and custom urls is not yet available. 
+``GRIST_SERVER_PROTOCOL``, ``GRIST_API_SERVER`` and ``GRIST_API_ROOT`` 
+are the remaining components of the Grist Api url: do not override the 
+default values. 
 
 ``GRIST_WORKSPACE_ID`` is your workspace ID: in fact, very few APIs make use 
 of this value, and you may not need it at all. 
