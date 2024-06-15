@@ -4,5 +4,12 @@
 
     "GRIST_SELF_MANAGED": "N",
     "GRIST_SELF_MANAGED_HOME": "http://localhost:8484",
-    "GRIST_SELF_MANAGED_SINGLE_ORG": "Y"
+    "GRIST_SELF_MANAGED_SINGLE_ORG": "Y",
+
+
+    "note0": "---------------------------------------------------------------",
+    "note1": "this is the configuration setup for the test suite", 
+    "note2": "fill in the first 2 fields, then optionally change the other 3",
+    "note3": "this is the *only* way to supply configuration to the test suite",
+    "note4": "and no other configuration than this is needed"
 }

@@ -31,10 +31,10 @@ Basic usage goes as follows::
     cols = [{'id': 'age', 'fields': {'label':'age', 'type': 'Int'}}]
     status_code, response = grist.add_cols('Table1', cols) 
 
-You should read the documentation first, to learn about the basic Pygrister 
-concepts, patterns and configurations. However, the api call functions 
-themselves are not documented in Pygrister: see the 
-`Grist API reference documentation <https://support.getgrist.com/api/>`_ 
+You should `read the documentation <https://pygrister.readthedocs.io>`_ 
+first, to learn about the basic Pygrister concepts, patterns and configurations. 
+However, the api call functions themselves are not documented in Pygrister: 
+see the `Grist API reference documentation <https://support.getgrist.com/api/>`_ 
 for details about each api signature, and browse the Pygrister test suite 
 for more usage examples.
 
@@ -120,8 +120,6 @@ def check_safemode(funct):
 
 Apiresp = tuple[int, Any] #: the return type of all api call functions
 
-# TODO everywhere, construct query params so that api defauls are not included
-# in the url... problem is, params defaults are not well-documented
 
 class GristApi:
     def __init__(self, config: dict[str, str]|None = None):
@@ -228,8 +226,6 @@ class GristApi:
                            json=json) 
             self.ok = resp.ok
             self._save_request_data(resp)
-            # TODO the old grist_api.py went to great lengths to retry in case 
-            # of an SQLITE_BUSY error. Maybe this is best left to the caller?
             if self.raise_option:
                 resp.raise_for_status()
             return resp.status_code, resp.json()
@@ -247,11 +243,8 @@ class GristApi:
                                 f.write(chunk)
                 return resp.status_code, None
             else: # 'POST', upload mode
-                # TODO this is ugly... headers and the "upload" bit below  
+                # TODO headers and the "upload" bit below  
                 # are too coupled with the specific needs of upload_attachment;
-                # it *is* the only function that requires this code though!
-                # TODO Grist api doesn't support upload streaming, apparently?
-                # (i.e., the same as below but with "data={'upload': f}")
                 with open(filename, 'rb') as f:
                     resp = request(method, url, headers=headers, 
                                    files={'upload': f})
@@ -297,7 +290,7 @@ class GristApi:
         txt += f'->Config: {config2output(self._config)}'
         return txt
 
-    # TEAM SITES (organisations)  # always cross-site allowed, of course
+    # TEAM SITES (organisations)
     # ------------------------------------------------------------------
 
     def list_team_sites(self) -> Apiresp:
@@ -354,7 +347,7 @@ class GristApi:
         url = f'{self.server}/orgs/{team_id}/access'
         return self.apicall(url, 'PATCH', json=json)
 
-    # WORKSPACES   # cross-site access always allowed
+    # WORKSPACES
     # ------------------------------------------------------------------
 
     def list_workspaces(self, team_id: str = '') -> Apiresp:
@@ -403,7 +396,7 @@ class GristApi:
         
         If successful, response will be ``None``.
         """
-        # note: it's safer to ask for a workspace id here
+        # it's safer to ask for a workspace id here
         url = f'{self.server}/workspaces/{ws_id}'
         return self.apicall(url, method='DELETE')
 
@@ -477,7 +470,7 @@ class GristApi:
         
         If successful, response will be ``None``.
         """
-        # note: it's safer to ask for a doc id here
+        # it's safer to ask for a doc id here
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}'
         return self.apicall(url, method='DELETE')
@@ -541,8 +534,6 @@ class GristApi:
         
         If successful, response will be ``None``.
         """
-        #TODO: table_id param is actually undocumented and possibly a mistake
-        # it should be possible to get the entire db in excel format, via the api?
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/download/xlsx'
         headers = {'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
@@ -790,7 +781,7 @@ class GristApi:
         
         If successful, response will be ``None``.
         """
-        # note: it's safer to ask for a doc id here
+        # it's safer to ask for a doc id here
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns/{col_id}'
         return self.apicall(url, 'DELETE')
@@ -808,7 +799,7 @@ class GristApi:
         # unclear if deprecated... seems the only way to delete a row though
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/data/delete'
-        #TODO this is the *only* api endpoint where "json" is a list, not a dict
+        # this is the *only* api endpoint where "json" is a list, not a dict
         return self.apicall(url, 'POST', json=rows) # type: ignore
 
     # ATTACHMENTS
@@ -831,8 +822,6 @@ class GristApi:
         if filter:
             # Requests will *form*-encode the filter, Grist want it *url*-encoded
             # instead, so we need to skip Request and manually compose the url
-            # Note: filters here work only for attachment properties, 
-            # so they are not really useful I'm afraid
             params.update({'filter': modjson.dumps(filter)})
             encoded_params = urlencode(params, quote_via=quote)
             st, res = self.apicall(url+'?'+encoded_params)
@@ -956,10 +945,6 @@ class GristApi:
     # SQL
     # ------------------------------------------------------------------
  
-    # note: in the following "run_sql_*" APIs, Grist happily accepts how 
-    # Requests *form*-encodes the sql statement in the url... 
-    # compare and contrast: the filters in list_attachments and see_records
-
     def run_sql(self, sql: str, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/sql``.
         

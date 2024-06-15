@@ -21,6 +21,7 @@ directory as this file. Edit the already present json file as follows:
 - "GRIST_TEAM_SITE": your team site (you may ignore if running a mono-site Grist)
 - "GRIST_SELF_MANAGED": set to "Y" if you are running a self-managed Grist
 - "GRIST_SELF_MANAGED_HOME": the main url of your self-managed Grist
+- "GRIST_SELF_MANAGED_SINGLE_ORG": "Y" if you are running the mono-team flavour 
 Note: no other config key should be configured for the test suite. 
 
 The test suite will leave several objects (workspaces and docs) in your 
@@ -532,14 +533,13 @@ class TestTables(BaseTestPyGrister):
         self.assertEqual(st, 200)
         tables = [{'id': name, 'columns': 
                    [{'id': 'col1', 'fields': {'label': 'Col 1bis'}}]}]
-        # now, it *looks like* the same innocent payload as before, with 
+        # now, this *looks like* the same innocent payload as before, with 
         # only a minor edit... but this time, boom! the Grist api will go 
-        # full http400 with a cryptic message like 
+        # full http400 with a rather cryptic message like 
         # 'error': 'Invalid payload', 'details': 
         # {'userError': 'Error: body.tables[0] is not a RecordWithStringId; 
         #   body.tables[0].fields is missing'}
         # This will need a few more rounds of trial/error I'm afraid...
-        # of course none of this is actually documented
         st, res = self.g.update_tables(tables, self.doc_id, self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
@@ -654,7 +654,7 @@ class TestAttachments(BaseTestPyGrister):
                                            team_id=self.team_id)
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
-        # maybe id=1 is not the one we just uploaded... 
+        # note that id=1 could not be the one we just uploaded... 
         st, res = self.g.see_attachment(1, doc_id=self.doc_id, 
                                         team_id=self.team_id)
         self.assertIsInstance(res, dict)
