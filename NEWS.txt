@@ -1,6 +1,14 @@
 NEWS
 ====
 
+v0.4.0, 2024.06.15
+------------------
+
+- Pygrister is now on PyPI, and "officially" in beta status. New apis will 
+  be added, but the basic interface design should be pretty stable now
+- nothing changed, just a little code cleanup and a version bump to mark 
+  the PyPI launch
+
 v0.3.0, 2024.06.02
 ------------------
 

@@ -28,14 +28,30 @@ Basic usage goes as follows::
     cols = [{'id': 'age', 'fields': {'label':'age', 'type': 'Int'}}]
     status_code, response = grist.add_cols('Table1', cols) 
 
-Right now, Pygrister is in early alpha stage, not even published on PyPI. 
-For now, you may install it directly from the GitHub repo::
-
-    python -m pip install git+https://github.com/ricpol/pygrister
-
 You should `read the docs first <https://pygrister.readthedocs.io>`_, 
 and then take a look at the test suite for more usage examples. 
 
+Install.
+--------
+
+Right now, Pygrister is in beta stage, meaning that the overall interface 
+should be fairly stable but I still make no promises about further changes. 
+
+You can install Pygrister from PyPI::
+
+    python -m pip install pygrister
+
+What's next.
+------------
+
+- Add support for some other useful, *undocumented* Grist Apis; 
+- Add at least a basic type system for records;
+- Maybe write a few "macros/recipes" for common Grist tasks... 
+
 Any feedback and contribution is *very welcome* at this stage! 
 
-License: MIT (see ``LICENSE.rst``). Copyright 2024 Riccardo Polignieri
+License.
+--------
+
+Pygrister is released under the MIT license (see ``LICENSE.rst``). 
+Copyright 2024 Riccardo Polignieri

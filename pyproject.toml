@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "Pygrister"
-version = "0.1.0"
+version = "0.4.0"
 dependencies = ["requests>=2.31.0",]
 requires-python = ">= 3.9"
 authors = [{name = "Riccardo Polignieri"},]
@@ -13,7 +13,7 @@ readme = "readme.rst"
 license = {file = "LICENSE.txt"}
 keywords = ["Grist", "relational spreadsheet", "database", "API"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
   "Topic :: Software Development :: Libraries",
   "Topic :: Database",
@@ -27,4 +27,6 @@ classifiers = [
 
 [project.urls]
 Repository = "https://github.com/ricpol/pygrister"
+"Bug Tracker" = "https://github.com/ricpol/pygrister/issues"
+Changelog = "https://github.com/ricpol/pygrister/blob/main/NEWS.txt"
 Documentation = "https://pygrister.readthedocs.io"
