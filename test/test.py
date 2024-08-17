@@ -838,7 +838,7 @@ class TestWebhooks(BaseTestPyGrister):
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
-    @unittest.skipIf(TEST_CONFIGURATION['GRIST_GRIST_SELF_MANAGED'] == 'Y')
+    @unittest.skipIf(TEST_CONFIGURATION['GRIST_GRIST_SELF_MANAGED'] == 'Y', '')
     def test_add_update_delete_webhooks(self):
         # with my basic self-managed setup, this will fail with an Http 403
         # it's problably just a matter of proper configuration of the container...
