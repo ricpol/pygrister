@@ -1,6 +1,11 @@
 NEWS
 ====
 
+Bleeding edge: committed to the repo, not yet released on PyPI
+--------------------------------------------------------------
+
+- added a new type conversion system
+
 v0.4.0, 2024.06.15
 ------------------
 

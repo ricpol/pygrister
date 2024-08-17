@@ -14,9 +14,8 @@ the boring stuff every time. Apart from that and little else, Pygrister
 is rather low-level: it will call the api and retrieve the response "as is". 
 If the api call is malformed, you will simply receive a bad HTTP status code. 
 
-In addition, Pygrister will not attempt to convert sent and received data types: 
-a separate, high-level manager will one day be available for type conversion 
-and a slightly friendlier interface. 
+Pygrister will not attempt to convert sent and received data types: 
+however, it will execute custom converter functions, if provided.
 
 Basic usage goes as follows::
 
@@ -122,7 +121,9 @@ Apiresp = tuple[int, Any] #: the return type of all api call functions
 
 
 class GristApi:
-    def __init__(self, config: dict[str, str]|None = None):
+    def __init__(self, config: dict[str, str]|None = None,
+                 in_converter: dict|None = None, 
+                 out_converter: dict|None = None):
         self.reconfig(config)
         self.apicalls: int = 0            #: total number of API calls
         self.ok: bool = True              #: if an HTTPError occurred
@@ -134,6 +135,12 @@ class GristApi:
         self.resp_code: str = ''          #: last response status code
         self.resp_reason: str = ''        #: last response status reason
         self.resp_headers: dict = dict()  #: last reponse headers
+        self.in_converter = {}            #: converters for input data
+        self.out_converter = {}           #: converters for output data
+        if in_converter:
+            self.in_converter = in_converter
+        if out_converter:
+            self.out_converter = out_converter
 
     def reconfig(self, config: dict[str, str]|None = None) -> None:
         """Reload the configuration options. 
@@ -575,13 +582,41 @@ class GristApi:
     # RECORDS
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _apply_out_converter(records: list[dict], converter: dict):
+        for rec in records:
+            for k, v in rec.items():
+                try:
+                    rec[k] = converter[k](v)
+                except KeyError:
+                    pass
+                except (TypeError, ValueError): # if converter fails, we return...
+                    if v is not None:           # ...either None...
+                        rec[k] = str(v)         # ...or a string
+        return records
+
+    @staticmethod
+    def _apply_in_converter(records: list[dict], converter: dict, 
+                            is_add_update: bool = False):
+        # call with "is_add_update=True" only from add_update_records
+        # it's a hack to compensate for the different record schema
+        for rec in records:
+            the_record = rec if not is_add_update else rec['fields']
+            for k, v in the_record.items():
+                try:  # note: we prefer not to catch Type/ValueErrors here
+                    the_record[k] = converter[k](v)
+                except KeyError:
+                    pass
+        return records
+
     def list_records(self, table_id: str, filter: dict|None = None, 
                      sort: str = '', limit: int = 0, hidden: bool = False, 
                      doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/tables/{tableId}/records``.
         
-        If successful, response will be a list of "Pygrister records with id" 
-        (see docs). 
+        If a converter is found for this table, data conversion will be 
+        attempted. If successful, response will be a list of "Pygrister 
+        records with id" (see docs). 
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
@@ -597,9 +632,14 @@ class GristApi:
             st, res = self.apicall(url, headers=headers, 
                                    params={'hidden': hidden})
         try:
-            return st, [{'id': r['id']}|r['fields'] for r in res['records']]
-        except KeyError:
+            records = [{'id': r['id']}|r['fields'] for r in res['records']]
+        except KeyError: # an error occurred
             return st, res
+        try:
+            converter = self.out_converter[table_id]
+        except KeyError: # no converter for this table
+            return st, records
+        return st, self._apply_out_converter(records, converter)
 
     @check_safemode
     def add_records(self, table_id: str, records: list[dict], 
@@ -608,8 +648,13 @@ class GristApi:
         """Implement POST ``/docs/{docId}/tables/{tableId}/records``.
         
         ``records``: a list of "Pygrister records without id" (see docs).
-        If successful, response will be a ``list[int]`` of added record ids.
+        If a converter is found for this table, data conversion will be 
+        attempted. If successful, response will be a ``list[int]`` of 
+        added record ids.
         """
+        converter = self.in_converter.get(table_id, None)
+        if converter is not None: 
+            records = self._apply_in_converter(records, converter)
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
         params = {'noparse': noparse}
@@ -627,8 +672,12 @@ class GristApi:
         """Implement PATCH ``/docs/{docId}/tables/{tableId}/records``.
 
         ``records``: a list of "Pygrister records with id" (see docs).
-        If successful, response will be ``None``.
+        If a converter is found for this table, data conversion will be 
+        attempted. If successful, response will be ``None``.
         """
+        converter = self.in_converter.get(table_id, None)
+        if converter is not None: 
+            records = self._apply_in_converter(records, converter)
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
         params = {'noparse': noparse}
@@ -644,8 +693,12 @@ class GristApi:
                            doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement PUT ``/docs/{docId}/tables/{tableId}/records``.
         
-        If successful, response will be ``None``.
+        If a converter is found for this table, data conversion will be 
+        attempted. If successful, response will be ``None``.
         """
+        converter = self.in_converter.get(table_id, None)
+        if converter is not None: 
+            records = self._apply_in_converter(records, converter, True)
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
         params = {'noparse': noparse, 'onmany': onmany, 'noadd': noadd, 
@@ -948,30 +1001,43 @@ class GristApi:
     def run_sql(self, sql: str, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/sql``.
         
-        If successful, response will be a list of "Pygrister records" (see docs) 
-        with or without id, depending on the query. 
+        If a converter named "sql" is found, data conversion will be attempted. 
+        If successful, response will be a list of "Pygrister records" 
+        (see docs) with or without id, depending on the query.  
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/sql'
         params = {'q': sql}
         st, res = self.apicall(url, params=params)
         try:
-            return st, [r['fields'] for r in res['records']]
+            records = [r['fields'] for r in res['records']]
         except KeyError:
             return st, res
+        try:
+            converter = self.out_converter['sql']
+        except KeyError: # no converter for this queryset
+            return st, records
+        return st, self._apply_out_converter(records, converter)
 
     def run_sql_with_args(self, sql: str, qargs: list, timeout: int = 1000,
                           doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/sql``.
         
-        If successful, response will be a list of "Pygrister records" (see docs) 
-        with or without id, depending on the query. 
+        If a converter named "sql" is found, data conversion will be attempted. 
+        If successful, response will be a list of "Pygrister records" 
+        (see docs) with or without id, depending on the query. 
         """
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/sql'
         json = {'sql': sql, 'args': qargs, 'timeout': timeout}
         st, res = self.apicall(url, method='POST', json=json)
         try:
-            return st, [r['fields'] for r in res['records']]
+            records = [r['fields'] for r in res['records']]
         except KeyError:
             return st, res
+        try:
+            converter = self.out_converter['sql']
+        except KeyError: # no converter for this queryset
+            return st, records
+        return st, self._apply_out_converter(records, converter)
+

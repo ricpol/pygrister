@@ -51,6 +51,7 @@ in normal usage it's just ``<grist>.add_records(<table>, records)``.
 
 import os, os.path
 import time
+from datetime import datetime
 import json
 import unittest
 from requests import HTTPError
@@ -388,7 +389,7 @@ class TestDocs(BaseTestPyGrister):
 
 
 class TestRecordAccess(BaseTestPyGrister): 
-    # we test "/records", "/data" and "/sql" endpoints here
+    # we test "/records", "/data" and "/sql" endpoints here (no converters)
     @classmethod
     def setUpClass(cls):
         cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
@@ -501,6 +502,169 @@ class TestRecordAccess(BaseTestPyGrister):
                                            team_id=self.team_id)
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
+
+
+class TestConverters(BaseTestPyGrister): 
+    # we test converters for "/records" and "/sql" endpoints here
+    @classmethod
+    def setUpClass(cls):
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
+        ws_id, name = _make_ws(cls.team_id)
+        cls.doc_id = _make_doc(ws_id)
+        cols = [{'id': 'Test', 'fields': {'label': 'Test', 'type': 'Text'}},
+                {'id': 'Sort', 'fields': {'label': 'Sort', 'type': 'Text'}},
+                {'id': 'Bnum', 'fields': {'label': 'Bnum', 'type': 'Numeric'}},
+                {'id': 'Cint', 'fields': {'label': 'Cint', 'type': 'Int'}},
+                {'id': 'Dbol', 'fields': {'label': 'Dbol', 'type': 'Bool'}},
+                {'id': 'Edate', 'fields': {'label': 'Edate', 'type': 'Date'}},]
+        tables = [{'id': 'T'+name, 'columns': cols}]
+        gristapi = api.GristApi(config=TEST_CONFIGURATION)
+        st, res = gristapi.add_tables(tables, cls.doc_id, cls.team_id)
+        cls.table_id = res[0]
+        total_apicalls.append(gristapi.apicalls)
+
+    def test_list_records(self):
+        records = [{'Test': 'list_records', 'Sort': 'a', 
+                    'Bnum': 1.1, 'Edate': 1602280800},
+                   {'Test': 'list_records', 'Sort': 'b', 
+                    'Bnum': 2, 'Edate': None}, 
+                   {'Test': 'list_records', 'Sort': 'c', 
+                    'Bnum': 'hello', 'Edate': 'hello'},]
+        st, res = self.g.add_records(self.table_id, records, 
+                                     doc_id=self.doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        # first we try without converters...
+        st, res = self.g.list_records(self.table_id, 
+                                      filter={'Test': ['list_records']}, sort='Sort',
+                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        self.assertEqual(res[0]['Bnum'], 1.1)
+        self.assertEqual(res[1]['Bnum'], 2)
+        self.assertEqual(res[2]['Bnum'], 'hello')
+        self.assertEqual(res[0]['Edate'], 1602280800)
+        self.assertEqual(res[1]['Edate'], None)
+        self.assertEqual(res[2]['Edate'], 'hello')
+        # now let's try converters:
+        conv = {self.table_id: 
+                    {'Bnum': lambda i: float(i),
+                     'Edate': lambda i: datetime.fromtimestamp(i),}  # (1)
+                }
+        self.g.out_converter = conv
+        st, res = self.g.list_records(self.table_id, 
+                                      filter={'Test': ['list_records']}, sort='Sort',
+                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        self.assertEqual(res[0]['Bnum'], 1.1)
+        self.assertEqual(res[1]['Bnum'], 2.0)
+        self.assertEqual(res[2]['Bnum'], 'hello')
+        self.assertEqual(res[0]['Edate'], datetime(2020, 10, 10))
+        self.assertEqual(res[1]['Edate'], None)
+        self.assertEqual(res[2]['Edate'], 'hello')
+
+        # (1) note: this works here, but it's very naive: write timezone-aware 
+        # converters in your real code! The Grist Api will silently compensate 
+        # for your document (local) timezone when inserting/retrieving dates, 
+        # so what ends up stored in the database will be different from the naive 
+        # date that you have passed to the Api. For instance, at the time of this 
+        # writing my Grist document was set at UTC+2, so while I passed 
+        # timestamp "1602280800", the number stored in the database was 
+        # "1602201600" (2 hours earlier) and, when I checked with the Grist GUI, 
+        # the date diplayed was indeed "2020-10-09" instead of "2020-10-10" 
+        # as I intended. 
+        # See https://support.getgrist.com/dates/#time-zones and 
+        # https://xkcd.com/1883/
+
+    def test_add_records(self):
+        conv = {self.table_id: 
+                    {'Bnum': lambda i: float(i),
+                     'Edate': lambda i: int(datetime.timestamp(i)),}  # (1) above
+                }
+        self.g.in_converter = conv
+        # we add records with a converter
+        records = [{'Test': 'add_records', 'Sort': 'a', 
+                    'Bnum': 1.1, 'Edate': datetime(2020, 10, 10)},
+                   {'Test': 'add_records', 'Sort': 'b', 
+                    'Bnum': '2', 'Edate': datetime(2020, 10, 10)},]
+        st, res = self.g.add_records(self.table_id, records, 
+                                     doc_id=self.doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        # now we retrieve them without any "out" converter set
+        st, res = self.g.list_records(self.table_id, 
+                                      filter={'Test': ['add_records']}, sort='Sort',
+                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        self.assertEqual(res[0]['Bnum'], 1.1)
+        self.assertEqual(res[1]['Bnum'], 2.0)
+        self.assertEqual(res[1]['Edate'], 1602280800)
+
+    def test_add_records_weak_converter(self):
+        # note: Pygrister will fix Value/TypeErrors for you for "outgoing"
+        # converters only (ie, when retrieving data), 
+        # but NOT for "ingoing" converters (when uploading data)
+        conv = {self.table_id: {'Bnum': lambda i: float(i)}}
+        self.g.in_converter = conv
+        # this is a "weak" converter that ignores possible errors
+        with self.assertRaises(ValueError):
+            st, res = self.g.add_records(self.table_id, [{'Bnum': 'hello'}], 
+                                         doc_id=self.doc_id, team_id=self.team_id)
+        with self.assertRaises(TypeError):
+            st, res = self.g.add_records(self.table_id, [{'Bnum': None}], 
+                                         doc_id=self.doc_id, team_id=self.team_id)
+
+    def test_add_update_records(self):
+        records = [{'Test': 'add_update', 'Sort': 'to_update_a', 'Bnum': 1.1},
+                   {'Test': 'add_update', 'Sort': 'to_update_b', 'Bnum': 2}]
+        st, res = self.g.add_records(self.table_id, records, 
+                                     doc_id=self.doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        # let's add a converter...
+        conv = {self.table_id: 
+                    {'Bnum': lambda i: float(i),
+                     'Edate': lambda i: int(datetime.timestamp(i)),} 
+                }
+        self.g.in_converter = conv
+        records = [{'require': {'Sort': 'to_update_a'}, 
+                    'fields': {'Bnum': '5'}}, 
+                   {'require': {'Sort': 'to_update_b'}, 
+                    'fields': {'Edate': datetime(2020, 10, 10)}},]
+        st, res = self.g.add_update_records(self.table_id, 
+                        records, doc_id=self.doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        # now let's retrieve the records without a converter
+        st, res = self.g.list_records(self.table_id, 
+                                      filter={'Test': ['add_update']}, sort='Sort',
+                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        self.assertEqual(res[0]['Bnum'], 5.0)
+        self.assertEqual(res[1]['Edate'], 1602280800)
+
+    def test_sql(self):
+        records = [{'Test': 'test_sql', 'Sort': 'a', 
+                    'Bnum': 1.1, 'Edate': 1602280800},
+                   {'Test': 'test_sql', 'Sort': 'b', 
+                    'Bnum': 2, 'Edate': None}, 
+                   {'Test': 'test_sql', 'Sort': 'c', 
+                    'Bnum': 'hello', 'Edate': 'hello'},]
+        st, res = self.g.add_records(self.table_id, records, 
+                                     doc_id=self.doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        # now we add an "out" converter:
+        conv = {'sql': 
+                    {'Bnum': lambda i: float(i),
+                     'Edate': lambda i: datetime.fromtimestamp(i),}
+                }
+        self.g.out_converter = conv
+        sql = f'select * from {self.table_id} where Test=? order by Sort' 
+        qargs = ['test_sql']
+        st, res = self.g.run_sql_with_args(sql, qargs, doc_id=self.doc_id, 
+                                           team_id=self.team_id)
+        self.assertEqual(st, 200)
+        self.assertEqual(res[0]['Bnum'], 1.1)
+        self.assertEqual(res[1]['Bnum'], 2.0)
+        self.assertEqual(res[2]['Bnum'], 'hello')
+        self.assertEqual(res[0]['Edate'], datetime(2020, 10, 10))
+        self.assertEqual(res[1]['Edate'], None)
+        self.assertEqual(res[2]['Edate'], 'hello')
 
 
 class TestTables(BaseTestPyGrister):

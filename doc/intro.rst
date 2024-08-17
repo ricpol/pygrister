@@ -15,8 +15,7 @@ is rather low-level: usually, it will call the api and retrieve the response
 If the api call is malformed, you will simply receive a bad HTTP status code. 
 
 In addition, Pygrister will not attempt to convert sent and received data types: 
-a separate, high-level manager will one day be available for type conversion 
-and a slightly friendlier interface. 
+however, it will execute custom converter functions, if provided.
 
 This document covers the basic Pygrister concepts, patterns and configurations. 
 However, the api call functions themselves are not documented in Pygrister: 

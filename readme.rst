@@ -41,11 +41,16 @@ You can install Pygrister from PyPI::
 
     python -m pip install pygrister
 
+Note that this repo may have recent features not yet released on PyPI: 
+see ``NEWS.txt`` and/or the commit history. To try the "bleeding edge" 
+from GitHub::
+
+    python -m pip install git+https://github.com/ricpol/pygrister
+
 What's next.
 ------------
 
 - Add support for some other useful, *undocumented* Grist Apis; 
-- Add at least a basic type system for records;
 - Maybe write a few "macros/recipes" for common Grist tasks... 
 
 Any feedback and contribution is *very welcome* at this stage! 

@@ -6,5 +6,6 @@ Pygrister docs.
 
     intro
     conf
+    types
     misc
     api_doc
