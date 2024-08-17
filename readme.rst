@@ -31,6 +31,17 @@ Basic usage goes as follows::
 You should `read the docs first <https://pygrister.readthedocs.io>`_, 
 and then take a look at the test suite for more usage examples. 
 
+Python version required.
+------------------------
+
+Pygrister will work with any Python>=3.9. 
+
+Note that Grist itself may have 
+`stricter Python requirements <https://support.getgrist.com/python/#supported-python-versions>`_ 
+but don't mix things up: the Grist's Python lives on the server, supporting 
+a Grist instance. You will likely run Pygrister from a client instead, with 
+your Python of choice. 
+
 Install.
 --------
 

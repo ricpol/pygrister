@@ -17,12 +17,12 @@ have those values already stored in the configuration, so it's just a matter
 of calling ::
 
     grist = GristApi()
-    grist.see_records('Table1')
+    grist.list_records('Table1')
 
 However, if you need to specify a different team/document, Pygrister 
 allows you this too::
 
-    grist.see_records('Table1', doc_id='...', team_id='...')
+    grist.list_records('Table1', doc_id='...', team_id='...')
 
 
 Where configuration is stored.
@@ -81,13 +81,13 @@ This will affect all the API calls from now on.
 Finally, specific API call functions may provide optional parameters to 
 temporarily override the configuration. For instance, this ::
 
-    st_code, res = grist.see_records('mytable')
+    st_code, res = grist.list_records('mytable')
 
 will fetch records from a table in your current working document (as per config). 
 If you need to quickly pull data from another document just once, there's no 
 need to change your configuration: a simple ::
 
-    st_code, res = grist.see_records('another_table', doc_id='......')
+    st_code, res = grist.list_records('another_table', doc_id='......')
 
 will do the trick. 
 
