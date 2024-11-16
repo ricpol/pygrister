@@ -4,6 +4,8 @@ NEWS
 Bleeding edge: committed to the repo, not yet released on PyPI
 --------------------------------------------------------------
 
+- it is now possible to pass additional parameters to the Requests call 
+  (fixes issue #2)
 - added a new type conversion system
 
 v0.4.0, 2024.06.15

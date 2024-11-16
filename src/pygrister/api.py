@@ -123,7 +123,8 @@ Apiresp = tuple[int, Any] #: the return type of all api call functions
 class GristApi:
     def __init__(self, config: dict[str, str]|None = None,
                  in_converter: dict|None = None, 
-                 out_converter: dict|None = None):
+                 out_converter: dict|None = None, 
+                 request_options: dict|None = None):
         self.reconfig(config)
         self.apicalls: int = 0            #: total number of API calls
         self.ok: bool = True              #: if an HTTPError occurred
@@ -137,10 +138,13 @@ class GristApi:
         self.resp_headers: dict = dict()  #: last reponse headers
         self.in_converter = {}            #: converters for input data
         self.out_converter = {}           #: converters for output data
+        self.request_options = {}         #: other options to pass to request
         if in_converter:
             self.in_converter = in_converter
         if out_converter:
             self.out_converter = out_converter
+        if request_options:
+            self.request_options = request_options
 
     def reconfig(self, config: dict[str, str]|None = None) -> None:
         """Reload the configuration options. 
@@ -230,7 +234,7 @@ class GristApi:
 
         if not filename:  # ordinary request
             resp = request(method, url, headers=headers, params=params, 
-                           json=json) 
+                           json=json, **self.request_options) 
             self.ok = resp.ok
             self._save_request_data(resp)
             if self.raise_option:
@@ -239,7 +243,7 @@ class GristApi:
         else:
             if method == 'GET': # download mode
                 with request(method, url, headers=headers, params=params, 
-                             stream=True) as resp:
+                             stream=True, **self.request_options) as resp:
                     self.ok = resp.ok
                     self._save_request_data(resp)
                     if self.raise_option:
@@ -254,7 +258,7 @@ class GristApi:
                 # are too coupled with the specific needs of upload_attachment;
                 with open(filename, 'rb') as f:
                     resp = request(method, url, headers=headers, 
-                                   files={'upload': f})
+                                   files={'upload': f}, **self.request_options)
                 self.ok = resp.ok
                 self._save_request_data(resp)
                 if self.raise_option:

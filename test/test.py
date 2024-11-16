@@ -54,7 +54,7 @@ import time
 from datetime import datetime
 import json
 import unittest
-from requests import HTTPError
+from requests import HTTPError, ConnectTimeout
 
 from pygrister import api
 
@@ -123,7 +123,7 @@ class TestVarious(BaseTestPyGrister):
         self.assertFalse(self.g.ok)
         st, res = self.g.see_team()
         self.assertTrue(self.g.ok)
-    
+
     def test_reconfig(self):
         self.assertEqual(self.g._config['GRIST_RAISE_ERROR'], 'Y')
         self.assertEqual(self.g._config['GRIST_SAFEMODE'], 'N')
@@ -138,6 +138,17 @@ class TestVarious(BaseTestPyGrister):
         self.g.reconfig({'GRIST_RAISE_ERROR': 'Y'})
         self.assertEqual(self.g._config['GRIST_RAISE_ERROR'], 'Y')
         self.assertEqual(self.g._config['GRIST_SAFEMODE'], 'N')
+
+    def test_request_options(self):
+        # as an example of extra-options, we test a timeout limit
+        # let's make it so the server is 'http://10.255.255.1'
+        self.g.update_config({'GRIST_SERVER_PROTOCOL': 'http://', 
+                              'GRIST_TEAM_SITE': '10', 
+                              'GRIST_API_SERVER': '255.255.1'})
+        # without this, test will take forever, then fail with ConnectionError
+        self.g.request_options = {'timeout': 1}
+        with self.assertRaises(ConnectTimeout):
+            st, res = self.g.see_team()
 
 
 class TestTeamSites(BaseTestPyGrister):
@@ -180,7 +191,6 @@ class TestTeamSites(BaseTestPyGrister):
         st, res = self.g.update_team_users(users, self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
-
 
 class TestWorkspaces(BaseTestPyGrister):
     @classmethod
@@ -251,7 +261,6 @@ class TestWorkspaces(BaseTestPyGrister):
         st, res = self.g.add_workspace(name, self.team_id)
         self.assertIsInstance(res, int)
         self.assertEqual(st, 200)
-
 
 class TestDocs(BaseTestPyGrister):
     @classmethod
@@ -387,7 +396,6 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
 
-
 class TestRecordAccess(BaseTestPyGrister): 
     # we test "/records", "/data" and "/sql" endpoints here (no converters)
     @classmethod
@@ -502,7 +510,6 @@ class TestRecordAccess(BaseTestPyGrister):
                                            team_id=self.team_id)
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
-
 
 class TestConverters(BaseTestPyGrister): 
     # we test converters for "/records" and "/sql" endpoints here
@@ -666,7 +673,6 @@ class TestConverters(BaseTestPyGrister):
         self.assertEqual(res[1]['Edate'], None)
         self.assertEqual(res[2]['Edate'], 'hello')
 
-
 class TestTables(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
@@ -707,7 +713,6 @@ class TestTables(BaseTestPyGrister):
         st, res = self.g.update_tables(tables, self.doc_id, self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
-
 
 class TestCols(BaseTestPyGrister):
     @classmethod
@@ -779,7 +784,6 @@ class TestCols(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
 
-
 class TestAttachments(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
@@ -823,7 +827,6 @@ class TestAttachments(BaseTestPyGrister):
                                         team_id=self.team_id)
         self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
-
 
 class TestWebhooks(BaseTestPyGrister):
     @classmethod

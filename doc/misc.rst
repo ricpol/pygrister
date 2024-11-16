@@ -104,3 +104,20 @@ inspecting the status code, you may then write something like ::
     st_code, res = grist.list_records('mytable')
     if grist.ok:  # equivalent to "if st_code < 300"
         ...
+
+
+Additional parameters for the request.
+--------------------------------------
+
+You may pass optional parameters, not otherwise used by Pygrister, to the underlying 
+`Requests call <https://requests.readthedocs.io/en/latest/api/#requests.request>`_. 
+Simply pass a ``request_options`` parameter to the ``GristApi`` constructor, ::
+
+    grist = GristApi(request_options={'timeout': 5})
+
+or modify the property at runtime::
+
+    grist.request_options = {'timeout': 5}
+
+The ``request_options`` will then be injected into all subsequent Pygrister api 
+calls. The code above, for example, will set a timeout limit from now on. 
