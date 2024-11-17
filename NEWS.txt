@@ -7,6 +7,21 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 - it is now possible to pass additional parameters to the Requests call 
   (fixes issue #2)
 - added a new type conversion system
+- fixes for Grist api changes:
+  Grist made (undocumented!) changes in the return value of a few Apis. 
+  We opted to maintain the old returns, but now you need to *upgrade* 
+  Pygrister in order to keep things as before!
+  * DELETE docs/<docid> - used to return None, now returns <docid>
+    Pygrister's "delete_doc" will return None as before
+  * PATCH docs/<docid> - used to return None, now returns <docid>
+    Pygrister's "update_doc" will return None as before
+  * PATCH docs/<docid>/move - used to return None, now returns <docid>
+    Pygrister's "move_doc" will return None as before
+  * DELETE workspaces/<wsid> - used to return None, now returns <wsid>
+    Pygrister's "delete_workspace" will return None as before
+  * PATCH workspaces/<wsid> - used to return None, now returns <wsid>
+    Pygrister's "update_workspace" will return None as before
+  As usual, the original Grist response is always available as "resp_content"
 
 v0.4.0, 2024.06.15
 ------------------

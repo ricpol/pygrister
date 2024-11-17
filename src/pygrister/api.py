@@ -399,7 +399,10 @@ class GristApi:
         ws_id = ws_id or int(self._config['GRIST_WORKSPACE_ID'])
         url = f'{self.server}/workspaces/{ws_id}'
         json = {'name': new_name}
-        return self.apicall(url, method='PATCH', json=json)
+        st, res = self.apicall(url, method='PATCH', json=json)
+        if res == ws_id:
+            res = None
+        return st, res
 
     @check_safemode
     def delete_workspace(self, ws_id: int = 0) -> Apiresp:
@@ -409,7 +412,10 @@ class GristApi:
         """
         # it's safer to ask for a workspace id here
         url = f'{self.server}/workspaces/{ws_id}'
-        return self.apicall(url, method='DELETE')
+        st, res = self.apicall(url, method='DELETE')
+        if res == ws_id:
+            res = None
+        return st, res
 
     def list_workspace_users(self, ws_id: int = 0) -> Apiresp:
         """Implement GET ``/workspaces/{workspaceId}/access``.
@@ -473,7 +479,10 @@ class GristApi:
         json = {'isPinned': pinned}
         if new_name:
             json.update({'name': new_name}) # type:ignore
-        return self.apicall(url, method='PATCH', json=json)
+        st, res = self.apicall(url, method='PATCH', json=json)
+        if res == doc_id:
+            res = None
+        return st, res
 
     @check_safemode
     def delete_doc(self, doc_id: str, team_id: str = '') -> Apiresp:
@@ -484,7 +493,10 @@ class GristApi:
         # it's safer to ask for a doc id here
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}'
-        return self.apicall(url, method='DELETE')
+        st, res = self.apicall(url, method='DELETE')
+        if res == doc_id:
+            res = None
+        return st, res
         
     @check_safemode
     def move_doc(self, ws_id: int, doc_id: str = '', 
@@ -496,7 +508,10 @@ class GristApi:
         doc_id, server = self._select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/move'
         json = {'workspace': ws_id}
-        return self.apicall(url, method='PATCH', json=json)
+        st, res = self.apicall(url, method='PATCH', json=json)
+        if res == doc_id:
+            res = None
+        return st, res
 
     def list_doc_users(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/access``.
