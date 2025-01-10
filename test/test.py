@@ -150,6 +150,35 @@ class TestVarious(BaseTestPyGrister):
         with self.assertRaises(ConnectTimeout):
             st, res = self.g.see_team()
 
+    def test_request_session(self):
+        self.g.open_session()
+        # simple GET api
+        st, res = self.g.see_team()
+        self.assertEqual(st, 200)
+        name = str(time.time_ns())
+        # POST
+        st, ws_id = self.g.add_workspace(name, self.team_id)
+        self.assertEqual(st, 200)
+        self.assertIn('Cookie', self.g.req_headers) # the session thing is working
+        name = str(time.time_ns())
+        st, doc_id = self.g.add_doc(name, ws_id=ws_id)
+        self.assertEqual(st, 200)
+        # GET in download mode
+        st, res = self.g.download_csv(name+'.csv', table_id='Table1',
+                                      doc_id=doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        # POST in upload mode
+        f = os.path.join(HERE, 'imgtest.jpg')
+        st, res = self.g.upload_attachment(f, doc_id=doc_id, team_id=self.team_id)
+        self.assertEqual(st, 200)
+        # PATCH
+        name = str(time.time_ns())
+        st, res = self.g.update_workspace(name, ws_id=ws_id)
+        self.assertEqual(st, 200)
+        # DELETE
+        st, res = self.g.delete_doc(doc_id)
+        self.assertEqual(st, 200)
+        self.g.close_session()
 
 class TestTeamSites(BaseTestPyGrister):
     @classmethod

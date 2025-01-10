@@ -47,7 +47,7 @@ from urllib.parse import urlencode, quote
 from pprint import pformat
 from typing import Any
 
-from requests import request, JSONDecodeError
+from requests import request, Session, JSONDecodeError
 
 from pygrister.config import PYGRISTER_CONFIG
 
@@ -136,6 +136,7 @@ class GristApi:
         self.resp_code: str = ''          #: last response status code
         self.resp_reason: str = ''        #: last response status reason
         self.resp_headers: dict = dict()  #: last reponse headers
+        self.session = None               #: Requests session object, or None
         self.in_converter = {}            #: converters for input data
         self.out_converter = {}           #: converters for output data
         self.request_options = {}         #: other options to pass to request
@@ -222,10 +223,21 @@ class GristApi:
             server = self.make_server(team_name=team_id)
         return doc, server
 
+    def open_session(self):
+        if self.session:
+            self.session.close()
+        self.session = Session()
+    
+    def close_session(self):
+        if self.session:
+            self.session.close()
+        self.session = None
+    
     def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
                 params: dict|None = None, json: dict|None = None, 
                 filename: str = '') -> Apiresp:
         self.apicalls += 1
+        call = self.session.request if self.session else request
         if headers is None:
             headers = {'Content-Type': 'application/json',
                        'Accept': 'application/json'}
@@ -233,8 +245,8 @@ class GristApi:
             {'Authorization': f'Bearer {self._config["GRIST_API_KEY"]}'})
 
         if not filename:  # ordinary request
-            resp = request(method, url, headers=headers, params=params, 
-                           json=json, **self.request_options) 
+            resp = call(method, url, headers=headers, params=params, 
+                        json=json, **self.request_options) 
             self.ok = resp.ok
             self._save_request_data(resp)
             if self.raise_option:
@@ -242,8 +254,8 @@ class GristApi:
             return resp.status_code, resp.json()
         else:
             if method == 'GET': # download mode
-                with request(method, url, headers=headers, params=params, 
-                             stream=True, **self.request_options) as resp:
+                with call(method, url, headers=headers, params=params, 
+                          stream=True, **self.request_options) as resp:
                     self.ok = resp.ok
                     self._save_request_data(resp)
                     if self.raise_option:
@@ -257,8 +269,8 @@ class GristApi:
                 # TODO headers and the "upload" bit below  
                 # are too coupled with the specific needs of upload_attachment;
                 with open(filename, 'rb') as f:
-                    resp = request(method, url, headers=headers, 
-                                   files={'upload': f}, **self.request_options)
+                    resp = call(method, url, headers=headers, 
+                                files={'upload': f}, **self.request_options)
                 self.ok = resp.ok
                 self._save_request_data(resp)
                 if self.raise_option:

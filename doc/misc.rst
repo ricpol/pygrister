@@ -121,3 +121,36 @@ or modify the property at runtime::
 
 The ``request_options`` will then be injected into all subsequent Pygrister api 
 calls. The code above, for example, will set a timeout limit from now on. 
+
+
+Using Requests sessions in Pygrister.
+-------------------------------------
+
+Requests supports using 
+`sessions <https://requests.readthedocs.io/en/latest/user/advanced/#session-objects>`_ 
+to persist connection data, and so does Pygrister. 
+
+Working with sessions is straightforward::
+
+    >>> grist = GristApi({...})
+    >>> grist.open_session()  # open a new session
+    >>> grist.session         # this is how you know you are in a session
+    <requests.sessions.Session object at ...>
+    >>> # ...Pygrister api calls are now "inside" the session...
+    >>> grist.close_session() # close the session
+    >>> grist.session         # "session" attribute is now None
+
+As long as you are in a session, subsequent api calls will re-use the same 
+underlying connection, resulting in much faster interaction. From the 
+second api call on, if you inspect the request headers (``grist.req_headers``), 
+you will notice a new ``'Cookie'`` element added by Requests to persist the 
+connection. 
+
+In Pygrister, session have no other use than for boosting performance, and they 
+are transparent to the rest of the api. Inside a session, you will use the 
+``GristApi`` class just the same: start a session, and forget about it. 
+
+You may use sessions for performance, when you need to make several api calls 
+in a row. However, keep in mind that Requests (and Pygrister) sessions are 
+supplied "as it is" - your server may be configured to expire a session after 
+a while, for instance. 
