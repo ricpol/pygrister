@@ -70,4 +70,4 @@ License.
 --------
 
 Pygrister is released under the MIT license (see ``LICENSE.rst``). 
-Copyright 2024 Riccardo Polignieri
+Copyright 2024-2025 Riccardo Polignieri
