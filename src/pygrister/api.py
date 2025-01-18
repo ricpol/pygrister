@@ -313,6 +313,29 @@ class GristApi:
         txt += f'->Config: {config2output(self._config)}'
         return txt
 
+    # USERS
+    # ------------------------------------------------------------------
+
+    @check_safemode
+    def delete_user(self, user: str, doc_id: str = '', 
+                    team_id: str = '') -> Apiresp:
+        """Implement DELETE ``/users/{userId}``.
+
+        Note: since this is the only /users endpoint implemented by Grist 
+        right now, and since it is of little help (you can only delete 
+        your own account), we choose not to implement this one, and leave 
+        it here as a stub. 
+        """
+        raise GristApiNotImplemented
+        # the following is a stub implementation:
+        # doc_id, server = self._select_params(doc_id, team_id)
+        # url = f'{server}/users/{user}'
+        # st, res = self.apicall(url, 'DELETE')
+        # if st <= 200:
+        #     return st, None 
+        # else:
+        #     return st, res
+    
     # TEAM SITES (organisations)
     # ------------------------------------------------------------------
 
@@ -1071,4 +1094,3 @@ class GristApi:
         except KeyError: # no converter for this queryset
             return st, records
         return st, self._apply_out_converter(records, converter)
-

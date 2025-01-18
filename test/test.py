@@ -180,6 +180,16 @@ class TestVarious(BaseTestPyGrister):
         self.assertEqual(st, 200)
         self.g.close_session()
 
+class TestUsers(BaseTestPyGrister):
+    @classmethod
+    def setUpClass(cls):
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
+    
+    def test_delete_user(self):
+        # this is not yet implemented
+        with self.assertRaises(api.GristApiNotImplemented):
+            self.g.delete_user('bogus')
+
 class TestTeamSites(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
