@@ -313,12 +313,146 @@ class GristApi:
         txt += f'->Config: {config2output(self._config)}'
         return txt
 
-    # USERS
+    # USERS (/scim/v2 and /user endpoints)
     # ------------------------------------------------------------------
 
+    def see_user(self, user_id: int) -> Apiresp:
+        """Implement GET ``/scim/v2/Users/{userId}``. 
+        
+        If successful, response will be a ``dict`` of user details. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.server}/scim/v2/Users/{user_id}'
+        return self.apicall(url, 
+                            headers={'Content-Type': 'application/scim+json'})
+
+    def see_myself(self) -> Apiresp:
+        """Implement GET ``/scim/v2/Me``. 
+        
+        If successful, response will be a ``dict`` of logged-in user's details. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.server}/scim/v2/Me'
+        return self.apicall(url,
+                            headers={'Content-Type': 'application/scim+json'})
+
+    def list_users(self):
+        """Implement GET ``/scim/v2/Users``. 
+        
+        If successful, response will be a ``list[dict]`` of users. 
+        If scim is not enabled, will return Http 501.
+        """
+        raise GristApiNotImplemented #TODO this one requires pagination
+
+    def _make_user_data(self, username, emails, formatted_name, display_name, 
+                        lang, locale, photos, schemas) -> dict: 
+        # compose json payload for a scim user
+        if schemas is None: 
+            schemas = ['urn:ietf:params:scim:schemas:core:2.0:User']
+        json = {'userName': username, 'name': {'formatted': ''}, 
+                'locale': locale, 'preferredLanguage': lang, 'schemas': schemas}
+        json['displayName'] = display_name or username
+        json['name']['formatted'] = formatted_name or display_name or username
+        ml = [{'value': m, 'primary': False} for m in emails]
+        ml[0]['primary'] = True
+        json['emails'] = ml
+        if photos:
+            ph = [{'value': ph, 'primary': False, 'type': 'photo'} 
+                  for ph in photos]
+            ph[0]['primary'] = True
+            json['photos'] = ph
+        return json
+
     @check_safemode
-    def delete_user(self, user: str, doc_id: str = '', 
-                    team_id: str = '') -> Apiresp:
+    def add_user(self, username: str, emails: list[str],
+                 formatted_name: str = '', display_name: str = '', 
+                 lang: str = 'en', locale: str = 'en', 
+                 photos: list[str]|None = None, schemas: list[str]|None = None 
+                 ) -> Apiresp:
+        """Implement POST ``/scim/v2/Users``. 
+
+        Note: ``schemas`` defaults to 
+        ['urn:ietf:params:scim:schemas:core:2.0:User']
+
+        If successful, response will be the user id as an ``int``. 
+        If scim is not enabled, will return Http 501.
+        """
+        json = self._make_user_data(username, emails, formatted_name, 
+                                    display_name,lang, locale, photos, schemas)
+        url = f'{self.server}/scim/v2/Users'
+        st, res = self.apicall(url, 'POST', json=json, 
+                               headers={'Content-Type': 'application/scim+json'})
+        try:
+            return st, int(res['id'])
+        except KeyError:
+            return st, res
+
+    @check_safemode
+    def update_user_override(self, user_id: int, username: str, emails: list[str],
+                             formatted_name: str = '', display_name: str = '', 
+                             lang: str = 'en', locale: str = 'en', 
+                             photos: list[str]|None = None, 
+                             schemas: list[str]|None = None) -> Apiresp:
+        """Implement PUT ``/scim/v2/Users/{userId}``. 
+        
+        Note: ``schemas`` defaults to 
+        ['urn:ietf:params:scim:schemas:core:2.0:User']
+
+        If successful, response will be ``None``. 
+        If scim is not enabled, will return Http 501.
+        """
+        json = self._make_user_data(username, emails, formatted_name, 
+                                    display_name,lang, locale, photos, schemas)
+        url = f'{self.server}/scim/v2/Users/{user_id}'
+        st, res = self.apicall(url, 'PUT', json=json, 
+                               headers={'Content-Type': 'application/scim+json'})
+        try:
+            _ = res['id']
+            return st, None
+        except KeyError:
+            return st, res
+
+    @check_safemode
+    def update_user(self, user_id: int, operations: list[dict], 
+                    schemas: list[str]|None = None) -> Apiresp:
+        """Implement PATCH ``/scim/v2/Users/{userId}``. 
+        
+        Note: ``schemas`` defaults to 
+        ['urn:ietf:params:scim:api:messages:2.0:PatchOp']
+
+        If successful, response will be ``None``. 
+        If scim is not enabled, will return Http 501.
+        """
+        if schemas is None:
+            schemas = ['urn:ietf:params:scim:api:messages:2.0:PatchOp']
+        json = {'Operations': operations, 'schemas': schemas}
+        url = f'{self.server}/scim/v2/Users/{user_id}'
+        st, res = self.apicall(url, 'PATCH', json=json, 
+                               headers={'Content-Type': 'application/scim+json'})
+        try:
+            _ = res['id']
+            return st, None
+        except KeyError:
+            return st, res
+        
+    @check_safemode
+    def delete_user(self, user_id: int):
+        """Implement DELETE ``/scim/v2/Users/{userId}``. 
+        
+        If successful, response will be ``None``. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.server}/scim/v2/Users/{user_id}'
+        # TODO this fails now, because this api is an oddball and will return 
+        # an *empty* response, which in turn will crash my response.json() in 
+        # self.apicall. 
+        # Turns out I need to prepare for an empty response too... 
+        return self.apicall(url, 'DELETE', 
+                            headers={'Content-Type': 'application/scim+json'})
+
+    @check_safemode
+    def delete_myself(self, user: str, doc_id: str = '', 
+                      team_id: str = '') -> Apiresp:
         """Implement DELETE ``/users/{userId}``.
 
         Note: since this is the only /users endpoint implemented by Grist 
@@ -335,7 +469,69 @@ class GristApi:
         #     return st, None 
         # else:
         #     return st, res
-    
+
+    def search_users(self):
+        """Implement POST ``/scim/v2/Users/.search``. 
+        
+        If successful, response will be a ``list[dict]`` of users. 
+        If scim is not enabled, will return Http 501.
+        """
+        raise GristApiNotImplemented #TODO this one requires pagination
+
+    @check_safemode
+    def bulk_users(self, operations: list[dict], 
+                   schemas: list[str]|None = None) -> Apiresp:
+        """Implement POST ``/scim/v2/Bulk``. 
+
+        Note: ``schemas`` defaults to 
+        ['urn:ietf:params:scim:api:messages:2.0:BulkRequest']
+
+        If successful, response will be a ``list[int]`` of status codes for 
+        each operation (inspect ``GristApi.resp_content`` for details, 
+        if any operations resulted in a bad status code).
+        If scim is not enabled, will return Http 501.
+        """
+        if schemas is None:
+            schemas = ['urn:ietf:params:scim:api:messages:2.0:BulkRequest']
+        json = {'Operations': operations, 'schemas': schemas}
+        url = f'{self.server}/scim/v2/Bulk'
+        st, res = self.apicall(url, 'POST', json=json, 
+                               headers={'Content-Type': 'application/scim+json'})
+        if st == 200:
+            return st, [int(i['status']) for i in res['Operations']]
+        else:
+            return st, res
+
+    def see_scim_schemas(self):
+        """Implement GET ``/scim/v2/Schemas``. 
+        
+        If successful, response will a ``dict`` of scim schemas. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.server}/scim/v2/Schemas'
+        return self.apicall(url, 
+                            headers={'Content-Type': 'application/scim+json'})
+
+    def see_scim_config(self):
+        """Implement GET ``/scim/v2/ServiceProviderConfig``. 
+        
+        If successful, response will a ``dict`` of scim provider configuration. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.server}/scim/v2/ServiceProviderConfig'
+        return self.apicall(url, 
+                            headers={'Content-Type': 'application/scim+json'})
+
+    def see_scim_resources(self):
+        """Implement GET ``/scim/v2/ResourceTypes``. 
+        
+        If successful, response will a ``dict`` of scim resources. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.server}/scim/v2/ResourceTypes'
+        return self.apicall(url, 
+                            headers={'Content-Type': 'application/scim+json'})
+
     # TEAM SITES (organisations)
     # ------------------------------------------------------------------
 
