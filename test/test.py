@@ -144,7 +144,9 @@ class TestVarious(BaseTestPyGrister):
         # let's make it so the server is 'http://10.255.255.1'
         self.g.update_config({'GRIST_SERVER_PROTOCOL': 'http://', 
                               'GRIST_TEAM_SITE': '10', 
-                              'GRIST_API_SERVER': '255.255.1'})
+                              'GRIST_API_SERVER': '255.255.1', 
+                              # maybe we are self-managed instead
+                              'GRIST_SELF_MANAGED_HOME': 'http://10.255.255.1'})
         # without this, test will take forever, then fail with ConnectionError
         self.g.request_options = {'timeout': 1}
         with self.assertRaises(ConnectTimeout):
