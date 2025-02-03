@@ -223,12 +223,15 @@ class TestUsersScim(BaseTestPyGrister):
         self.assertEqual(st, 200)
         self.assertEqual(usr['locale'], 'es')
         # now delete the user
-        # right now doesn't work yet...
-        # st, res = self.g.delete_user(user_id)
-        # self.assertEqual(st, 204)
-        # self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
-        # st, res = self.g.see_user(user_id)
-        # self.assertEqual(st, 404)
+        st, res = self.g.delete_user(user_id)
+        self.assertEqual(st, 204)
+        # if the following fails, it means Grist fixed the api,  
+        # which now returns no response body at all
+        self.assertIsNone(res)
+        # now double-check that the user is gone
+        self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
+        st, res = self.g.see_user(user_id)
+        self.assertEqual(st, 404)
 
     def test_search_users(self):
         pass

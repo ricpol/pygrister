@@ -251,7 +251,7 @@ class GristApi:
             self._save_request_data(resp)
             if self.raise_option:
                 resp.raise_for_status()
-            return resp.status_code, resp.json()
+            return resp.status_code, resp.json() if resp.content else None
         else:
             if method == 'GET': # download mode
                 with call(method, url, headers=headers, params=params, 
@@ -275,20 +275,23 @@ class GristApi:
                 self._save_request_data(resp)
                 if self.raise_option:
                     resp.raise_for_status()
-                return resp.status_code, resp.json()
+                return resp.status_code, resp.json() if resp.content else None
 
     def _save_request_data(self, response):
         self.req_url = response.request.url
         self.req_body = response.request.body
         self.req_headers = response.request.headers
         self.req_method = response.request.method
-        try:
-            self.resp_content = str(response.json())[:MAXSAVEDRESP]
-        except JSONDecodeError:
-            if SAVEBINARYRESP:
-                self.resp_content = response.content[:MAXSAVEDRESP]
-            else:
-                self.resp_content = '<not a valid json>'
+        if response.content:
+            try:
+                self.resp_content = str(response.json())[:MAXSAVEDRESP]
+            except JSONDecodeError:
+                if SAVEBINARYRESP:
+                    self.resp_content = response.content[:MAXSAVEDRESP]
+                else:
+                    self.resp_content = '<not a valid json>'
+        else:
+            self.resp_content = '<no response body>'
         self.resp_code = response.status_code
         self.resp_reason = response.reason
         self.resp_headers = response.headers
@@ -443,10 +446,6 @@ class GristApi:
         If scim is not enabled, will return Http 501.
         """
         url = f'{self.server}/scim/v2/Users/{user_id}'
-        # TODO this fails now, because this api is an oddball and will return 
-        # an *empty* response, which in turn will crash my response.json() in 
-        # self.apicall. 
-        # Turns out I need to prepare for an empty response too... 
         return self.apicall(url, 'DELETE', 
                             headers={'Content-Type': 'application/scim+json'})
 
