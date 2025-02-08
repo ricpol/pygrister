@@ -6,6 +6,8 @@
     "GRIST_SELF_MANAGED_HOME": "http://localhost:8484",
     "GRIST_SELF_MANAGED_SINGLE_ORG": "Y",
 
+    "GRIST_TEST_RUN_USER_TESTS": "N",
+
 
     "note0": "---------------------------------------------------------------",
     "note1": "this is the configuration setup for the test suite", 

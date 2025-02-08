@@ -13,6 +13,10 @@ or against a self-managed instance of Grist,
     the team site will be the one indicated by the ``GRIST_SINGLE_ORG`` 
     env variable that you will provide separately.)
 
+If you are planning to run the tests many times against the standard SaaS Grist, 
+in fact you may want to start with an entirely separate Grist account, to avoid 
+cluttering your "home" db with bogus users data (see below).
+
 Remember, the test suite *will not make use* of your regular configuration 
 files (eg., ``~/.gristapi/config.json``). 
 Everything *must* be provided in a separate ``config_test.json`` in the same 
@@ -22,6 +26,8 @@ directory as this file. Edit the already present json file as follows:
 - "GRIST_SELF_MANAGED": set to "Y" if you are running a self-managed Grist
 - "GRIST_SELF_MANAGED_HOME": the main url of your self-managed Grist
 - "GRIST_SELF_MANAGED_SINGLE_ORG": "Y" if you are running the mono-team flavour 
+- "GRIST_TEST_RUN_USER_TESTS": "N" to skip the tests that create users 
+  (special, see below)
 Note: no other config key should be configured for the test suite. 
 
 The test suite will leave several objects (workspaces and docs) in your 
@@ -29,8 +35,23 @@ team site. The objects created have unique names, so it should be safe
 re-running the test suite with the same sites: however, you may want 
 to clean up eventually. 
 
+Test users are a separate problem. A few tests will create new users in your 
+test team site: even if you remove them manually in the "manage team" 
+section of the GUI, all you are deleting is the user-team association, but 
+the user data will remain in your "home" database (which you currently cannot 
+access in SaaS Grist). You really can't completely delete a user from the GUI 
+and, in SaaS Grist, you can't use the SCIM apis (which are currently 
+not enabled). It is normally not a problem to leave a few inactive users 
+in the database. However, if you end up running the test suite hundreds of 
+times, you may want to avoid the clutter. In a self-managed instance of Grist, 
+you just throw the container away after a while. In SaaS Grist, you may want 
+to activate a separate account to run the tests. 
+To help you keep test users under control, we added a special configuration 
+key, only useful when running the test suite: set "GRIST_TEST_RUN_USER_TESTS" 
+to "N" to skip every test that may create a user. 
+
 A few object will also be downloaded in your current directory. Moreover, 
-tests involving user/permission manipulation will trigger email notifications 
+tests involving user/permission manipulation may trigger email notifications 
 from Grist. 
 
 Finally, please keep in mind that the purpose here is testing the Pygrister 
@@ -210,6 +231,7 @@ class TestUsersScim(BaseTestPyGrister):
     def test_list_users(self):
         pass
 
+    @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_USER_TESTS'] == 'N', '')
     def test_add_update_delete_user(self):
         base_name = str(time.time_ns())
         usr, email = f'{base_name}', f'{base_name}@example.com'
@@ -236,6 +258,7 @@ class TestUsersScim(BaseTestPyGrister):
     def test_search_users(self):
         pass
 
+    @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_USER_TESTS'] == 'N', '')
     def test_bulk_users(self):
         # let's add a few users in bulk
         base_name = str(time.time_ns())
@@ -298,6 +321,7 @@ class TestTeamSites(BaseTestPyGrister):
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
+    @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_USER_TESTS'] == 'N', '')
     def test_update_team_users(self):
         name = str(time.time_ns())[-5:]
         users = {f'u{name}a@example.com': 'editors', 
@@ -353,6 +377,7 @@ class TestWorkspaces(BaseTestPyGrister):
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
     
+    @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_USER_TESTS'] == 'N', '')
     def test_update_workspace_users(self):
         name = str(time.time_ns())[-5:]
         users = {f'u{name}a@example.com': 'editors', 
@@ -453,6 +478,7 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
+    @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_USER_TESTS'] == 'N', '')
     def test_update_doc_users(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)

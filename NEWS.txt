@@ -8,6 +8,8 @@ Bleeding edge: committed to the repo, not yet released on PyPI
   several api calls in a row.
 - added a stub for DELETE /users/<userid>, but we are not implementing 
   this one at the moment. 
+- added a note and a special config key in the test suite only, to skip 
+  tests that create users, since in SaaS Grist they can't really be deleted. 
 
 v0.5.0, 2024.11.17
 ------------------
