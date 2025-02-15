@@ -228,8 +228,41 @@ class TestUsersScim(BaseTestPyGrister):
         st, res = self.g.see_user(myself_id)
         self.assertEqual(st, 200)
 
+    def test_list_users_raw(self):
+        # this demonstrates using the "raw" api call, with manual pagination
+        st, res = self.g.list_users_raw(1, 10)
+        self.assertEqual(st, 200)
+        id_first = res['Resources'][0]['id']
+        id_second = res['Resources'][1]['id']
+        st, res = self.g.list_users_raw(2, 10)
+        self.assertEqual(st, 200)
+        self.assertEqual(res['Resources'][0]['id'], id_second)
+        # passing an out-of-range index results in returning the first
+        # items anyway: I believe this is a mistake...
+        st, res = self.g.list_users_raw(1000000, 10)
+        self.assertEqual(st, 200)
+        # if this fails, it means the issue has been fixed:
+        self.assertEqual(res['Resources'][0]['id'], id_first)
+        # and now for the filters! I can't make this work... 
+        # note that the very same filter will work in the search api...
+        # if this fails, it means it was a bug and it has been fixed:
+        with self.assertRaises(HTTPError):
+            st, res = self.g.list_users_raw(filter='userName co example')
+
     def test_list_users(self):
-        pass
+        # this demonstates using the fancy, auto-paginating api call
+        for st, res in self.g.list_users(): 
+            self.assertEqual(st, 200)
+        # now let's iterate manually
+        user_list = self.g.list_users()
+        self.assertEqual(len(user_list), 0)
+        st, chunk = next(user_list)
+        self.assertEqual(st, 200)
+        self.assertGreater(len(user_list), 0)
+        # here we can fix the out-of-range issue:
+        user_list = self.g.list_users(1000000, 10)
+        with self.assertRaises(StopIteration):
+            next(user_list)
 
     @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_USER_TESTS'] == 'N', '')
     def test_add_update_delete_user(self):
@@ -255,8 +288,25 @@ class TestUsersScim(BaseTestPyGrister):
         st, res = self.g.see_user(user_id)
         self.assertEqual(st, 404)
 
+    def test_search_users_raw(self):
+        # this demonstrates using the "raw" api call, with manual pagination
+        st, res = self.g.search_users_raw(1, 10)
+        self.assertEqual(st, 200)
+        # and now for the filters... let's add a user first
+        # (note: a bunch of "@getgrist" users should always be present)
+        st, res = self.g.search_users_raw(filter='userName co getgrist')
+        self.assertEqual(st, 200)
+
     def test_search_users(self):
-        pass
+        # this demonstates using the fancy, auto-paginating api call
+        for st, res in self.g.search_users(): 
+            self.assertEqual(st, 200)
+        # now let's iterate manually
+        user_list = self.g.search_users()
+        self.assertEqual(len(user_list), 0)
+        st, chunk = next(user_list)
+        self.assertEqual(st, 200)
+        self.assertGreater(len(user_list), 0)
 
     @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_USER_TESTS'] == 'N', '')
     def test_bulk_users(self):

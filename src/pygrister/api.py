@@ -119,6 +119,32 @@ def check_safemode(funct):
 
 Apiresp = tuple[int, Any] #: the return type of all api call functions
 
+class _Paginator:
+    # a wrapper around api calls that need pagination - still very experimental!
+    def __init__(self, provider, start, items, lenname, 
+                 res_transform, **query_args):
+        self.provider = provider # the GristApi method that will handle the call
+        self.index = start # start index for pagination
+        self.items = items # number of items to retrieve
+        self.lenname = lenname # the res dict key storing the total num of items
+        self.res_transform = res_transform # a callable to clean up the call result
+        self.query_args = query_args # any other arg to be passed to the call
+        self.num_items = 0 # the total num of items
+
+    def __len__(self): 
+        return self.num_items
+    
+    def __iter__(self): 
+        return self
+
+    def __next__(self):        
+        st, res = self.provider(self.index, self.items, **self.query_args)
+        self.num_items = int(res[self.lenname])
+        if self.index > self.num_items:
+            raise StopIteration
+        self.index += self.items
+        return st, self.res_transform(res)
+      
 
 class GristApi:
     def __init__(self, config: dict[str, str]|None = None,
@@ -339,13 +365,37 @@ class GristApi:
         return self.apicall(url,
                             headers={'Content-Type': 'application/scim+json'})
 
-    def list_users(self):
+    def list_users(self, start: int = 1, chunk: int = 10, 
+                   filter: str = '') -> _Paginator:
         """Implement GET ``/scim/v2/Users``. 
         
-        If successful, response will be a ``list[dict]`` of users. 
+        This is a paginated api: return an iterable object which, in turn, 
+        will retrieve ``chunk`` users at a time, as a ``list[dict]``. 
+        """
+        return _Paginator(self.list_users_raw, start, chunk, 'totalResults', 
+                          lambda res: res['Resources'], filter=filter)
+
+    def list_users_raw(self, start: int = 1, chunk: int = 10, 
+                       filter: str = '') -> Apiresp:
+        """Implement GET ``/scim/v2/Users``. 
+        
+        If successful, response will be a ``dict`` of user data. 
         If scim is not enabled, will return Http 501.
         """
-        raise GristApiNotImplemented #TODO this one requires pagination
+        url = f'{self.server}/scim/v2/Users'
+        headers = {'Content-Type': 'application/scim+json'}
+        if filter:
+            # Requests will *form*-encode the filter, Grist want it *url*-encoded
+            # instead, so we need to skip Request and manually compose the url
+            params = {'startIndex': start, 'count': chunk, 
+                      'filter': modjson.dumps(filter)}
+            encoded_params = urlencode(params, quote_via=quote)
+            st, res = self.apicall(url+'?'+encoded_params, headers=headers)
+        else:
+            # the usual way
+            st, res = self.apicall(url, headers=headers, 
+                                   params={'startIndex': start, 'count': chunk})
+        return st, res
 
     def _make_user_data(self, username, emails, formatted_name, display_name, 
                         lang, locale, photos, schemas) -> dict: 
@@ -469,13 +519,53 @@ class GristApi:
         # else:
         #     return st, res
 
-    def search_users(self):
+    def search_users(self, start: int = 1, chunk: int = 10, 
+                     sort: str = '', asc: bool = True, filter: str = '', 
+                     attrib: list[str]|None = None, 
+                     no_attrib: list[str]|None = None, 
+                     schemas: list[str]|None = None) -> _Paginator:
         """Implement POST ``/scim/v2/Users/.search``. 
         
-        If successful, response will be a ``list[dict]`` of users. 
-        If scim is not enabled, will return Http 501.
+        Note: ``schemas`` defaults to 
+        ['urn:ietf:params:scim:api:messages:2.0:BulkRequest']
+
+        This is a paginated api: return an iterable object which, in turn, 
+        will retrieve ``chunk`` users at a time, as a ``list[dict]``. 
         """
-        raise GristApiNotImplemented #TODO this one requires pagination
+        return _Paginator(self.search_users_raw, start, chunk, 'totalResults', 
+                          lambda res: res['Resources'],
+                          sort=sort, asc=asc, filter=filter, attrib=attrib, 
+                          no_attrib=no_attrib, schemas=schemas)
+
+    def search_users_raw(self, start: int = 1, chunk: int = 10, 
+                         sort: str = '', asc: bool = True, filter: str = '', 
+                         attrib: list[str]|None = None, 
+                         no_attrib: list[str]|None = None, 
+                         schemas: list[str]|None = None) -> Apiresp:
+        """Implement POST ``/scim/v2/Users/.search``. 
+        
+        Note: ``schemas`` defaults to 
+        ['urn:ietf:params:scim:api:messages:2.0:BulkRequest']
+
+        If successful, response will be a ``dict`` of user data. 
+        If scim is not enabled, will return Http 501. 
+        """
+        url = f'{self.server}/scim/v2/Users/.search'
+        headers = {'Content-Type': 'application/scim+json'}
+        if schemas is None:
+            schemas = ['urn:ietf:params:scim:api:messages:2.0:SearchRequest']
+        json = {'startIndex': start, 'count': chunk, 'schemas': schemas}
+        if filter:
+            json['filter'] = filter
+        if sort:
+            sortorder = ('descending', 'ascending')[int(asc)]
+            json['sortBy'] = sort
+            json['sortOrder'] = sortorder
+        if attrib is not None:
+            json['attributes'] = attrib
+        if no_attrib is not None:
+            json['excludedAttributes'] = no_attrib
+        return self.apicall(url, 'POST', headers=headers, json=json)
 
     @check_safemode
     def bulk_users(self, operations: list[dict], 

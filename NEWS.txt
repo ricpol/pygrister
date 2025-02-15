@@ -5,7 +5,8 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 --------------------------------------------------------------
 
 - support for sessions from Requests, to improve performance when making 
-  several api calls in a row.
+  several api calls in a row
+- provisional support for the new Scim apis
 - added a stub for DELETE /users/<userid>, but we are not implementing 
   this one at the moment. 
 - added a note and a special config key in the test suite only, to skip 

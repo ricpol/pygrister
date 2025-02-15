@@ -8,4 +8,5 @@ Pygrister docs.
     conf
     types
     misc
+    scim
     api_doc
