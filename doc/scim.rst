@@ -21,7 +21,7 @@ First of all, SCIM is not even enabled on the "regular" SaaS Grist (that
 is, www.getgrist.com). If you want to try out SCIM, you must set up a local 
 installation and enable SCIM (set ``GRIST_ENABLE_SCIM`` in your environment). 
 
-(Note: even if you will find a new SCIM section in your Api console, you can 
+(Note: even if you will find a new SCIM section in your Api console, you can't 
 actually place a call if you are on SaaS Grist.)
 
 Be careful! If you already run your own Grist service, please *do not* run 
@@ -58,7 +58,7 @@ it out. For instance, and in no particular order:
   status codes for every single operation, to simplify the underlying Grist 
   api. To check the "real" response, inspect ``grist.resp_content`` as usual.)
 - we couldn't make filters work in the 
-  `getUsers endpoint <https://support.getgrist.com/api/#tag/scim/operation/getUsers`_,  
+  `getUsers endpoint <https://support.getgrist.com/api/#tag/scim/operation/getUsers>`_,  
   while they seem to work just fine in the 
   `search case <https://support.getgrist.com/api/#tag/scim/operation/searchUsers>`_. 
   See also the relevant code in our test suite. 
