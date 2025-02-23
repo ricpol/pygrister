@@ -45,8 +45,11 @@ your Python of choice.
 Install.
 --------
 
+Any feedback and contribution is *very welcome* at this stage! 
+
 Right now, Pygrister is in beta stage, meaning that the overall interface 
-should be fairly stable but I still make no promises about further changes. 
+should be fairly stable but I make no promises about further changes. 
+The new Scim api support is still *very* experimental. 
 
 You can install Pygrister from PyPI::
 
@@ -57,14 +60,6 @@ see ``NEWS.txt`` and/or the commit history. To try the "bleeding edge"
 from GitHub::
 
     python -m pip install git+https://github.com/ricpol/pygrister
-
-What's next.
-------------
-
-- Add support for some other useful, *undocumented* Grist Apis; 
-- Maybe write a few "macros/recipes" for common Grist tasks... 
-
-Any feedback and contribution is *very welcome* at this stage! 
 
 License.
 --------

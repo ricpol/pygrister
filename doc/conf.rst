@@ -3,12 +3,12 @@ Pygrister configuration.
 
 In everyday use, you will need Pygrister to push/pull data from a single 
 document and very little else. Working with multiple documents, workspaces 
-or even sites is rarely needed. Pygrister comes with a configuration system 
+and sites is rarely needed. Pygrister comes with a configuration system 
 to register your defaults for common operations, while still allowing you to 
 switch gears at any time. 
 
 For example, to retrieve data from a table, you would call the Grist API 
-endpoint ::
+endpoint as ::
 
     https://<myteam>.getgrist.com/api/docs/<docID>/tables/<tableID>/records
 
@@ -19,10 +19,10 @@ of calling ::
     grist = GristApi()
     grist.list_records('Table1')
 
-However, if you need to specify a different team/document, Pygrister 
-allows you this too::
+However, when you need to specify a different team/document, Pygrister 
+allows you this more verbose call too::
 
-    grist.list_records('Table1', doc_id='...', team_id='...')
+    grist.list_records('Table1', doc_id='mydoc', team_id='myteam')
 
 
 Where configuration is stored.
@@ -35,19 +35,19 @@ Pygrister configuration is a set of key/value pairs stored
 
 - first, in a ``config.py`` file situated in the installation directory, 
   along with the other Python modules. This is intended to provide sensible 
-  default values for each configuration key, and you should never modify this 
+  default values for each configuration key: you should never modify this 
   file directly;
 - then, in a ``~/.gristapi/config.json`` file that you can leave in your home 
   directory to override the defaults with your own preferences. You are free 
-  to put here just the values you want to modify;
-- finally, you may supply your values as environment variables.
+  to put there just the keys for which you want to modify the default value;
+- finally, you may supply your values also as environment variables.
 
-Note that a value declared in a place will override those in the lower 
+Note that a value declared in one place will override those in the lower 
 layers. For instance, if you do nothing, the value for the ``GRIST_TEAM_SITE`` 
 key will default to ``docs``; if you write something like 
 ``"GRIST_TEAM_SITE": "myteam"`` in your json file, then it will be ``myteam``; 
-then, if you also set up a ``GRIST_TEAM_SITE`` env variable, this one will be 
-the chosen value. 
+then, if you also set a ``GRIST_TEAM_SITE`` env variable, that will be 
+the final value. 
 
 You don't need to provide either a ``~/.gristapi/config.json`` file or env 
 variables: you can choose one or the others, or a mix of the two. Environment 
@@ -58,14 +58,13 @@ Nothing stops you from doing something like ::
     os.environ['GRIST_TEAM_SITE'] = 'mysite'
     grist = GristApi()
 
-in your code. 
+in your code. However, this is not really necessary since Pygrister provides 
+3 more ways of overriding configuration at runtime.
 
 Runtime configuration.
 ^^^^^^^^^^^^^^^^^^^^^^
 
-However, Pygrister provides 3 more ways of overriding configuration at runtime. 
-
-First, you may pass an optional ``config`` parameter to the ``GristApi`` 
+At runtime, you may pass an optional ``config`` parameter to the ``GristApi`` 
 constructor, to override any "static" configuration previously defined::
 
     grist = GristApi(config={'GRIST_TEAM_SITE': 'mysite'})
@@ -76,7 +75,7 @@ between the two is explained below)::
 
     grist.update_config(config={'GRIST_TEAM_SITE': 'mysite'})
 
-This will affect all the API calls from now on. 
+This will affect all API calls from now on. 
 
 Finally, specific API call functions may provide optional parameters to 
 temporarily override the configuration. For instance, this ::
@@ -87,14 +86,15 @@ will fetch records from a table in your current working document (as per config)
 If you need to quickly pull data from another document just once, there's no 
 need to change your configuration: a simple ::
 
-    st_code, res = grist.list_records('another_table', doc_id='......')
+    st_code, res = grist.list_records('another_table', doc_id='another_doc')
 
 will do the trick. 
 
 The function ``api.get_config`` returns the current "static" configuration, 
 i.e. taking into account only the json files and environment variables. At 
 runtime, you may inspect the variable ``GristApi._config`` to know the "real", 
-actual configuration in use. 
+actual configuration in use (the function ``GristApi.inspect`` will also 
+output the configuration among other things).
 
 Changing the configuration at runtime.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -119,7 +119,7 @@ incrementally. ::
     >>> g._config['GRIST_TEAM_SITE'], g._config['GRIST_SAFEMODE']
     ('docs', 'N')
 
-You may call ``reconfig`` without arguments to revert to the original "static" 
+Just call ``reconfig`` without arguments to revert to the original "static" 
 configuration.
 
 Configuration keys.
@@ -143,7 +143,7 @@ currently defined, and their default values::
         'GRIST_SAFEMODE': 'N',
     }
 
-**Please note**: configuration values *must* be non-empty strings. If you 
+**Please note**: configuration values *must be non-empty strings*. If you 
 don't need a config key, just leave the default value as it is: do not 
 override it with an empty string!
 
@@ -158,15 +158,15 @@ detailed separately below.
 personal site (the "@my-name" one). 
 
 ``GRIST_SERVER_PROTOCOL``, ``GRIST_API_SERVER`` and ``GRIST_API_ROOT`` 
-are the remaining components of the Grist Api url: do not override the 
-default values. 
+are the remaining components of the SaaS Grist Api url: you should never 
+override the default values unless you know what you are doing.
 
 ``GRIST_WORKSPACE_ID`` is your workspace ID: in fact, very few APIs make use 
 of this value, and you may not need it at all. 
 
-``GRIST_DOC_ID`` is the ID of the document you work the most. If your workflow 
-involves constant switching between various documents, you may be better off 
-leaving the default value here, and provide the actual IDs at runtime. 
+``GRIST_DOC_ID`` should be set to the ID of the document you work with the most. 
+If your workflow involves constant switching between various documents, you may 
+be better off leaving the default value here, and provide the actual IDs at runtime. 
 
 ``GRIST_RAISE_ERROR``: if set to ``Y`` (the default), Pygrister will raise an 
 exception if something went wrong with the API call. This will be discussed later 
@@ -176,13 +176,19 @@ on.
 no writing API calls will be allowed. 
 
 *Note*: extensions and subclasses may add other config keys as needed. 
-Pygrister will incorporate them in the design explained here.
+Pygrister will incorporate them in the design explained here. 
+For instance, our test suite adds a ``GRIST_TEST_RUN_USER_TESTS`` key, to 
+allow running user creation tests: this is, in fact, a "user-defined" key 
+that is needed and processed only by the test suite.
 
 Support for the self-hosted Grist.
 ----------------------------------
 
-The Grist API works the same way for both the regular Grist SaaS and the 
+The Grist API works the same way for both the regular SaaS Grist and the 
 self-managed version - and so does Pygrister. 
+
+To learn about the self-hosted version of Grist read the 
+`Grist documentation <https://support.getgrist.com/self-managed>`_.
 
 If you want to use Pygrister with a self-hosted Grist instance, you need to 
 set up a few more configuration options. 
@@ -214,9 +220,6 @@ enabled in Pygrister, the configuration keys ``GRIST_SERVER_PROTOCOL`` and
 ``GRIST_API_SERVER`` will be ignored, and ``GRIST_SELF_MANAGED_HOME`` 
 will be used instead. The remaining configuration keys will work as usual. 
 
-To learn about the self-hosted version of Grist read the 
-`Grist documentation <https://support.getgrist.com/self-managed>`_.
-
 App-specific configuration.
 ---------------------------
 
@@ -229,23 +232,22 @@ file and load it at runtime::
     
     grist = GristApi(config=myconfig)
 
-If you change things, and then you need to come back to your starting config, 
+If you change things, and then you need to revert to your starting config, 
 then you just have to call ::
 
     grist.reconfig(config=myconfig)
-
 
 "Cross-site" access.
 --------------------
 
 We call it a cross-site access when you try reaching an object belonging to a 
-team site "from" a different team site, i.e. calling 
+team site "from" a different team site, that is, calling 
 ``https://mysite.getgrist.com/api/...`` to reach something that does not belong 
 to ``mysite``. 
 
 The general rule, here, is that all the ``/docs`` APIs do not allow cross-site 
-operations, while other endpoints are fine. For example, trying to reach a 
-document ``https://<site>.getgrist.com/api/docs/<doc_id>`` will result in an 
+operations, while other endpoints are fine with it. For example, trying to reach 
+a call to ``https://<site>.getgrist.com/api/docs/<doc_id>`` will result in an 
 HTTP 404 if ``<doc_id>`` does not belong to ``<site>``. On the other hand, 
 something like ``https://<site>.getgrist.com/api/workspaces/<ws_id>`` will work, 
 even if the workspace is not in ``<site>``. 
@@ -253,7 +255,7 @@ even if the workspace is not in ``<site>``.
 In terms of Pygrister's own interface, there's little we can do about this. 
 Most of the time, you will work with a single team site, so you'll do the 
 right thing anyway. If your workflow involves switching between sites, be 
-careful that the resource you're trying to contact belongs to your "current" 
+aware that the resource you're trying to contact must belong to your "current" 
 team site (as per configuration). For instance, this will not work::
 
     doc1 = '<doc1_ID>' # belongs to "myteam1"

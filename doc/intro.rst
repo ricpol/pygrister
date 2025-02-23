@@ -14,12 +14,12 @@ is rather low-level: usually, it will call the api and retrieve the response
 "as is". 
 If the api call is malformed, you will simply receive a bad HTTP status code. 
 
-In addition, Pygrister will not attempt to convert sent and received data types: 
-however, it will execute custom converter functions, if provided.
+In addition, Pygrister will not attempt to convert types in sent and received 
+data: however, it will execute custom converter functions, if provided.
 
 This document covers the basic Pygrister concepts, patterns and configurations. 
-However, the api call functions themselves are not documented in Pygrister: 
-see the 
+However, the api call functions themselves are *not* documented in Pygrister: 
+consult the 
 `Grist API reference documentation <https://support.getgrist.com/api/>`_ 
 for details about each api signature, and browse the Pygrister test suite 
 for more usage examples.
@@ -61,7 +61,7 @@ object of its own data model:
 - A **Table** is... well, a table: where the actual data is stored. Of course, 
   you may have multiple tables in a document. The table ID is usually its name 
   but again, you can also customize the table's name. The best way to find out 
-  all your table IDs, is to clic on "Raw data" in the left column: for each 
+  all your table IDs, is to clic on "Raw data" in the lower left column: for each 
   table, a "TABLE ID" will also be shown. Please note: table IDs will always 
   start with a *capital* letter. If you give a table a name starting with a 
   number, Grist will leave the name as you prefer, then silently add a "T" 
@@ -90,7 +90,12 @@ object of its own data model:
   Figuring out the attachment ID of a file is not straightforward: if you 
   have an attachment column named "A", you may create a formula column and 
   set it to ``=$A`` - or, download the Sqlite database. 
-
+- Users have their own IDs too, which is an integer number. The new SCIM apis 
+  make use of users IDs: however, SCIM is not enabled (so far) in the regular 
+  SaaS Grist, and you can't retrieve the "home" database where those IDs 
+  are stored. See the SCIM section of this documentation for more info. 
+  The few, non-SCIM apis dealing with user manipulation identify users by their 
+  own unique email. 
 
 The ``GristApi`` class.
 =======================
@@ -133,26 +138,27 @@ API call return values.
 -----------------------
 
 API call functions always return a 2-items tuple: the *Http status code* of the 
-response (an integer number), and the *response body*. Pygrister makes an 
-effort to simplify a little and uniform the json objects returned by the 
-underlying Grist Api. Responses returned by Pygrister will follow this pattern: 
+response (an integer number), and the *response body*. Sometimes Pygrister will 
+put a little effort in simplifying and uniforming the json object returned by 
+the underlying Grist Api. Responses returned by Pygrister follows this pattern: 
 
-- all ``see_*`` functions will return a dictionary, describing a single object 
+- all ``see_*`` functions return a dictionary, describing a single object 
   (one table, one column...);
-- all ``list_*`` functions will return a list of dictionaries;
-- "singular form" ``add_*`` functions (``add_workspace``, ``add_doc``) will 
+- all ``list_*`` functions return a list of dictionaries;
+- "singular form" ``add_*`` functions (``add_workspace``, ``add_doc``) 
   return the ID of the added object;
-- "plural form" ``add_*`` functions (``add_tables``...) will return a list of 
+- "plural form" ``add_*`` functions (``add_tables``...) return a list of 
   IDs of the added objects (possibly just one);
-- ``delete_*``, ``update_*``, ``add_update_*`` functions will return ``None``; 
-  ``download_*`` functions will return ``None`` and download something as a 
+- ``delete_*``, ``update_*``, ``add_update_*`` functions return ``None``; 
+  ``download_*`` functions return ``None`` and download something as a 
   side effect. 
 
 Docstrings in each function report the return type, but you'll still need the 
 Grist API documentation for the details. 
 
 Pygrister will also save the original response body of the last API call anyway: 
-if you need it, inspect the ``resp_content`` attribute before making another call::
+if you need it, inspect the ``resp_content`` attribute *before* making another 
+call::
 
     >>> grist = GristApi()
     >>> grist.add_cols('Table1', [{'id': 'colA'}, {'id': 'colB'}])
@@ -167,7 +173,7 @@ the status code instead. For this and other configuration options, read on.
 Record format in Pygrister.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Pygrister puts extra effort into uniforming the APIs for record manipulation. 
+Pygrister puts extra effort in uniforming the APIs for record manipulation. 
 The original Grist API has a few ways to describe a list of records, depending 
 on the case. In Pygrister, a record is *always* a ``{col: value}`` dictionary, 
 and a list of records is a ``list[dict]``. This is true for both input parameters 

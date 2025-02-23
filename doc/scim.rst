@@ -21,7 +21,7 @@ First of all, SCIM is not even enabled on the "regular" SaaS Grist (that
 is, www.getgrist.com). If you want to try out SCIM, you must set up a local 
 installation and enable SCIM (set ``GRIST_ENABLE_SCIM`` in your environment). 
 
-(Note: even if you will find a new SCIM section in your Api console, you can't 
+(Note: you will find a new SCIM section in your Api console, but you can't 
 actually place a call if you are on SaaS Grist.)
 
 Be careful! If you already run your own Grist service, please *do not* run 
@@ -41,10 +41,10 @@ it out. For instance, and in no particular order:
   we always use integers;
 - when creating or updating 
   `a user <https://support.getgrist.com/api/#tag/scim/operation/createUser>`_, 
-  protocol for providing emails and photos is rather convoluted and support 
-  multiple instances: in reality, Grist will only store the "primary" email/photo. 
+  protocol for providing emails and pictures is rather convoluted and support 
+  multiple instances: in reality, Grist will only store the "primary" email/pic. 
   It's easier in Pygrister: you just provide a list of strings for both emails and 
-  photos: the first one is intended as the primary (then again, only the first 
+  pics: the first one is intended as the primary (then again, only the first 
   item will be used by Grist anyway); 
 - the DELETE endpoint will only return a status code, with no payload. This 
   is an exception (perhaps an oversight?) to the behaviour of Grist apis, 
@@ -75,7 +75,7 @@ What about the old user-related apis?
 Existing endpoints that already deal with user creation, like 
 ``update_team_users``, ``update_workspace_users`` and ``update_doc_users`` 
 (using their Pygrister names) will work as before, of course. However, 
-they are somewhat limited, in that they create a user and set her permissions 
+they are somewhat limited, in that they create a user and set permissions 
 in one single step, but you can't fill in all the user's details. 
 
 Theoretically, you should first add the user with the SCIM api, and only 
@@ -93,8 +93,8 @@ Wait, did you say pagination?!
 Two of the new Grist SCIM endpoints (namely, 
 `getUsers <https://support.getgrist.com/api/#tag/scim/operation/getUsers>`_ 
 and
-`searchUsers <https://support.getgrist.com/api/#tag/scim/operation/searchUsers>`_) 
-will support *pagination*: you also pass a starting point and a number of users 
+`searchUsers <https://support.getgrist.com/api/#tag/scim/operation/searchUsers>`_)  
+support *pagination*: you also pass a starting point and a number of users 
 to be retrieved with one single call.
 
 While these are the only "paginated" endpoints in the Grist apis right now 
@@ -102,19 +102,19 @@ While these are the only "paginated" endpoints in the Grist apis right now
 we cannot exclude that there are plans to introduce pagination in other places 
 at some point. 
 
-Thus, we made a little extra effort to support pagination in a smoother, 
-more pythonic way. With any luck, the mechanism we have created will also 
-adapt to future paginated apis, if they arrive. However, keep in mind that 
+Thus, we made a little extra effort in supporting pagination in a smoother, 
+more pythonic way. With any luck, the mechanism will also adapt to future 
+paginated apis, if they arrive. However, keep in mind that 
 this part is still very unstable and experimental, and may change in the future. 
 
-The rule is: every Grist endpoint that support pagination will have *two* 
-corrisponding functions in the ``GristApi`` class: 
+**The rule is**: every Grist endpoint (say, ``fooapi``) that support pagination 
+always has *two* corrisponding functions in the ``GristApi`` class: 
 
 - a ``GristApi.fooapi_raw`` function, that calls ``fooapi`` in the traditional 
   way, without any "fancy" pagination. You just submit your starting point and 
   number of items to be retrieved, and the function will return the usual 
   ``status_code, result`` tuple, just like all the other Pygrister apis. If 
-  you then want the next chunk of results, you have to make another call to 
+  you then want the next chunk of results, you'll have to make another call to 
   ``fooapi_raw``, submitting the next starting point, and so on. 
   **Please note**: all ``GristApi`` functions ending in ``*_raw`` will always 
   return the response "as it is" from the Grist api call (ie, a dictionary). 
@@ -156,8 +156,8 @@ with the updated index, retrieving the next 5 users, and so on.
 When there are no more users to retrieve, a ``StopIteration`` will be raised 
 (this is the normal way in Python). 
 
-Of course, you don't have to keep calling ``next``. As for any regular 
-Python iterable, you can just use a ``for`` loop:: 
+Of course, you don't have to keep calling ``next``. As with any regular 
+Python iterable, you want to use a ``for`` loop:: 
 
     >>> userlist = grist.list_users(start=1, chunk=5)
     >>> for status_code, result in userlist:
@@ -166,7 +166,7 @@ Python iterable, you can just use a ``for`` loop::
 Pretty neat, right? At every step of the loop, the api call will be posted 
 and the result retrieved. But wait, there's more!
 
-After the first call has been posted, the iterable will have a ``__len__`` 
+*After* the first call has been posted, the iterable will have a ``__len__`` 
 attribute storing the total number of items::
 
     >>> userlist = grist.list_users(start=1, chunk=5)
@@ -195,7 +195,7 @@ Another interesting feature to keep in mind: the iterable object is just a
 thin wrapper, but the actual api call is still managed by the ``GristApi`` 
 instance as usual. This means that all the usual goodies are still available, 
 just like for any other api call. For instance, if you get a bad status code 
-while iterating, you can still inspect the ``GristApi`` instance to find out 
+while iterating, you can still ``inspect`` the ``GristApi`` instance to find out 
 what happened::
 
     >>> userlist = grist.list_users(start=1, chunk=5)
@@ -209,12 +209,12 @@ what happened::
 Of course, for now we have only 2 "paginated" apis (``list_users`` and 
 ``search_users``, with the corresponding ``list_users_raw`` and 
 ``search_users_raw``) and they both deal with the niche SCIM interface, 
-so all this probably won't do you any good in everyday life... but maybe 
+so all of this probably won't do you any good in everyday life... but maybe 
 in the future!
 
 Finally, there is still one oddity (a bug, perhaps?) in the Grist apis 
 that you should be aware of. When you pass an out-of-range index to a 
-"paginated" api, you will retrieve the first items as if nothing. 
+"paginated" api, you will still retrieve the first items as if nothing. 
 You can test this in Pygrister too, using the ``*_raw`` function that mirrors 
 the original api behaviour::
 

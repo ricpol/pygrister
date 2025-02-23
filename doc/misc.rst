@@ -9,7 +9,7 @@ If you set the ``GRIST_SAFEMODE`` configuration key to ``Y``, all API call
 functions attempting a write operation will be blocked: Pygrister will throw 
 a ``GristApiInSafeMode`` exception instead. 
 
-Please note that the two ``run_sql*`` functions are allowed in safe mode, 
+Please note that the two ``run_sql*`` functions are still allowed in safe mode, 
 because the underlying API only accepts ``SELECT`` statements anyway. 
 
 
@@ -18,12 +18,12 @@ Troubleshooting the API call.
 
 It goes without saying, Pygrister relies on the excellent Python Requests 
 library to do the actual talking with the Grist API. Every time a request 
-is sent and a response is retrieved, Pygrister saves the relevant details 
-of both the request and the response for subsequent inspection. 
+is sent, and a response is retrieved, Pygrister saves the relevant details 
+of both for subsequent inspection. 
 
 You may check the ``req_url``, ``req_body``, ``req_headers``, ``req_method``, 
 ``resp_content``, ``resp_code``, ``resp_reason``, ``resp_headers``, attributes 
-right after each API call to make sure Pygrister has handled the request 
+*right after* each API call to make sure Pygrister has handled the request 
 correctly. 
 
 The convenience function ``inspect`` will output all the saved data at once. 
@@ -83,9 +83,9 @@ of course not conform to the "regular" Pygrister format for a successful
 request::
 
     >>> grist.reconfig({'GRIST_RAISE_ERROR': 'N'})
-    >>> grist.list_records('bogus_table')
+    >>> grist.list_records('bogus_table') # usually, response here is a list
     (404, {'error': 'Table not found "bogus_table"'})
-    >>> grist.add_records('Table1', ['bogus_records'])
+    >>> grist.add_records('Table1', ['bogus_records']) # usually, resp. is None
     (400, {'error': 'Invalid payload', 'details': 
     {'userError': 'Error: body.records[0] is not a NewRecord; (...)}})
 
@@ -106,12 +106,12 @@ inspecting the status code, you may then write something like ::
         ...
 
 
-Additional parameters for the request.
---------------------------------------
+Additional arguments for the request.
+-------------------------------------
 
-You may pass optional parameters, not otherwise used by Pygrister, to the underlying 
+You may pass optional arguments, not otherwise used by Pygrister, to the underlying 
 `Requests call <https://requests.readthedocs.io/en/latest/api/#requests.request>`_. 
-Simply pass a ``request_options`` parameter to the ``GristApi`` constructor, ::
+Simply pass a ``request_options`` argument to the ``GristApi`` constructor, ::
 
     grist = GristApi(request_options={'timeout': 5})
 
@@ -119,7 +119,7 @@ or modify the property at runtime::
 
     grist.request_options = {'timeout': 5}
 
-The ``request_options`` will then be injected into all subsequent Pygrister api 
+The ``request_options`` will then be injected into all subsequent Pygrister API 
 calls. The code above, for example, will set a timeout limit from now on. 
 
 
@@ -139,8 +139,9 @@ Working with sessions is straightforward::
     >>> # ...Pygrister api calls are now "inside" the session...
     >>> grist.close_session() # close the session
     >>> grist.session         # "session" attribute is now None
+    >>>
 
-As long as you are in a session, subsequent api calls will re-use the same 
+As long as you are in a session, all subsequent api calls will re-use the same 
 underlying connection, resulting in much faster interaction. From the 
 second api call on, if you inspect the request headers (``grist.req_headers``), 
 you will notice a new ``'Cookie'`` element added by Requests to persist the 
@@ -148,7 +149,7 @@ connection.
 
 In Pygrister, session have no other use than for boosting performance, and they 
 are transparent to the rest of the api. Inside a session, you will use the 
-``GristApi`` class just the same: start a session, and forget about it. 
+``GristApi`` class just the same: start a session, and then forget about it. 
 
 You may use sessions for performance, when you need to make several api calls 
 in a row. However, keep in mind that Requests (and Pygrister) sessions are 

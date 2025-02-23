@@ -37,7 +37,7 @@ a number in the GUI cell, that will be treated as *text*, since you didn't
 use the widget to select a date... but wait! You can't actually store a 
 *numerical string* in an integer Sqlite column, because it will be converted 
 (and thus interpreted as a timestamp). To circumvent Sqlite type affinity, 
-Grist will silently convert any *numerical string* in a *date* column to an 
+Grist will silently convert any *numerical string* inside a *date* column to an 
 *exadecimal blob* and store it in this format. As a result, you can put 
 a number in a date column using the GUI, but not with the API. (The same goes 
 with a boolean column.)
@@ -80,14 +80,14 @@ could totally work as an input converter for an integer column in Grist.
 
 On the other hand, keep in mind that input converters should return, at the 
 very least, something that you can safely pass to the Grist API, i.e. a 
-json-izable value. For instance, if you need to store in Grist an exact 
-decimal number, you can't have your converter simply return a ``decimal.Decimal`` 
+json-izable value. For instance, if you need to store an exact decimal number 
+in Grist, you can't have your converter simply return a ``decimal.Decimal`` 
 instance (no more that you could pass it directly to the API!). You may want 
 to return ``Decimal.to_eng_string`` instead, and store the value as a string.
 
 Also note that input converters are applied *before* calling the API, 
 of course: Pygrister has no say in any further mangling of your data, once 
-the converted values are passed to the API. For instance, as discussed above, 
+the converted values are passed to the Grist API. For instance, as discussed above, 
 you can store a *string* into a Date column, but not a *numerical string* 
 (at least, not with the API). Hence, if you have an input converter for a 
 Date column which may return numerical strings, keep in mind that your values 
@@ -99,7 +99,7 @@ by Grist for such cases... which is undocumented, as far as we know.)
 Output converters are easier: they receive the value retrieved by the API, and 
 convert it to whatever you want - since it is your own code that consumes 
 the value from now on, Grist is no longer involved and you can choose freely. 
-Only you have to be prepared to accept input values of different types, since a 
+You only have to be prepared to accept input values of different types, since a 
 GUI user will have more freedom in entering data anyway. 
 
 Register a converter.
@@ -146,7 +146,7 @@ register dictionaries::
 
 To delete all converters, set the register to an empty dictionary::
 
-    grist.in_converter = {} # reset input converters
+    grist.in_converter = dict() # reset input converters
 
 See the test suite for more example of converter usage. 
 
@@ -165,7 +165,7 @@ Once registered, *input converters* are applied to the following APIs:
 - ``GristApi.run_sql`` (special)
 - ``GritsApi.run_sql_with_args`` (special)
   
-To use converters with the two "sql" APIs, however, you will have to register 
+To use converters with the two "sql" APIs, you will have to register 
 them under the special ``sql`` key, as in
 
 ::
@@ -188,10 +188,15 @@ handles this in a different way for input and output converters.
 
 At the moment, Pygrister does not intervene when an *input* converter fails, 
 and simply let the resulting exception propagate (this may change in the 
-future). 
+future). The reasoning for this is that the data about to be written to 
+the database should be entirely your responsibility, and Pygrister will 
+simply refuse to guess. Therefore, you have to catch your own exceptions. 
+The only guarantee is that the converters are applied immediately *before* 
+passing the data to the API: if even one record triggers a failure in the 
+converter, no data will be written to the database. 
 
-An *output* converter, however, is handled a little more graciously. Should it 
-fail with a ``ValueError`` or ``TypeError`` (the most common 
+An *output* converter, on the other hand, is handled a little more graciously. 
+Should it fail with a ``ValueError`` or ``TypeError`` (the most common 
 ones in such cases), then Pygrister will catch the exception and 
 return either ``None`` (for null values) or ``str(value)`` (for anything 
 else). Since ``str(x)`` always works in Python, this means that your 
@@ -200,9 +205,9 @@ you can work with - well, almost!, unless the converter fails with another,
 more exotic exception, that is. 
 
 This is meant as a way of saving you from having to write all the boring 
-``try/except`` (or ``if/else``) blocks in your converters, to account 
+``try/except`` (or ``if/else``) blocks in your output converters, to account 
 for the occasional null value or plain string that you may find in a Grist 
-column. For instance, this is usually not necessary::
+(Sqlite) column. For instance, this is usually not necessary::
 
     def my_output_converter(value):
         if value is None:   # this is handled by Pygrister
@@ -219,15 +224,7 @@ In many cases, this could be written just as ::
         return some_fancy_data_conversion(value)
 
 Of course, if you don't like Pygrister's default behaviour, you can always 
-catch the ``Value/TypeError`` yourself, and write your own handlers. 
-
-As mentioned before, *input* converters, on the other hand, have no embedded 
-exception handlers. The reasoning here is that the data to be written to 
-the database should be entirely your responsibility, and Pygrister will 
-simply refuse to guess. Therefore, you have to catch your own exceptions. 
-The only guarantee is that the converters are applied immediately *before* 
-passing the data to the API: if even one record triggers a failure in the 
-converter, no data will be written to the database. 
+catch the ``ValueError`` or ``TypeError`` yourself, and write your own handlers. 
 
 A note on converting date/times.
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -235,8 +232,8 @@ A note on converting date/times.
 A common use case for converters is adapting Grist timestamps in Date columns 
 from/to complex Python types such as ``datetime.date``. If you are writing 
 a converter like this, please note that Grist has a notion of "local time": 
-Grist documents set a default timezone at the moment they are first created; 
-date/time columns may set their own timezones (defaulting to the global document 
+Grist documents set a default timezone when they are first created; 
+date/time columns set their own timezones (defaulting to the global document 
 timezone); then the GUI widget may (or may not!) compensate for the users' local 
 time offset when converting to database timestamps. See 
 `the Grist documentation <https://support.getgrist.com/dates/#time-zones>`_ 
@@ -262,7 +259,7 @@ The problem here is that ``the_date`` is a "naive" date object, without
 timezone info. Grist will assume UTC+0, and further mangle the timestamp 
 produced by the converter to compensate for the column's own timezone. 
 Since your local time is probably different than UTC+0, when you'll check 
-the inserted value with the GUI, you will see a different thing. 
+the inserted value with the GUI, you will likely see a different thing. 
 (The test suite has examples of this behaviour.)
 
 One *possible* solution is to use a timezone-aware Python object instead (see 
