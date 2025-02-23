@@ -119,8 +119,8 @@ def check_safemode(funct):
 
 Apiresp = tuple[int, Any] #: the return type of all api call functions
 
-class _Paginator:
-    # a wrapper around api calls that need pagination - still very experimental!
+class Paginator:
+    """A simple iterable object to wrap Api calls that needs pagination."""
     def __init__(self, provider, start, items, lenname, 
                  res_transform, **query_args):
         self.provider = provider # the GristApi method that will handle the call
@@ -366,13 +366,13 @@ class GristApi:
                             headers={'Content-Type': 'application/scim+json'})
 
     def list_users(self, start: int = 1, chunk: int = 10, 
-                   filter: str = '') -> _Paginator:
+                   filter: str = '') -> Paginator:
         """Implement GET ``/scim/v2/Users``. 
         
         This is a paginated api: return an iterable object which, in turn, 
         will retrieve ``chunk`` users at a time, as a ``list[dict]``. 
         """
-        return _Paginator(self.list_users_raw, start, chunk, 'totalResults', 
+        return Paginator(self.list_users_raw, start, chunk, 'totalResults', 
                           lambda res: res['Resources'], filter=filter)
 
     def list_users_raw(self, start: int = 1, chunk: int = 10, 
@@ -523,7 +523,7 @@ class GristApi:
                      sort: str = '', asc: bool = True, filter: str = '', 
                      attrib: list[str]|None = None, 
                      no_attrib: list[str]|None = None, 
-                     schemas: list[str]|None = None) -> _Paginator:
+                     schemas: list[str]|None = None) -> Paginator:
         """Implement POST ``/scim/v2/Users/.search``. 
         
         Note: ``schemas`` defaults to 
@@ -532,7 +532,7 @@ class GristApi:
         This is a paginated api: return an iterable object which, in turn, 
         will retrieve ``chunk`` users at a time, as a ``list[dict]``. 
         """
-        return _Paginator(self.search_users_raw, start, chunk, 'totalResults', 
+        return Paginator(self.search_users_raw, start, chunk, 'totalResults', 
                           lambda res: res['Resources'],
                           sort=sort, asc=asc, filter=filter, attrib=attrib, 
                           no_attrib=no_attrib, schemas=schemas)
