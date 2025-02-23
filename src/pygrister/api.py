@@ -249,12 +249,14 @@ class GristApi:
             server = self.make_server(team_name=team_id)
         return doc, server
 
-    def open_session(self):
+    def open_session(self) -> None:
+        """Open a Requests sessions for subsequent Api calls."""
         if self.session:
             self.session.close()
         self.session = Session()
     
-    def close_session(self):
+    def close_session(self) -> None:
+        """Close a session, if any."""
         if self.session:
             self.session.close()
         self.session = None
@@ -591,7 +593,7 @@ class GristApi:
         else:
             return st, res
 
-    def see_scim_schemas(self):
+    def see_scim_schemas(self) -> Apiresp:
         """Implement GET ``/scim/v2/Schemas``. 
         
         If successful, response will a ``dict`` of scim schemas. 
@@ -601,7 +603,7 @@ class GristApi:
         return self.apicall(url, 
                             headers={'Content-Type': 'application/scim+json'})
 
-    def see_scim_config(self):
+    def see_scim_config(self) -> Apiresp:
         """Implement GET ``/scim/v2/ServiceProviderConfig``. 
         
         If successful, response will a ``dict`` of scim provider configuration. 
@@ -611,7 +613,7 @@ class GristApi:
         return self.apicall(url, 
                             headers={'Content-Type': 'application/scim+json'})
 
-    def see_scim_resources(self):
+    def see_scim_resources(self) -> Apiresp:
         """Implement GET ``/scim/v2/ResourceTypes``. 
         
         If successful, response will a ``dict`` of scim resources. 
@@ -922,7 +924,7 @@ class GristApi:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _apply_out_converter(records: list[dict], converter: dict):
+    def _apply_out_converter(records: list[dict], converter: dict) -> list[dict]:
         for rec in records:
             for k, v in rec.items():
                 try:
@@ -936,7 +938,7 @@ class GristApi:
 
     @staticmethod
     def _apply_in_converter(records: list[dict], converter: dict, 
-                            is_add_update: bool = False):
+                            is_add_update: bool = False) -> list[dict]:
         # call with "is_add_update=True" only from add_update_records
         # it's a hack to compensate for the different record schema
         for rec in records:
