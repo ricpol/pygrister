@@ -250,13 +250,13 @@ class GristApi:
         return doc, server
 
     def open_session(self) -> None:
-        """Open a Requests sessions for subsequent Api calls."""
+        """Open a Requests sessions for all subsequent Api calls."""
         if self.session:
             self.session.close()
         self.session = Session()
     
     def close_session(self) -> None:
-        """Close a session, if any."""
+        """Close an open session, if any."""
         if self.session:
             self.session.close()
         self.session = None
@@ -264,6 +264,7 @@ class GristApi:
     def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
                 params: dict|None = None, json: dict|None = None, 
                 filename: str = '') -> Apiresp:
+        """The engine responsible for actually calling the Apis."""
         self.apicalls += 1
         call = self.session.request if self.session else request
         if headers is None:
@@ -427,7 +428,7 @@ class GristApi:
         """Implement POST ``/scim/v2/Users``. 
 
         Note: ``schemas`` defaults to 
-        ['urn:ietf:params:scim:schemas:core:2.0:User']
+        ``['urn:ietf:params:scim:schemas:core:2.0:User']``
 
         If successful, response will be the user id as an ``int``. 
         If scim is not enabled, will return Http 501.
@@ -451,7 +452,7 @@ class GristApi:
         """Implement PUT ``/scim/v2/Users/{userId}``. 
         
         Note: ``schemas`` defaults to 
-        ['urn:ietf:params:scim:schemas:core:2.0:User']
+        ``['urn:ietf:params:scim:schemas:core:2.0:User']``
 
         If successful, response will be ``None``. 
         If scim is not enabled, will return Http 501.
@@ -473,7 +474,7 @@ class GristApi:
         """Implement PATCH ``/scim/v2/Users/{userId}``. 
         
         Note: ``schemas`` defaults to 
-        ['urn:ietf:params:scim:api:messages:2.0:PatchOp']
+        ``['urn:ietf:params:scim:api:messages:2.0:PatchOp']``
 
         If successful, response will be ``None``. 
         If scim is not enabled, will return Http 501.
@@ -529,7 +530,7 @@ class GristApi:
         """Implement POST ``/scim/v2/Users/.search``. 
         
         Note: ``schemas`` defaults to 
-        ['urn:ietf:params:scim:api:messages:2.0:BulkRequest']
+        ``['urn:ietf:params:scim:api:messages:2.0:BulkRequest']``
 
         This is a paginated api: return an iterable object which, in turn, 
         will retrieve ``chunk`` users at a time, as a ``list[dict]``. 
@@ -547,7 +548,7 @@ class GristApi:
         """Implement POST ``/scim/v2/Users/.search``. 
         
         Note: ``schemas`` defaults to 
-        ['urn:ietf:params:scim:api:messages:2.0:BulkRequest']
+        ``['urn:ietf:params:scim:api:messages:2.0:BulkRequest']``
 
         If successful, response will be a ``dict`` of user data. 
         If scim is not enabled, will return Http 501. 
@@ -575,7 +576,7 @@ class GristApi:
         """Implement POST ``/scim/v2/Bulk``. 
 
         Note: ``schemas`` defaults to 
-        ['urn:ietf:params:scim:api:messages:2.0:BulkRequest']
+        ``['urn:ietf:params:scim:api:messages:2.0:BulkRequest']``
 
         If successful, response will be a ``list[int]`` of status codes for 
         each operation (inspect ``GristApi.resp_content`` for details, 

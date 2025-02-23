@@ -37,7 +37,7 @@ to clean up eventually.
 
 Test users are a separate problem. A few tests will create new users in your 
 test team site: even if you remove them manually in the "manage team" 
-section of the GUI, all you are deleting is the user-team association, but 
+section of the GUI, you are only deleting the user-team association, but 
 the user data will remain in your "home" database (which you currently cannot 
 access in SaaS Grist). You really can't completely delete a user from the GUI 
 and, in SaaS Grist, you can't use the SCIM apis (which are currently 
