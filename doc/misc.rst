@@ -30,6 +30,20 @@ The convenience function ``inspect`` will output all the saved data at once.
 You may call it if anything goes wrong: in fact, request/response data are 
 collected even if an Http error occurred (see below). 
 
+**Please be aware**: the "inspect" attributes ``req_*`` and ``resp_*`` 
+will store the status of the last api call *that was successfully responded to* 
+by the server. If the call times out, for example, there will be no response 
+object to store and inspect in the first place. 
+In other words, if you receive a Http404 (or any other "bad" status code, 
+resulting in a HTTPError from Requests - again, see below for details), then 
+the details of the response will be retrieved and stored all the same. 
+However, if the call fails *before* a response is even retrieved, Pygrister 
+will simply bail out propagating the appropriate  
+`Requests exception <https://requests.readthedocs.io/en/latest/api/#exceptions>`_. 
+If this happen, the "inspect" attributes will still reflect the status of the 
+*next-to-last* call, which can be confusing. In other words, *do not* call 
+``inspect`` after any Requests exception that is not a HTTPError. 
+
 Please note only the first 5000 characters of a text/json response will be 
 stored: this should be plenty for inspection purposes, but if you really 
 need to save more, you may raise the value of the ``MAXSAVEDRESP`` constant.

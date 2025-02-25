@@ -326,10 +326,12 @@ class GristApi:
         self.resp_headers = response.headers
 
     def inspect(self) -> str:
-        """Collect useful info about the last api call that was sent. 
+        """Collect info on the last api call that was responded to by the server. 
         
-        Intended for debug: add a ``print(self.inspect())`` after 
-        something went wrong. Works after an HTTPError too.
+        Intended for debug: add a ``print(self.inspect())`` right after the 
+        call to inspect. Works even if the server returned a "bad" status 
+        code (aka HTTPError). Does not work if the call itself was not 
+        successful (eg., timed out). 
         """
         hdcopy = dict(self.req_headers)
         prot, key = hdcopy['Authorization'].split()

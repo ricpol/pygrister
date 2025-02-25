@@ -8,9 +8,12 @@ Bleeding edge: committed to the repo, not yet released on PyPI
   several api calls in a row
 - provisional support for the new Scim apis
 - added a stub for DELETE /users/<userid>, but we are not implementing 
-  this one at the moment. 
+  this one at the moment
 - added a note and a special config key in the test suite only, to skip 
-  tests that create users, since in SaaS Grist they can't really be deleted. 
+  tests that create users, since in SaaS Grist they can't really be deleted
+- added a note in both the docstring for "GristApi.inspect" and the docs, 
+  to clarify that, in fact, if no reponse is retrieved, then nothing useful 
+  will be left to inspect. 
 
 v0.5.0, 2024.11.17
 ------------------
