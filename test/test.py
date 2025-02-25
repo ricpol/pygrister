@@ -168,7 +168,7 @@ class TestVarious(BaseTestPyGrister):
                               'GRIST_API_SERVER': '255.255.1', 
                               # maybe we are self-managed instead
                               'GRIST_SELF_MANAGED_HOME': 'http://10.255.255.1'})
-        # without this, test will take forever, then fail with ConnectionError
+        # without this, test will take forever, before failing with ConnectTimeout
         self.g.request_options = {'timeout': 1}
         with self.assertRaises(ConnectTimeout):
             st, res = self.g.see_team()
