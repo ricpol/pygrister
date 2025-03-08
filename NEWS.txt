@@ -4,6 +4,12 @@ NEWS
 Bleeding edge: committed to the repo, not yet released on PyPI
 --------------------------------------------------------------
 
+Nothing right now.
+
+
+v0.6.0, 2025.08.03
+------------------
+
 - support for sessions from Requests, to improve performance when making 
   several api calls in a row
 - provisional support for the new Scim apis
