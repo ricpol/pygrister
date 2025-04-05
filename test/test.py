@@ -78,6 +78,8 @@ import unittest
 from requests import HTTPError, ConnectTimeout
 
 from pygrister import api
+from pygrister import config
+from pygrister.exceptions import *
 
 # standard config values used by tests
 default_config = {
@@ -145,20 +147,33 @@ class TestVarious(BaseTestPyGrister):
         st, res = self.g.see_team()
         self.assertTrue(self.g.ok)
 
+    def test_custom_configurator(self):
+        self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'Y')
+        c = config.Configurator(config={'GRIST_RAISE_ERROR': 'N'})
+        old_c = self.g.configurator
+        self.g.configurator = c
+        self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'N')
+        self.g.configurator = old_c
+        self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'Y')
+        g = api.GristApi(custom_configurator=c)
+        self.assertEqual(g.configurator.config['GRIST_RAISE_ERROR'], 'N')
+        with self.assertRaises(GristApiNotConfigured):
+            g = api.GristApi(config={'foo':'bar'}, custom_configurator=c)
+
     def test_reconfig(self):
-        self.assertEqual(self.g._config['GRIST_RAISE_ERROR'], 'Y')
-        self.assertEqual(self.g._config['GRIST_SAFEMODE'], 'N')
+        self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'Y')
+        self.assertEqual(self.g.configurator.config['GRIST_SAFEMODE'], 'N')
         # update_config is for incremental changes
         self.g.update_config({'GRIST_SAFEMODE': 'Y'})
-        self.assertEqual(self.g._config['GRIST_RAISE_ERROR'], 'Y')
-        self.assertEqual(self.g._config['GRIST_SAFEMODE'], 'Y')
+        self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'Y')
+        self.assertEqual(self.g.configurator.config['GRIST_SAFEMODE'], 'Y')
         self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
-        self.assertEqual(self.g._config['GRIST_RAISE_ERROR'], 'N')
-        self.assertEqual(self.g._config['GRIST_SAFEMODE'], 'Y')
+        self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'N')
+        self.assertEqual(self.g.configurator.config['GRIST_SAFEMODE'], 'Y')
         # reconfig is for re-building from scratch
         self.g.reconfig({'GRIST_RAISE_ERROR': 'Y'})
-        self.assertEqual(self.g._config['GRIST_RAISE_ERROR'], 'Y')
-        self.assertEqual(self.g._config['GRIST_SAFEMODE'], 'N')
+        self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'Y')
+        self.assertEqual(self.g.configurator.config['GRIST_SAFEMODE'], 'N')
 
     def test_request_options(self):
         # as an example of extra-options, we test a timeout limit

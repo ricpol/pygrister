@@ -92,7 +92,7 @@ will do the trick.
 
 The function ``api.get_config`` returns the current "static" configuration, 
 i.e. taking into account only the json files and environment variables. At 
-runtime, you may inspect the variable ``GristApi._config`` to know the "real", 
+runtime, you may look at ``GristApi.configurator.config`` to know the "real", 
 actual configuration in use (the function ``GristApi.inspect`` will also 
 output the configuration among other things).
 
@@ -122,11 +122,57 @@ incrementally. ::
 Just call ``reconfig`` without arguments to revert to the original "static" 
 configuration.
 
+Custom configurators.
+^^^^^^^^^^^^^^^^^^^^^
+
+This is an advanced topic and you probably will never need it. A "configurator" 
+class deals with the Pygrister configuration behind the scenes. The default 
+configurator is ``config.Configurator``, and the ``GristApi`` class will load 
+it when instantiated. 
+
+You may want to write your own, different configurator, deriving from 
+``config.Configurator``. Then, you can pass it to the ``GristApi`` 
+constructor as the ``custom_configurator`` argument::
+
+    class MyConfigurator(Configurator):
+        pass # do your own thing here
+    
+    my_configurator = MyConfigurator(config={...})
+    grist = GristApi(custom_configurator=my_configurator)
+
+**Important**: you cannot pass both the ``config`` and ``custom_configurator`` 
+arguments to the ``GristApi`` class constructor: a ``GristApiNotConfigured`` 
+exception will be raised. If you choose to pass a custom configurator, you should  
+load its own configuration in advance, as shown in the example above. 
+
+The internal configurator object is exposed as the ``GristApi.configurator`` 
+attribute. Thus, you may also change configurator at runtime::
+
+    grist = GristApi() # load the default configurator
+    old_configurator = grist.configurator
+    new_configurator = MyConfigurator(config={...})
+    grist.configurator = new_configurator # change configurator
+    grist.configurator = old_configurator # swap back
+
+If you keep the instance of the default configurator, you can then alternate 
+between the two, as above. Of course, if the new configurator holds a different 
+set of config keys, this turns out to be yet another way of changing 
+configuration at runtime. 
+
+Now that you know about ``config.Configurator``, you should also know that 
+``GristApi.reconfig`` is just an alias for ``GristApi.configurator.reconfig``, 
+and ``GristApi.update_config`` is really ``GristApi.configurator.update_config``. 
+
+(All that being said - why would you want to write a custom configurator, after 
+all? For instance, you may want a different way of storing the "static" 
+configurations keys: just ovveride ``Configurator.get_config`` and provide 
+your own logic.)
+
 Configuration keys.
 -------------------
 
-This is the content of the ``config.py`` file, listing all the config keys 
-currently defined, and their default values::
+This is a list of all the config keys currently defined and their default 
+values, as defined in the ``config.py`` module::
 
     {
         'GRIST_API_KEY': '<your_api_key_here>',

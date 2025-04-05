@@ -4,7 +4,14 @@ NEWS
 Bleeding edge: committed to the repo, not yet released on PyPI
 --------------------------------------------------------------
 
-Nothing right now.
+- moved configuration to config.py: api changed:
+   - the new config.Configurator class will now handle configuration
+   - new "custom_configurator" optional param to GristApi.__init__
+   - <grist>.make_server is now <grist>.configurator.make_server
+   - <grist>._config (private but useful!) is now <grist>.configurator.config
+- moved exceptions to a new exceptions.py module: api changed:
+   - from pygrister.api import <some_exception> is now 
+     from.pygrister.exceptions import <some_exception>
 
 
 v0.6.0, 2025.08.03
