@@ -12,7 +12,7 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 - moved exceptions to a new exceptions.py module: api changed:
    - from pygrister.api import <some_exception> is now 
      from.pygrister.exceptions import <some_exception>
-
+- first stab at a new Pygrister cli
 
 v0.6.0, 2025.08.03
 ------------------
