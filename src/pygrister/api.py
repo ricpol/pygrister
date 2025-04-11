@@ -562,6 +562,19 @@ class GristApi:
         json = {'name': new_name}
         return self.apicall(url, method='PATCH', json=json)
 
+    @check_safemode
+    def delete_team(self, team_id: str = '') -> Apiresp:
+        """Implement DELETE ``/orgs/{orgId}``.
+        
+        If successful, response will be ``None``.
+        """
+        team_id = team_id or 'current'
+        url = f'{self.configurator.server}/orgs/{team_id}'
+        st, res = self.apicall(url, 'DELETE')
+        if self.ok:
+            res = None
+        return st, res
+
     def list_team_users(self, team_id: str = '') -> Apiresp:
         """Implement GET ``/orgs/{orgId}/access``.
         
@@ -726,7 +739,19 @@ class GristApi:
         if res == doc_id:
             res = None
         return st, res
+    
+    @check_safemode
+    def delete_doc_history(self, keep: int = 0, 
+                           doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/states/remove``.
         
+        If successful, response will be ``None``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/states/remove'
+        json = {'keep': keep}
+        return self.apicall(url, method='POST', json=json)
+
     @check_safemode
     def move_doc(self, ws_id: int, doc_id: str = '', 
                  team_id: str = '') -> Apiresp:
@@ -741,6 +766,16 @@ class GristApi:
         if res == doc_id:
             res = None
         return st, res
+
+    @check_safemode
+    def reload_doc(self, doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/force-reload``.
+        
+        If successful, response will be ``None``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/force-reload'
+        return self.apicall(url, method='POST')
 
     def list_doc_users(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/access``.

@@ -381,6 +381,12 @@ class TestTeamSites(BaseTestPyGrister):
         self.assertEqual(st, 200)
         self.assertIsNone(res)
 
+    @unittest.expectedFailure
+    def test_delete_team(self):
+        # since there is no way to *create* a team in the first place, 
+        # we won't test team deletion!
+        pass
+
     def test_list_team_users(self):
         st, res = self.g.list_team_users(TestTeamSites.team_id)
         self.assertIsInstance(res, list)
@@ -486,6 +492,15 @@ class TestDocs(BaseTestPyGrister):
         with self.assertRaises(api.GristApiInSafeMode):
             self.g.add_doc(name, self.workspace_id)
 
+    def test_delete_doc_history(self):
+        name = str(time.time_ns())
+        st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(doc_id, str)
+        self.assertEqual(st, 200)
+        st, res = self.g.delete_doc_history(0, doc_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+
     @unittest.expectedFailure
     def test_create_delete_doc_cross_site(self):
         # fun fact: cross-site doc creation is allowed...
@@ -531,6 +546,15 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsInstance(ws_id, int)
         self.assertEqual(st, 200)
         st, res = self.g.move_doc(ws_id, doc_id, self.team_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+
+    def test_reload_doc(self):
+        name = str(time.time_ns())
+        st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(doc_id, str)
+        self.assertEqual(st, 200)
+        st, res = self.g.reload_doc(doc_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
 
