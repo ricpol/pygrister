@@ -1017,8 +1017,8 @@ class TestAttachments(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
         cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
-        ws_id, name = _make_ws(cls.team_id)
-        cls.doc_id = _make_doc(ws_id)
+        self.ws_id, name = _make_ws(cls.team_id)
+        cls.doc_id = _make_doc(self.ws_id)
 
     def test_list_attachments(self):
         st, res = self.g.list_attachments(doc_id=self.doc_id, team_id=self.team_id)
@@ -1042,6 +1042,25 @@ class TestAttachments(BaseTestPyGrister):
         st, res = self.g.download_attachment(name, 1, doc_id=self.doc_id, 
                                              team_id=self.team_id)
         self.assertIsNone(res)
+        self.assertEqual(st, 200)
+    
+    def test_upload_download_attachments_bulk(self):
+        # this is for the "archive" apis
+        f = os.path.join(HERE, 'imgtest.jpg')
+        st, res = self.g.upload_attachment(f, doc_id=self.doc_id, 
+                                           team_id=self.team_id)
+        self.assertEqual(st, 200)
+        name = 'downloaded_atts_'+str(time.time_ns())
+        st, res = self.g.download_attachments(name, doc_id=self.doc_id, 
+                                              team_id=self.team_id)
+        self.assertEqual(st, 200)
+        self.assertIsNone(res)
+        self.assertTrue(os.path.isfile(name+'.tar'))
+
+        # should work even if no attachments are present
+        doc_id = _make_doc(self.ws_id)
+        st, res = self.g.download_attachments(doc_id=doc_id, 
+                                              team_id=self.team_id)
         self.assertEqual(st, 200)
 
     def test_see_attachment(self):

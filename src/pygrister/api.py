@@ -1201,6 +1201,25 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/attachments/{attachment_id}/download'
         headers = {'accept': '*/*'}
         return self.apicall(url, headers=headers, filename=filename)
+    
+    def download_attachments(self, filename: str = '', format: str = 'tar', 
+                             doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/attachments/archive``.
+        
+        ``filename``: must be a file name without extension and defaults 
+        to ``doc_<doc_id>_attachments.<format>``. 
+        If successful, response will be ``None``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/attachments/archive'
+        headers = {'accept': '*/*'}
+        params = {'format': format}
+        if filename:
+            filename = f'{filename}.{format}'
+        else:
+            filename = f'doc_{doc_id}_attachments.{format}'
+        return self.apicall(url, headers=headers, params=params, 
+                            filename=filename)
 
     # WEBHOOKS
     # ------------------------------------------------------------------

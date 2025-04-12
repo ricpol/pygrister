@@ -18,6 +18,7 @@ Bleeding edge: committed to the repo, not yet released on PyPI
      since there's still no way to create a team, use this one at your risk!
    - POST /docs/{docId}/states/remove -> GristApi.delete_doc_history
    - POST /docs/{docId}/force-reload -> GristApi.reload_doc
+   - GET /docs/{docId}/attachments/archive -> GristApi.download_attachments
 
 v0.6.0, 2025.08.03
 ------------------
