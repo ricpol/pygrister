@@ -207,7 +207,7 @@ class TestVarious(BaseTestPyGrister):
         self.assertEqual(st, 200)
         # POST in upload mode
         f = os.path.join(HERE, 'imgtest.jpg')
-        st, res = self.g.upload_attachment(f, doc_id=doc_id, team_id=self.team_id)
+        st, res = self.g.upload_attachments([f], doc_id=doc_id, team_id=self.team_id)
         self.assertEqual(st, 200)
         # PATCH
         name = str(time.time_ns())
@@ -381,7 +381,7 @@ class TestTeamSites(BaseTestPyGrister):
         self.assertEqual(st, 200)
         self.assertIsNone(res)
 
-    @unittest.expectedFailure
+    @unittest.skip
     def test_delete_team(self):
         # since there is no way to *create* a team in the first place, 
         # we won't test team deletion!
@@ -906,8 +906,8 @@ class TestTables(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
         cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
-        ws_id, name = _make_ws(cls.team_id)
-        cls.doc_id = _make_doc(ws_id)
+        cls.ws_id, name = _make_ws(cls.team_id)
+        cls.doc_id = _make_doc(cls.ws_id)
 
     def test_list_tables(self):
         st, res = self.g.list_tables(self.doc_id, self.team_id)
@@ -1017,8 +1017,8 @@ class TestAttachments(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
         cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
-        self.ws_id, name = _make_ws(cls.team_id)
-        cls.doc_id = _make_doc(self.ws_id)
+        cls.ws_id, name = _make_ws(cls.team_id)
+        cls.doc_id = _make_doc(cls.ws_id)
 
     def test_list_attachments(self):
         st, res = self.g.list_attachments(doc_id=self.doc_id, team_id=self.team_id)
@@ -1034,9 +1034,16 @@ class TestAttachments(BaseTestPyGrister):
 
     def test_upload_download_attachments(self):
         f = os.path.join(HERE, 'imgtest.jpg')
-        st, res = self.g.upload_attachment(f, doc_id=self.doc_id, 
-                                           team_id=self.team_id)
+        st, res = self.g.upload_attachments([f], doc_id=self.doc_id, 
+                                            team_id=self.team_id)
         self.assertIsInstance(res, list)
+        self.assertEqual(len(res), 1)
+        self.assertEqual(st, 200)
+        # upload multiple attachments
+        st, res = self.g.upload_attachments([f, f, f], doc_id=self.doc_id, 
+                                            team_id=self.team_id)
+        self.assertIsInstance(res, list)
+        self.assertEqual(len(res), 3)
         self.assertEqual(st, 200)
         name = 'att_'+str(time.time_ns())+'.jpg'
         st, res = self.g.download_attachment(name, 1, doc_id=self.doc_id, 
@@ -1047,8 +1054,8 @@ class TestAttachments(BaseTestPyGrister):
     def test_upload_download_attachments_bulk(self):
         # this is for the "archive" apis
         f = os.path.join(HERE, 'imgtest.jpg')
-        st, res = self.g.upload_attachment(f, doc_id=self.doc_id, 
-                                           team_id=self.team_id)
+        st, res = self.g.upload_attachments([f], doc_id=self.doc_id, 
+                                            team_id=self.team_id)
         self.assertEqual(st, 200)
         name = 'downloaded_atts_'+str(time.time_ns())
         st, res = self.g.download_attachments(name, doc_id=self.doc_id, 
@@ -1066,8 +1073,8 @@ class TestAttachments(BaseTestPyGrister):
     def test_see_attachment(self):
         # make sure we have at least one attachment to see
         f = os.path.join(HERE, 'imgtest.jpg')
-        st, res = self.g.upload_attachment(f, doc_id=self.doc_id, 
-                                           team_id=self.team_id)
+        st, res = self.g.upload_attachments([f], doc_id=self.doc_id, 
+                                            team_id=self.team_id)
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         # note that id=1 could not be the one we just uploaded... 

@@ -13,12 +13,16 @@ Bleeding edge: committed to the repo, not yet released on PyPI
    - from pygrister.api import <some_exception> is now 
      from.pygrister.exceptions import <some_exception>
 - first stab at a new Pygrister cli
+- changed/deprecated APIs:
+   - GristApi.upload_attachment is now capable of uploading multiple files: 
+     as a result, it has been renamed to "upload_attachments" (plural), with 
+     a different signature. The old "upload_attachment" is *deprecated* and 
+     redirects to "upload_attachments". It will be removed at some point. 
 - new APIs: 
    - DELETE /orgs/{orgId} -> GritsApi.delete_team
      since there's still no way to create a team, use this one at your risk!
    - POST /docs/{docId}/states/remove -> GristApi.delete_doc_history
    - POST /docs/{docId}/force-reload -> GristApi.reload_doc
-   - GET /docs/{docId}/attachments/archive -> GristApi.download_attachments
 
 v0.6.0, 2025.08.03
 ------------------

@@ -45,6 +45,8 @@ import json as modjson # "json" is a common name for request params...
 import functools
 from urllib.parse import urlencode, quote
 from typing import Any
+from inspect import currentframe, getframeinfo
+from warnings import showwarning
 
 from requests import request, Session, JSONDecodeError
 
@@ -166,7 +168,7 @@ class GristApi:
     
     def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
                 params: dict|None = None, json: dict|None = None, 
-                filename: str = '') -> Apiresp:
+                filename: str = '', upload_files: list|None = None) -> Apiresp:
         """The engine responsible for actually calling the Apis."""
         self.apicalls += 1
         call = self.session.request if self.session else request
@@ -176,7 +178,30 @@ class GristApi:
         headers.update(
             {'Authorization': f'Bearer {self.configurator.config["GRIST_API_KEY"]}'})
 
-        if not filename:  # ordinary request
+        if filename: # download mode, method *must* be GET!
+            with call('GET', url, headers=headers, params=params, 
+                      stream=True, **self.request_options) as resp:
+                self.ok = resp.ok
+                self._save_request_data(resp)
+                if self.configurator.raise_option:
+                    resp.raise_for_status()
+                if resp.ok:
+                    with open(filename, 'wb') as f:
+                        for chunk in resp.iter_content(chunk_size=1024*100):
+                            f.write(chunk)
+            return resp.status_code, None
+        elif upload_files: # upload mode, method *must* be POST!
+            # TODO: "uploaded_files" must be ready for the call, 
+            # i.e. opening/closing files is handled by the calling function
+            # not sure if it's the best option, but for now...
+            resp = call('POST', url, headers=headers, 
+                        files=upload_files, **self.request_options)
+            self.ok = resp.ok
+            self._save_request_data(resp)
+            if self.configurator.raise_option:
+                resp.raise_for_status()
+            return resp.status_code, resp.json() if resp.content else None
+        else: # ordinary request
             resp = call(method, url, headers=headers, params=params, 
                         json=json, **self.request_options) 
             self.ok = resp.ok
@@ -184,30 +209,6 @@ class GristApi:
             if self.configurator.raise_option:
                 resp.raise_for_status()
             return resp.status_code, resp.json() if resp.content else None
-        else:
-            if method == 'GET': # download mode
-                with call(method, url, headers=headers, params=params, 
-                          stream=True, **self.request_options) as resp:
-                    self.ok = resp.ok
-                    self._save_request_data(resp)
-                    if self.configurator.raise_option:
-                        resp.raise_for_status()
-                    if resp.ok:
-                        with open(filename, 'wb') as f:
-                            for chunk in resp.iter_content(chunk_size=1024*100):
-                                f.write(chunk)
-                return resp.status_code, None
-            else: # 'POST', upload mode
-                # TODO headers and the "upload" bit below  
-                # are too coupled with the specific needs of upload_attachment;
-                with open(filename, 'rb') as f:
-                    resp = call(method, url, headers=headers, 
-                                files={'upload': f}, **self.request_options)
-                self.ok = resp.ok
-                self._save_request_data(resp)
-                if self.configurator.raise_option:
-                    resp.raise_for_status()
-                return resp.status_code, resp.json() if resp.content else None
 
     def _save_request_data(self, response):
         self.req_url = response.request.url
@@ -1168,10 +1169,23 @@ class GristApi:
             return st, res['records']
         except KeyError:
             return st, res
-        
+
     @check_safemode
-    def upload_attachment(self, filename: str, doc_id: str = '', 
-                          team_id: str = '') -> Apiresp:
+    def upload_attachment(self, filename: str, 
+                          doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/attachments`` for one file only.
+        
+        This is *deprecated* and redirects to ``upload_attachments`` 
+        which you should use instead.
+        """
+        line = getframeinfo(currentframe()).lineno + 1 # type: ignore
+        showwarning('Use upload_attachments instead', DeprecationWarning, 
+                    'api.py', line)
+        return self.upload_attachments([filename], doc_id, team_id)
+    
+    @check_safemode
+    def upload_attachments(self, filenames: list, doc_id: str = '', 
+                           team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/attachments``.
         
         If successful, response will be a ``list[int]`` of attachments ids.
@@ -1179,7 +1193,14 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments'
         headers = dict()
-        return self.apicall(url, 'POST', headers=headers, filename=filename)
+        fileobjs = [('upload', (f, open(f, 'rb'))) for f in filenames]
+        try:
+            st, res = self.apicall(url, 'POST', headers=headers, 
+                                   upload_files=fileobjs)
+        finally:
+            for obj in fileobjs:
+                obj[1][1].close()
+        return st, res
 
     def see_attachment(self, attachment_id: int, doc_id: str = '',
                        team_id: str = '') -> Apiresp:
