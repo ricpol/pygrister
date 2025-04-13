@@ -1051,8 +1051,8 @@ class TestAttachments(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
     
-    def test_upload_download_attachments_bulk(self):
-        # this is for the "archive" apis
+    def test_download_restore_attachments(self):
+        # this is for the download/upload "archive" apis
         f = os.path.join(HERE, 'imgtest.jpg')
         st, res = self.g.upload_attachments([f], doc_id=self.doc_id, 
                                             team_id=self.team_id)
@@ -1063,8 +1063,12 @@ class TestAttachments(BaseTestPyGrister):
         self.assertEqual(st, 200)
         self.assertIsNone(res)
         self.assertTrue(os.path.isfile(name+'.tar'))
-
-        # should work even if no attachments are present
+        # now we re-upload the tar file
+        st, res = self.g.upload_restore_attachments(name, doc_id=self.doc_id, 
+                                                    team_id=self.team_id)
+        self.assertEqual(st, 200)
+        self.assertDictEqual(res, {'added': 0, 'errored': 0, 'unused': 1})
+        # downloading should work even if no attachments are present
         doc_id = _make_doc(self.ws_id)
         st, res = self.g.download_attachments(doc_id=doc_id, 
                                               team_id=self.team_id)

@@ -1202,6 +1202,25 @@ class GristApi:
                 obj[1][1].close()
         return st, res
 
+    @check_safemode
+    def upload_restore_attachments(self, filename: str, 
+                                   doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/attachments/archive``.
+        
+        ``filename``: must be a file name without extension of a *tar* file.
+        If successful, response will be a summary ``dict`` of attachments used.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/attachments/archive'
+        headers = {'Accept': 'application/json'
+                   #'Content-Type': 'multipart/form-data', # do not use,
+                  }   # or Requests won't add boundaries and Grist will complain
+        with open(filename+'.tar', 'rb') as f:
+            fileobj = [('file', (filename+'.tar', f, 'application/x-tar'))]
+            st, res = self.apicall(url, method='POST', headers=headers, 
+                                   upload_files=fileobj) 
+        return st, res
+
     def see_attachment(self, attachment_id: int, doc_id: str = '',
                        team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/attachments/{attachmentId}``.
