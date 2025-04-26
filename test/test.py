@@ -28,6 +28,9 @@ directory as this file. Edit the already present json file as follows:
 - "GRIST_SELF_MANAGED_SINGLE_ORG": "Y" if you are running the mono-team flavour 
 - "GRIST_TEST_RUN_USER_TESTS": "N" to skip the tests that create users 
   (special, see below)
+- "GRIST_TEST_RUN_EXT_ATTACH_TESTS": "N" to skip the tests that need an external 
+  storage for attachments (special, see below)
+
 Note: no other config key should be configured for the test suite. 
 
 The test suite will leave several objects (workspaces and docs) in your 
@@ -49,6 +52,13 @@ to activate a separate account to run the tests.
 To help you keep test users under control, we added a special configuration 
 key, only useful when running the test suite: set "GRIST_TEST_RUN_USER_TESTS" 
 to "N" to skip every test that may create a user. 
+
+Another separate problem is how to test the Apis that require an external storage 
+for attachments. If your testing environment already supports external storage 
+(that is, you have a bucket in place and a "GRIST_EXTERNAL_ATTACHMENTS_MODE" 
+variable set to "snapshots") then you may set our special configuration key 
+"GRIST_TEST_RUN_EXT_ATTACH_TESTS" to include the tests dealing with storages. 
+If not, leave the key unset (the default) to skip those tests. 
 
 A few object will also be downloaded in your current directory. Moreover, 
 tests involving user/permission manipulation may trigger email notifications 

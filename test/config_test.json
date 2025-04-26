@@ -7,6 +7,7 @@
     "GRIST_SELF_MANAGED_SINGLE_ORG": "Y",
 
     "GRIST_TEST_RUN_USER_TESTS": "N",
+    "GRIST_TEST_RUN_EXT_ATTACH_TESTS": "N",
 
 
     "note0": "---------------------------------------------------------------",
