@@ -1261,6 +1261,68 @@ class GristApi:
         return self.apicall(url, headers=headers, params=params, 
                             filename=filename)
 
+    def see_attachment_store(self, 
+                             doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/attachments/store``.
+        
+        If successful, response will be either ``external`` or ``internal``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/attachments/store'
+        st, res = self.apicall(url)
+        return st, res['type']
+
+    def update_attachment_store(self, internal_store: bool = True, 
+                                doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/attachments/store``.
+        
+        Pass ``internal_store=True`` to set internal storage, ``False`` to set  
+        external storage.
+        If successful, response will be ``None``.
+        Passing ``False`` will return Http 400 if external storage is not 
+        configured.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/attachments/store'
+        json = {'type': {True:'internal', False:'external'}[internal_store]}
+        st, res = self.apicall(url, 'POST', json=json)
+        if self.ok:
+            res = None
+        return st, res
+  
+    def list_store_settings(self, 
+                            doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/attachments/stores``.
+        
+        If successful, response will be a ``list`` of external storage settings.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/attachments/stores'
+        st, res = self.apicall(url)
+        return st, res['stores']
+
+    def transfer_attachments(self,  
+                             doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/attachments/transferAll``.
+
+        If successful, response will be a ``dict`` of transfer details.
+        If external storage is not configured, will return Http 404.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/attachments/transferAll'
+        return self.apicall(url, 'POST')
+
+    def get_transfer_status(self,  
+                            doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/attachments/transferStatus``.
+
+        If successful, response will be a ``dict`` of transfer details.
+        If external storage is not configured, will return Http 404.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/attachments/transferStatus'
+        return self.apicall(url)
+
     # WEBHOOKS
     # ------------------------------------------------------------------
  

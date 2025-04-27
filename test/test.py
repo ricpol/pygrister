@@ -1097,6 +1097,56 @@ class TestAttachments(BaseTestPyGrister):
         self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
 
+# to test external attachments, you must run a self-hosted instance of Grist 
+# with "GRIST_EXTERNAL_ATTACHMENTS_MODE=snapshots", and a S3-compatible bucket 
+@unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_EXT_ATTACH_TESTS'] == 'N', '')
+class TestExternalAttachments(BaseTestPyGrister):
+    @classmethod
+    def setUpClass(cls):
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
+        ws_id, name = _make_ws(cls.team_id)
+        cls.doc_id = _make_doc(ws_id)
+
+    def test_store(self):
+        # this is for the various "store" apis (see, update, settings)
+        st, res = self.g.see_attachment_store(doc_id=self.doc_id, 
+                                              team_id=self.team_id)
+        self.assertEqual(res, 'internal')
+        st, res = self.g.update_attachment_store(internal_store=False, 
+                            doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
+        st, res = self.g.see_attachment_store(doc_id=self.doc_id, 
+                                              team_id=self.team_id)
+        self.assertEqual(res, 'external')
+        st, res = self.g.list_store_settings(doc_id=self.doc_id, 
+                                             team_id=self.team_id)
+        self.assertEqual(st, 200) # not really much to verify here... 
+
+    def test_transfer(self):
+        # this is for the transfering files apis, between external/internal store
+        st, res = self.g.update_attachment_store(doc_id=self.doc_id, 
+                                                 team_id=self.team_id)
+        st, res = self.g.see_attachment_store(doc_id=self.doc_id, 
+                                              team_id=self.team_id)
+        self.assertEqual(res, 'internal')
+        f = os.path.join(HERE, 'imgtest.jpg')
+        st, res = self.g.upload_attachments([f, f, f], doc_id=self.doc_id, 
+                                            team_id=self.team_id)
+        st, res = self.g.update_attachment_store(internal_store=False, 
+                            doc_id=self.doc_id, team_id=self.team_id)
+        st, res = self.g.see_attachment_store(doc_id=self.doc_id, 
+                                              team_id=self.team_id)
+        self.assertEqual(res, 'external')
+        # now we should have some attachments to transfer
+        st, res = self.g.transfer_attachments(doc_id=self.doc_id, 
+                                              team_id=self.team_id)
+        self.assertTrue(res['status']['isRunning'])
+        # "get_transfer_status" return depends on when we call it... 
+        st, res = self.g.get_transfer_status(doc_id=self.doc_id, 
+                                             team_id=self.team_id)
+        self.assertEqual(st, 200) # little we can test
+
+
 class TestWebhooks(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
