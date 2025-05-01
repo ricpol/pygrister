@@ -30,6 +30,8 @@ Bleeding edge: committed to the repo, not yet released on PyPI
    - GET /docs/{docId}/attachments/stores -> list_store_settings
    - POST /docs/{docId}/attachments/transferAll -> transfer_attachments
    - GET /docs/{docId}/attachments/transferStatus -> get_transfer_status
+- added a note in the docs to clarify that Grist Desktop is also supported 
+  (issue #6)
 
 v0.6.0, 2025.08.03
 ------------------

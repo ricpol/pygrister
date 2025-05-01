@@ -266,6 +266,32 @@ enabled in Pygrister, the configuration keys ``GRIST_SERVER_PROTOCOL`` and
 ``GRIST_API_SERVER`` will be ignored, and ``GRIST_SELF_MANAGED_HOME`` 
 will be used instead. The remaining configuration keys will work as usual. 
 
+Support for Grist Desktop.
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+`Grist Desktop <https://github.com/gristlabs/grist-desktop>`_ is basically a 
+self-hosted Grist, packaged as an Electron application: hence, Pygrister will 
+work just fine there too. The only catch is that you should provide a 
+``GRIST_DESKTOP_AUTH`` env variable to enable API calls, which are disabled by 
+default (for instance you may set it to ``=none``, see 
+`this forum thread <https://community.getgrist.com/t/using-the-api-with-grist-desktop/9271/1>`_ 
+for more details). 
+
+Also, keep in mind that Grist Deskop will use port 47478 by default. 
+All things considered, a Pygrister configuration like this should work for 
+Grist Desktop::
+
+    {
+        'GRIST_API_KEY': '<your_api_key_here>',
+        'GRIST_SELF_MANAGED': 'Y',
+        'GRIST_SELF_MANAGED_HOME': 'http://localhost:47478',
+        'GRIST_SELF_MANAGED_SINGLE_ORG': 'N',
+        'GRIST_TEAM_SITE': 'docs',
+    }
+
+Just set ``GRIST_DESKTOP_AUTH``, start Grist Deskop, generate an API key 
+there, and you should be able to place API calls with Pygrister as well. 
+
 App-specific configuration.
 ---------------------------
 
