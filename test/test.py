@@ -1141,8 +1141,8 @@ class TestExternalAttachments(BaseTestPyGrister):
         st, res = self.g.transfer_attachments(doc_id=self.doc_id, 
                                               team_id=self.team_id)
         self.assertTrue(res['status']['isRunning'])
-        # "get_transfer_status" return depends on when we call it... 
-        st, res = self.g.get_transfer_status(doc_id=self.doc_id, 
+        # "see_transfer_status" return depends on when we call it... 
+        st, res = self.g.see_transfer_status(doc_id=self.doc_id, 
                                              team_id=self.team_id)
         self.assertEqual(st, 200) # little we can test
 

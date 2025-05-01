@@ -1310,7 +1310,7 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/attachments/transferAll'
         return self.apicall(url, 'POST')
 
-    def get_transfer_status(self,  
+    def see_transfer_status(self,  
                             doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/attachments/transferStatus``.
 
