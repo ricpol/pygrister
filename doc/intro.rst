@@ -124,9 +124,7 @@ their names follow this pattern:
 - ``add_*`` functions implement ``POST`` calls to add an object;
 - ``add_update_*`` functions implement ``PUT`` calls to modify an object 
   if existing, adding otherwise;
-- ``delete_*`` functions implement ``DELETE`` calls to delete an object 
-  (note: delete functions will always ask explicitly for the object ID to 
-  be deleted, as a safety measure);
+- ``delete_*`` functions implement ``DELETE`` calls to delete an object;
 - ``download_*`` functions are for downloading.
 
 The docstring of each function reports the underlying Grist API: consult the 

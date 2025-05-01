@@ -653,7 +653,7 @@ class GristApi:
         
         If successful, response will be ``None``.
         """
-        # it's safer to ask for a workspace id here
+        ws_id = ws_id or int(self.configurator.config['GRIST_WORKSPACE_ID'])
         url = f'{self.configurator.server}/workspaces/{ws_id}'
         st, res = self.apicall(url, method='DELETE')
         if res == ws_id:
@@ -728,12 +728,11 @@ class GristApi:
         return st, res
 
     @check_safemode
-    def delete_doc(self, doc_id: str, team_id: str = '') -> Apiresp:
+    def delete_doc(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement DELETE ``/docs/{docId}``.
         
         If successful, response will be ``None``.
         """
-        # it's safer to ask for a doc id here
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}'
         st, res = self.apicall(url, method='DELETE')
@@ -1112,13 +1111,12 @@ class GristApi:
         return self.apicall(url, 'PUT', params=params, json=json)
 
     @check_safemode
-    def delete_column(self, table_id: str, col_id: str, doc_id: str, 
+    def delete_column(self, table_id: str, col_id: str, doc_id: str = '', 
                       team_id: str = '') -> Apiresp:
         """Implement DELETE ``/docs/{docId}/tables/{tableId}/columns/{colId}``.
         
         If successful, response will be ``None``.
         """
-        # it's safer to ask for a doc id here
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns/{col_id}'
         return self.apicall(url, 'DELETE')
@@ -1127,7 +1125,7 @@ class GristApi:
     # ------------------------------------------------------------------
 
     @check_safemode
-    def delete_rows(self, table_id: str, rows: list[int], doc_id: str, 
+    def delete_rows(self, table_id: str, rows: list[int], doc_id: str = '', 
                     team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/tables/{tableId}/data/delete``.
         
