@@ -28,6 +28,7 @@ directory as this file. Edit the already present json file as follows:
 - "GRIST_SELF_MANAGED_SINGLE_ORG": "Y" if you are running the mono-team flavour 
 - "GRIST_TEST_RUN_USER_TESTS": "N" to skip the tests that create users 
   (special, see below)
+- "GRIST_TEST_RUN_SCIM_TESTS": "N" to skip all SCIM api tests (special, see below)
 - "GRIST_TEST_RUN_EXT_ATTACH_TESTS": "N" to skip the tests that need an external 
   storage for attachments (special, see below)
 
@@ -52,6 +53,14 @@ to activate a separate account to run the tests.
 To help you keep test users under control, we added a special configuration 
 key, only useful when running the test suite: set "GRIST_TEST_RUN_USER_TESTS" 
 to "N" to skip every test that may create a user. 
+
+SCIM apis are a separate problem: SCIM tests are automatically skipped when you 
+run the test suite against the regular Grist SaaS (because SCIM is not enabled 
+there); but, even in self-hosted Grist, you have to enable SCIM first by 
+setting the GRIST_ENABLE_SCIM env variable. If you are self-hosted, but you 
+don't want to enable SCIM in your environment, set our special configuration key 
+"GRIST_TEST_RUN_SCIM_TESTS" to "N" (in config_test.json file) to skip all SCIM 
+tests altogether, so you don't get any spurious errors. 
 
 Another separate problem is how to test the Apis that require an external storage 
 for attachments. If your testing environment already supports external storage 
@@ -241,6 +250,7 @@ class TestUsersNoScim(BaseTestPyGrister):
 # note: to test scim ops, you need both GRIST_SELF_MANAGED here (because the 
 # regular Grist SaaS does not support scim) and GRIST_ENABLE_SCIM on the server!
 @unittest.skipIf(TEST_CONFIGURATION['GRIST_SELF_MANAGED'] == 'N', '')
+@unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_SCIM_TESTS'] == 'N', '')
 class TestUsersScim(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):

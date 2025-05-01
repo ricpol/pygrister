@@ -37,6 +37,8 @@ Bleeding edge: committed to the repo, not yet released on PyPI
   it has been reversed: "delete" apis will default to the current document, 
   just like the rest of them. Functions affected: delete_workspace, delete_doc, 
   delete_column, delete_rows (issue #5)
+- test suite: added special config keys in config_test.json, to skip SCIM tests 
+  and to skip external attachments tests
 
 v0.6.0, 2025.08.03
 ------------------
