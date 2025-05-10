@@ -71,6 +71,7 @@ ERRMSG = '[bold red]Error![/bold red]'
 def _exit_with_error(st, res, inspect) -> None:
     if inspect:
         cli_console.print(the_grist.inspect())
+        cli_console.rule()
     cli_console.print(ERRMSG, 'Status:', st, res)
     raise typer.Exit(BADCALL)
 
@@ -78,19 +79,27 @@ def _exit_if_error(st, res, inspect) -> None:
     if not the_grist.ok:
         if inspect:
             cli_console.print(the_grist.inspect())
+            cli_console.rule()
         cli_console.print(ERRMSG, 'Status:', st, res)
         raise typer.Exit(BADCALL)
 
 def _print_done_or_exit(st, res, inspect) -> None:
     if inspect:
         cli_console.print(the_grist.inspect())
+        cli_console.rule()
     if the_grist.ok: 
         cli_console.print(DONEMSG)
     else:
         cli_console.print(ERRMSG, 'Status:', st, res)
         raise typer.Exit(BADCALL)
 
-def _print_user_table(response) -> None:
+def _print_content(content, inspect) -> None:
+    if inspect:
+        cli_console.print(the_grist.inspect())
+        cli_console.rule()
+    cli_console.print(content)
+
+def _make_user_table(response) -> None:
     table = Table('id', 'name', 'email', 'access')
     for usr in response:
         table.add_row(str(usr['id']), usr['name'], usr['email'], 
@@ -113,7 +122,7 @@ inspect_opt = typer.Option('--inspect', '-i',
                            help = 'Print inspect output after api call')
 team_id_opt = typer.Option('--team', '-t', 
                            help='The team ID [default: current]')
-ws_id_opt = typer.Option('--ws', '-w', 
+ws_id_opt = typer.Option('--workspace', '-w', 
                          help='The workspace ID [default: current]')
 access_opt = typer.Option('--access', '-a', 
                           help='The new access level',
@@ -138,9 +147,7 @@ def list_orgs(inspect: Annotated[bool, inspect_opt] = False) -> None:
     table = Table('id', 'name', 'owner')
     for org in res:
         table.add_row(str(org['id']), org['name'], org['owner']['name'])
-    if inspect:
-        cli_console.print(the_grist.inspect())
-    cli_console.print(table)
+    _print_content(table, inspect)
 
 @org_app.command('see')
 def see_org(team_id: Annotated[str, team_id_opt] = '', 
@@ -149,17 +156,16 @@ def see_org(team_id: Annotated[str, team_id_opt] = '',
     """Describe a team"""
     st, res = the_grist.see_team(team_id)
     _exit_if_error(st, res, inspect) 
-    if inspect:
-        cli_console.print(the_grist.inspect())
     if details:
-        cli_console.print(res)
+        content = res
     else:
         table = Table('key', 'value')
         table.add_row('id', str(res['id']))
         table.add_row('name', res['name'])
         table.add_row('domain', res['domain'])
         table.add_row('owner', f"{res['owner']['id']} - {res['owner']['name']}")
-        cli_console.print(table)
+        content = table
+    _print_content(content, inspect)
 
 @org_app.command('update')
 def update_org(name: Annotated[str, typer.Argument(help='The new name')], 
@@ -183,12 +189,8 @@ def list_org_users(team_id: Annotated[str, team_id_opt] = '',
     """List users with access to team"""
     st, res = the_grist.list_team_users(team_id)
     _exit_if_error(st, res, inspect)
-    if inspect:
-        cli_console.print(the_grist.inspect())
-    if details:
-        cli_console.print(res)
-    else:
-        _print_user_table(res)
+    content = res if details else _make_user_table(res)
+    _print_content(content, inspect)
 
 @org_app.command('user-access')
 def change_team_access(uid: Annotated[int, typer.Argument(help='The user ID')], 
@@ -206,6 +208,7 @@ def change_team_access(uid: Annotated[int, typer.Argument(help='The user ID')],
     if not usr_email:
         if inspect:
             cli_console.print(the_grist.inspect())
+            cli_console.rule()
         raise typer.BadParameter('User id not found.')
     users = {usr_email: access}
     st, res = the_grist.update_team_users(users, team_id)
@@ -223,17 +226,16 @@ def list_ws(team_id: Annotated[str, team_id_opt] = '',
     """List workspaces and documents in a team"""
     st, res = the_grist.list_workspaces(team_id)
     _exit_if_error(st, res, inspect)
-    if inspect:
-        cli_console.print(the_grist.inspect())
     if details:
-        cli_console.print(res)
+        content = res
     else:
         table = Table('id', 'name', 'owner', 'email', 'docs')
         for ws in res:
             numdocs = len(ws.get('docs', []))
             table.add_row(str(ws['id']), ws['name'], str(ws['owner']['id']), 
                           ws['owner']['email'], str(numdocs))
-        cli_console.print(table)
+        content = table
+    _print_content(content, inspect)
 
 @ws_app.command('new')
 def add_ws(name: Annotated[str, typer.Argument(help='The name of new ws')], 
@@ -244,6 +246,7 @@ def add_ws(name: Annotated[str, typer.Argument(help='The name of new ws')],
     _exit_if_error(st, res, inspect)
     if inspect:
         cli_console.print(the_grist.inspect())
+        cli_console.rule()
     cli_console.print(DONEMSG, 'Id:', res)
 
 @ws_app.command('see')
@@ -253,10 +256,8 @@ def see_ws(ws_id: Annotated[int, ws_id_opt] = 0,
     """Describe a workspace"""
     st, res = the_grist.see_workspace(ws_id)
     _exit_if_error(st, res, inspect)
-    if inspect:
-        cli_console.print(the_grist.inspect())
     if details:
-        cli_console.print(res)
+        content = res
     else:
         table = Table('key', 'value')
         table.add_row('id', str(res['id']))
@@ -265,7 +266,8 @@ def see_ws(ws_id: Annotated[int, ws_id_opt] = 0,
         table.add_section()
         for doc in res.get('docs', []):
             table.add_row('doc', f"{doc['id']} - {doc['name']}")
-        cli_console.print(table)
+        content = table
+    _print_content(content, inspect)
 
 @ws_app.command('update')
 def update_ws(name: Annotated[str, typer.Argument(help='The new name')], 
@@ -289,12 +291,8 @@ def list_ws_users(ws_id: Annotated[int, ws_id_opt] = 0,
     """List users with access to workspace"""
     st, res = the_grist.list_workspace_users(ws_id)
     _exit_if_error(st, res, inspect)
-    if inspect:
-        cli_console.print(the_grist.inspect())
-    if details:
-        cli_console.print(res)
-    else:
-        _print_user_table(res)
+    content = res if details else _make_user_table(res)
+    _print_content(content, inspect)
 
 @ws_app.command('user-access')
 def change_ws_access(uid: Annotated[int, typer.Argument(help='The user ID')], 
@@ -312,6 +310,7 @@ def change_ws_access(uid: Annotated[int, typer.Argument(help='The user ID')],
     if not usr_email:
         if inspect:
             cli_console.print(the_grist.inspect())
+            cli_console.rule()
         raise typer.BadParameter('User id not found.')
     users = {usr_email: access}
     st, res = the_grist.update_workspace_users(users, ws_id)
