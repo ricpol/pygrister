@@ -48,6 +48,14 @@ class _CliConfigurator(Configurator):
         # overrides
         config['GRIST_RAISE_ERROR'] = 'N'
         config['GRIST_SAFEMODE'] = 'N'
+        # GristApi will happily crash with a ValueError when ws_id (an int!) 
+        # is needed but left unspecified (eg, the default str(!) in the 
+        # static config). As a fix, we replace the default with '0': still 
+        # an invalid id, but a number, so it won't crash and return http404
+        try:
+            int(config['GRIST_WORKSPACE_ID'])
+        except ValueError:
+            config['GRIST_WORKSPACE_ID'] = '0'
         return config
 
     def update_config(self, config: dict[str, str]):
@@ -123,7 +131,7 @@ inspect_opt = typer.Option('--inspect', '-i',
 team_id_opt = typer.Option('--team', '-t', 
                            help='The team ID [default: current]')
 ws_id_opt = typer.Option('--workspace', '-w', 
-                         help='The workspace ID [default: current]')
+                         help='The workspace integer ID [default: current]')
 access_opt = typer.Option('--access', '-a', 
                           help='The new access level',
                           callback=_user_access_validate)
