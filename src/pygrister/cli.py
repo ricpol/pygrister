@@ -107,12 +107,12 @@ def _print_content(content, inspect) -> None:
         cli_console.rule()
     cli_console.print(content)
 
-def _make_user_table(response) -> None:
+def _make_user_table(response) -> Table:
     table = Table('id', 'name', 'email', 'access')
     for usr in response:
         table.add_row(str(usr['id']), usr['name'], usr['email'], 
                       str(usr['access']))
-    cli_console.print(table)
+    return table
 
 def _user_access_validate(value):
     legal = 'owners editors viewers members none'
