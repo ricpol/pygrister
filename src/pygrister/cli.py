@@ -107,6 +107,12 @@ def _print_content(content, inspect) -> None:
         cli_console.rule()
     cli_console.print(content)
 
+def _print_done_and_id(content, inspect) -> None:
+    if inspect:
+        cli_console.print(the_grist.inspect())
+        cli_console.rule()
+    cli_console.print(DONEMSG, 'Id:', content)
+
 def _make_user_table(response) -> Table:
     table = Table('id', 'name', 'email', 'access')
     for usr in response:
@@ -122,9 +128,17 @@ def _user_access_validate(value):
         value = None
     return value
 
+def _user_max_access_validate(value):
+    legal = 'owners editors viewers'
+    if value not in legal.split():
+        raise typer.BadParameter(f'Access must be one of: {legal}')
+    if value == 'none':
+        value = None
+    return value
+
 # a few recurrent Typer options
 # ----------------------------------------------------------------------
-details_opt = typer.Option('--details/--no-details', '-D/-d',
+details_opt = typer.Option('--details/--no-details', '-T/-t',
                            help='Long/short info')
 inspect_opt = typer.Option('--inspect', '-i', 
                            help = 'Print inspect output after api call')
@@ -132,17 +146,24 @@ team_id_opt = typer.Option('--team', '-t',
                            help='The team ID [default: current]')
 ws_id_opt = typer.Option('--workspace', '-w', 
                          help='The workspace integer ID [default: current]')
+doc_id_opt = typer.Option('--document', '-d', 
+                          help='The document ID [default: current]')
 access_opt = typer.Option('--access', '-a', 
                           help='The new access level',
                           callback=_user_access_validate)
+max_access_opt = typer.Option('--max-access', '-A', 
+                          help='The max inherited access level',
+                          callback=_user_max_access_validate)
 
 # Typer sub-commands
 # ----------------------------------------------------------------------
 org_app = typer.Typer(help='Manage Grist teams (aka organisations)')
 ws_app = typer.Typer(help='Manage workspaces inside a team site')
+doc_app = typer.Typer(help='Manage documents inside a workspace')
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
+app.add_typer(doc_app, name='doc', no_args_is_help=True)
 
 
 # gry team -> for managing team sites (organisations)
@@ -252,10 +273,7 @@ def add_ws(name: Annotated[str, typer.Argument(help='The name of new ws')],
     """Create an empty workspace"""
     st, res = the_grist.add_workspace(name, team_id)
     _exit_if_error(st, res, inspect)
-    if inspect:
-        cli_console.print(the_grist.inspect())
-        cli_console.rule()
-    cli_console.print(DONEMSG, 'Id:', res)
+    _print_done_and_id(res, inspect)
 
 @ws_app.command('see')
 def see_ws(ws_id: Annotated[int, ws_id_opt] = 0,
@@ -324,8 +342,146 @@ def change_ws_access(uid: Annotated[int, typer.Argument(help='The user ID')],
     st, res = the_grist.update_workspace_users(users, ws_id)
     _print_done_or_exit(st, res, inspect)
         
-#TODO "change_user_access" is only for existing users, but "update_team_users"
+#TODO "change_ws_access" is only for existing users, but "update_team_users"
 # allows for adding users too. Maybe add a separate cli endpoint for this?
+
+# gry doc -> for managing documents
+# ----------------------------------------------------------------------
+
+@doc_app.command('new')
+def add_doc(name: Annotated[str, typer.Argument(help='The name of new ws')], 
+            pinned: Annotated[bool, typer.Option(help='Id pinned')] = False,
+            ws_id: Annotated[int, ws_id_opt] = 0, 
+            inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Create an empty document"""
+    st, res = the_grist.add_doc(name, pinned, ws_id)
+    _exit_if_error(st, res, inspect)
+    _print_done_and_id(res, inspect)
+
+@doc_app.command('see')
+def see_doc(doc_id: Annotated[str, doc_id_opt] = '', 
+            team_id: Annotated[str, team_id_opt] = '',
+            details: Annotated[bool, details_opt] = False,
+            inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Describe a document"""
+    st, res = the_grist.see_doc(doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    if details:
+        content = res
+    else:
+        table = Table('key', 'value')
+        table.add_row('id', res['id'])
+        table.add_row('name', res['name'])
+        table.add_row('pinned', str(res['isPinned']))
+        table.add_row('workspace', 
+            f"{res['workspace']['id']} - {res['workspace']['name']}")
+        table.add_row('team', 
+            f"{res['workspace']['org']['id']} - {res['workspace']['org']['name']}")
+        content = table
+    _print_content(content, inspect)
+
+@doc_app.command('update')
+def update_doc(name: Annotated[str, typer.Argument(help='The new name')],
+               pinned: Annotated[bool, typer.Option(help='Id pinned')] = False,
+               doc_id: Annotated[str, doc_id_opt] = '', 
+               team_id: Annotated[str, team_id_opt] = '',
+               inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Modify document metadata"""
+    st, res = the_grist.update_doc(name, pinned, doc_id, team_id)
+    _print_done_or_exit(st, res, inspect)
+
+@ doc_app.command('move')
+def move_doc(dest: Annotated[int, typer.Argument( 
+                             help='Destination ws integer ID')],
+             doc_id: Annotated[str, doc_id_opt] = '', 
+             team_id: Annotated[str, team_id_opt] = '',
+             inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Move document to another workspace"""
+    st, res = the_grist.move_doc(dest, doc_id, team_id)
+    _print_done_or_exit(st, res, inspect)
+
+@doc_app.command('delete')
+def delete_doc(doc_id: Annotated[str, doc_id_opt] = '', 
+               team_id: Annotated[str, team_id_opt] = '',
+               inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Delete a document"""
+    st, res = the_grist.delete_doc(doc_id, team_id)
+    _print_done_or_exit(st, res, inspect)
+
+@doc_app.command('purge-history')
+def delete_doc_history(keep: Annotated[int, typer.Option('--keep', '-k', 
+                                       help='Latest actions to keep')] = 0,
+                       doc_id: Annotated[str, doc_id_opt] = '', 
+                       team_id: Annotated[str, team_id_opt] = '',
+                       inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Delete the document action history"""
+    st, res = the_grist.delete_doc_history(keep, doc_id, team_id)
+    _print_done_or_exit(st, res, inspect)
+
+@doc_app.command('reload')
+def reload_doc(doc_id: Annotated[str, doc_id_opt] = '', 
+               team_id: Annotated[str, team_id_opt] = '',
+               inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Reload a document"""
+    st, res = the_grist.reload_doc(doc_id, team_id)
+    _print_done_or_exit(st, res, inspect)
+
+@doc_app.command('users')
+def list_doc_users(doc_id: Annotated[str, doc_id_opt] = '', 
+                   team_id: Annotated[str, team_id_opt] = '',
+                   details: Annotated[bool, details_opt] = False,
+                   inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """List users with access to document"""
+    st, res = the_grist.list_doc_users(doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    content = res if details else _make_user_table(res)
+    _print_content(content, inspect)
+
+@doc_app.command('user-access')
+def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')], 
+                      access: Annotated[str, access_opt],
+                      max_access: Annotated[str, max_access_opt] = 'owners', 
+                      doc_id: Annotated[str, doc_id_opt] = '', 
+                      team_id: Annotated[str, team_id_opt] = '',
+                      inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Change user access level to a document"""
+    st, res = the_grist.list_doc_users(doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    usr_email = ''
+    for usr in res:
+        if usr['id'] == uid:
+            usr_email = usr['email']
+            break
+    if not usr_email:
+        if inspect:
+            cli_console.print(the_grist.inspect())
+            cli_console.rule()
+        raise typer.BadParameter('User id not found.')
+    users = {usr_email: access}
+    st, res = the_grist.update_doc_users(users, max_access, doc_id, team_id)
+    _print_done_or_exit(st, res, inspect)
+
+#TODO again, this is for existing users only, but the api 
+# allows for adding users too. Maybe add a separate cli endpoint for this?
+ 
+@doc_app.command('download')
+def download_db(filename: Annotated[str, typer.Argument(help='Output file path')],
+                history: Annotated[bool, 
+                    typer.Option('--history/--no-history', '-H/-h', 
+                                 help='Include history')] = False, 
+                template: Annotated[bool, 
+                    typer.Option('--template/--no-template', '-P/-p', 
+                                 help='Template only, no data')] = False, 
+                doc_id: Annotated[str, doc_id_opt] = '', 
+                team_id: Annotated[str, team_id_opt] = '',
+                inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Download the document as sqlite file"""
+    nohistory = not history
+    st, res = the_grist.download_sqlite(filename, nohistory, template, 
+                                        doc_id, team_id)
+    _print_done_or_exit(st, res, inspect)
+    
+
 
 if __name__ == '__main__':
     app()
