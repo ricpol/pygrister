@@ -10,9 +10,9 @@
 # 3 -> we reserve this for errors on api call side (eg http 404)
 
 import os, os.path
+import json as modjson
 from pathlib import Path
 from enum import Enum
-import json as modjson
 from typing import List
 from typing_extensions import Annotated
 
@@ -69,8 +69,8 @@ class _CliConfigurator(Configurator):
 # the global GristApi (re-creadted at every cli call): inside a cli function, 
 # all api calls (usually just one but may be more) will use this instance
 _c = _CliConfigurator()
-the_grist = GristApi(custom_configurator=_c)
-# the global Rich console where everyone should be printed
+grist_api = GristApi(custom_configurator=_c)
+# the global Rich console where everything should be printed
 cli_console = Console()
 
 BADCALL = 3 # the exit code we reserve for bad call errors (eg http 404)
@@ -81,24 +81,24 @@ ERRMSG = '[bold red]Error![/bold red]'
 # ----------------------------------------------------------------------
 def _exit_with_error(st, res, inspect) -> None:
     if inspect:
-        cli_console.print(the_grist.inspect())
+        cli_console.print(grist_api.inspect())
         cli_console.rule()
     cli_console.print(ERRMSG, 'Status:', st, res)
     raise typer.Exit(BADCALL)
 
 def _exit_if_error(st, res, inspect) -> None:
-    if not the_grist.ok:
+    if not grist_api.ok:
         if inspect:
-            cli_console.print(the_grist.inspect())
+            cli_console.print(grist_api.inspect())
             cli_console.rule()
         cli_console.print(ERRMSG, 'Status:', st, res)
         raise typer.Exit(BADCALL)
 
 def _print_done_or_exit(st, res, inspect) -> None:
     if inspect:
-        cli_console.print(the_grist.inspect())
+        cli_console.print(grist_api.inspect())
         cli_console.rule()
-    if the_grist.ok: 
+    if grist_api.ok: 
         cli_console.print(DONEMSG)
     else:
         cli_console.print(ERRMSG, 'Status:', st, res)
@@ -106,13 +106,13 @@ def _print_done_or_exit(st, res, inspect) -> None:
 
 def _print_content(content, inspect) -> None:
     if inspect:
-        cli_console.print(the_grist.inspect())
+        cli_console.print(grist_api.inspect())
         cli_console.rule()
     cli_console.print(content)
 
 def _print_done_and_id(content, inspect) -> None:
     if inspect:
-        cli_console.print(the_grist.inspect())
+        cli_console.print(grist_api.inspect())
         cli_console.rule()
     cli_console.print(DONEMSG, 'Id:', content)
 
@@ -158,23 +158,23 @@ def _variadic_options_validate(value):
 
 # a few recurrent Typer options
 # ----------------------------------------------------------------------
-details_opt = typer.Option('--details/--no-details', '-T/-t',
-                           help='Long/short info')
-inspect_opt = typer.Option('--inspect', '-i', 
-                           help = 'Print inspect output after api call')
-team_id_opt = typer.Option('--team', '-t', 
-                           help='The team ID [default: current]')
-ws_id_opt = typer.Option('--workspace', '-w', 
-                         help='The workspace integer ID [default: current]')
-doc_id_opt = typer.Option('--document', '-d', 
-                          help='The document ID [default: current]')
-table_id_opt = typer.Option('--table', '-b',  help='The table ID name') 
-access_opt = typer.Option('--access', '-a', 
-                          help='The new access level',
-                          callback=_user_access_validate)
-max_access_opt = typer.Option('--max-access', '-A', 
-                          help='The max inherited access level',
-                          callback=_user_max_access_validate)
+_details_opt = typer.Option('--details/--no-details', '-T/-t',
+                            help='Long/short info')
+_inspect_opt = typer.Option('--inspect', '-i', 
+                            help = 'Print inspect output after api call')
+_team_id_opt = typer.Option('--team', '-m', 
+                            help='The team ID [default: current]')
+_ws_id_opt = typer.Option('--workspace', '-w', 
+                          help='The workspace integer ID [default: current]')
+_doc_id_opt = typer.Option('--document', '-d', 
+                           help='The document ID [default: current]')
+_table_id_opt = typer.Option('--table', '-b',  help='The table ID name') 
+_access_opt = typer.Option('--access', '-a', 
+                           help='The new access level',
+                           callback=_user_access_validate)
+_max_access_opt = typer.Option('--max-access', '-A', 
+                               help='The max inherited access level',
+                               callback=_user_max_access_validate)
 
 # Typer sub-commands
 # ----------------------------------------------------------------------
@@ -192,9 +192,9 @@ app.add_typer(table_app, name='table', no_args_is_help=True)
 # gry team -> for managing team sites (organisations)
 # ----------------------------------------------------------------------
 @org_app.command('list')
-def list_orgs(inspect: Annotated[bool, inspect_opt] = False) -> None:
+def list_orgs(inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List the teams you have access to"""
-    st, res = the_grist.list_team_sites()
+    st, res = grist_api.list_team_sites()
     _exit_if_error(st, res, inspect)
     table = Table('id', 'name', 'owner')
     for org in res:
@@ -202,11 +202,11 @@ def list_orgs(inspect: Annotated[bool, inspect_opt] = False) -> None:
     _print_content(table, inspect)
 
 @org_app.command('see')
-def see_org(team_id: Annotated[str, team_id_opt] = '', 
-            details: Annotated[bool, details_opt] = False,
-            inspect: Annotated[bool, inspect_opt] = False) -> None:
+def see_org(team_id: Annotated[str, _team_id_opt] = '', 
+            details: Annotated[bool, _details_opt] = False,
+            inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Describe a team"""
-    st, res = the_grist.see_team(team_id)
+    st, res = grist_api.see_team(team_id)
     _exit_if_error(st, res, inspect) 
     if details:
         content = res
@@ -221,36 +221,36 @@ def see_org(team_id: Annotated[str, team_id_opt] = '',
 
 @org_app.command('update')
 def update_org(name: Annotated[str, typer.Argument(help='The new name')], 
-               team_id: Annotated[str, team_id_opt] = '',
-               inspect: Annotated[bool, inspect_opt] = False) -> None:
+               team_id: Annotated[str, _team_id_opt] = '',
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Change the team name"""
-    st, res = the_grist.update_team(name, team_id)
+    st, res = grist_api.update_team(name, team_id)
     _print_done_or_exit(st, res, inspect)
      
 @org_app.command('delete')
-def delete_org(team_id: Annotated[str, team_id_opt] = '',
-               inspect: Annotated[bool, inspect_opt] = False) -> None:
+def delete_org(team_id: Annotated[str, _team_id_opt] = '',
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a team"""
-    st, res = the_grist.delete_team(team_id)
+    st, res = grist_api.delete_team(team_id)
     _print_done_or_exit(st, res, inspect)
 
 @org_app.command('users')
-def list_org_users(team_id: Annotated[str, team_id_opt] = '',  
-                   details: Annotated[bool, details_opt] = False,
-                   inspect: Annotated[bool, inspect_opt] = False) -> None:
+def list_org_users(team_id: Annotated[str, _team_id_opt] = '',  
+                   details: Annotated[bool, _details_opt] = False,
+                   inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List users with access to team"""
-    st, res = the_grist.list_team_users(team_id)
+    st, res = grist_api.list_team_users(team_id)
     _exit_if_error(st, res, inspect)
     content = res if details else _make_user_table(res)
     _print_content(content, inspect)
 
 @org_app.command('user-access')
 def change_team_access(uid: Annotated[int, typer.Argument(help='The user ID')], 
-                       access: Annotated[str, access_opt],
-                       team_id: Annotated[str, team_id_opt] = '',
-                       inspect: Annotated[bool, inspect_opt] = False) -> None:
+                       access: Annotated[str, _access_opt],
+                       team_id: Annotated[str, _team_id_opt] = '',
+                       inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Change user access level to a team"""
-    st, res = the_grist.list_team_users(team_id)
+    st, res = grist_api.list_team_users(team_id)
     _exit_if_error(st, res, inspect)
     usr_email = ''
     for usr in res:
@@ -259,11 +259,11 @@ def change_team_access(uid: Annotated[int, typer.Argument(help='The user ID')],
             break
     if not usr_email:
         if inspect:
-            cli_console.print(the_grist.inspect())
+            cli_console.print(grist_api.inspect())
             cli_console.rule()
         raise typer.BadParameter('User id not found.')
     users = {usr_email: access}
-    st, res = the_grist.update_team_users(users, team_id)
+    st, res = grist_api.update_team_users(users, team_id)
     _print_done_or_exit(st, res, inspect)
         
 #TODO "change_user_access" is only for existing users, but "update_team_users"
@@ -272,11 +272,11 @@ def change_team_access(uid: Annotated[int, typer.Argument(help='The user ID')],
 # gry ws -> for managing workspaces
 # ----------------------------------------------------------------------
 @ws_app.command('list')
-def list_ws(team_id: Annotated[str, team_id_opt] = '', 
-            details: Annotated[bool, details_opt] = False,
-            inspect: Annotated[bool, inspect_opt] = False) -> None:
+def list_ws(team_id: Annotated[str, _team_id_opt] = '', 
+            details: Annotated[bool, _details_opt] = False,
+            inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List workspaces and documents in a team"""
-    st, res = the_grist.list_workspaces(team_id)
+    st, res = grist_api.list_workspaces(team_id)
     _exit_if_error(st, res, inspect)
     if details:
         content = res
@@ -291,19 +291,19 @@ def list_ws(team_id: Annotated[str, team_id_opt] = '',
 
 @ws_app.command('new')
 def add_ws(name: Annotated[str, typer.Argument(help='The name of new ws')], 
-           team_id: Annotated[str, team_id_opt] = '',
-           inspect: Annotated[bool, inspect_opt] = False) -> None:
+           team_id: Annotated[str, _team_id_opt] = '',
+           inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Create an empty workspace"""
-    st, res = the_grist.add_workspace(name, team_id)
+    st, res = grist_api.add_workspace(name, team_id)
     _exit_if_error(st, res, inspect)
     _print_done_and_id(res, inspect)
 
 @ws_app.command('see')
-def see_ws(ws_id: Annotated[int, ws_id_opt] = 0,
-           details: Annotated[bool, details_opt] = False,
-           inspect: Annotated[bool, inspect_opt] = False) -> None:
+def see_ws(ws_id: Annotated[int, _ws_id_opt] = 0,
+           details: Annotated[bool, _details_opt] = False,
+           inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Describe a workspace"""
-    st, res = the_grist.see_workspace(ws_id)
+    st, res = grist_api.see_workspace(ws_id)
     _exit_if_error(st, res, inspect)
     if details:
         content = res
@@ -320,36 +320,36 @@ def see_ws(ws_id: Annotated[int, ws_id_opt] = 0,
 
 @ws_app.command('update')
 def update_ws(name: Annotated[str, typer.Argument(help='The new name')], 
-              ws_id: Annotated[int, ws_id_opt] = 0,
-              inspect: Annotated[bool, inspect_opt] = False) -> None:
+              ws_id: Annotated[int, _ws_id_opt] = 0,
+              inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Change the workspace name"""
-    st, res = the_grist.update_workspace(name, ws_id)
+    st, res = grist_api.update_workspace(name, ws_id)
     _print_done_or_exit(st, res, inspect)
 
 @ws_app.command('delete')
-def delete_ws(ws_id: Annotated[int, ws_id_opt] = 0,
-              inspect: Annotated[bool, inspect_opt] = False) -> None:
+def delete_ws(ws_id: Annotated[int, _ws_id_opt] = 0,
+              inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a workspace"""
-    st, res = the_grist.delete_workspace(ws_id)
+    st, res = grist_api.delete_workspace(ws_id)
     _print_done_or_exit(st, res, inspect)
 
 @ws_app.command('users')
-def list_ws_users(ws_id: Annotated[int, ws_id_opt] = 0,  
-                  details: Annotated[bool, details_opt] = False,
-                  inspect: Annotated[bool, inspect_opt] = False) -> None:
+def list_ws_users(ws_id: Annotated[int, _ws_id_opt] = 0,  
+                  details: Annotated[bool, _details_opt] = False,
+                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List users with access to workspace"""
-    st, res = the_grist.list_workspace_users(ws_id)
+    st, res = grist_api.list_workspace_users(ws_id)
     _exit_if_error(st, res, inspect)
     content = res if details else _make_user_table(res)
     _print_content(content, inspect)
 
 @ws_app.command('user-access')
 def change_ws_access(uid: Annotated[int, typer.Argument(help='The user ID')], 
-                     access: Annotated[str, access_opt],
-                     ws_id: Annotated[int, ws_id_opt] = 0,
-                     inspect: Annotated[bool, inspect_opt] = False) -> None:
+                     access: Annotated[str, _access_opt],
+                     ws_id: Annotated[int, _ws_id_opt] = 0,
+                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Change user access level to a workspace"""
-    st, res = the_grist.list_workspace_users(ws_id)
+    st, res = grist_api.list_workspace_users(ws_id)
     _exit_if_error(st, res, inspect)
     usr_email = ''
     for usr in res:
@@ -358,11 +358,11 @@ def change_ws_access(uid: Annotated[int, typer.Argument(help='The user ID')],
             break
     if not usr_email:
         if inspect:
-            cli_console.print(the_grist.inspect())
+            cli_console.print(grist_api.inspect())
             cli_console.rule()
         raise typer.BadParameter('User id not found.')
     users = {usr_email: access}
-    st, res = the_grist.update_workspace_users(users, ws_id)
+    st, res = grist_api.update_workspace_users(users, ws_id)
     _print_done_or_exit(st, res, inspect)
         
 #TODO "change_ws_access" is only for existing users, but "update_team_users"
@@ -371,23 +371,25 @@ def change_ws_access(uid: Annotated[int, typer.Argument(help='The user ID')],
 # gry doc -> for managing documents
 # ----------------------------------------------------------------------
 
+_pinned_opt = typer.Option('--pinned/--no-pinned', '-P/p', help='Is pinned')
+
 @doc_app.command('new')
 def add_doc(name: Annotated[str, typer.Argument(help='The name of new ws')], 
-            pinned: Annotated[bool, typer.Option(help='Id pinned')] = False,
-            ws_id: Annotated[int, ws_id_opt] = 0, 
-            inspect: Annotated[bool, inspect_opt] = False) -> None:
+            pinned: Annotated[bool, _pinned_opt] = False,
+            ws_id: Annotated[int, _ws_id_opt] = 0, 
+            inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Create an empty document"""
-    st, res = the_grist.add_doc(name, pinned, ws_id)
+    st, res = grist_api.add_doc(name, pinned, ws_id)
     _exit_if_error(st, res, inspect)
     _print_done_and_id(res, inspect)
 
 @doc_app.command('see')
-def see_doc(doc_id: Annotated[str, doc_id_opt] = '', 
-            team_id: Annotated[str, team_id_opt] = '',
-            details: Annotated[bool, details_opt] = False,
-            inspect: Annotated[bool, inspect_opt] = False) -> None:
+def see_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
+            team_id: Annotated[str, _team_id_opt] = '',
+            details: Annotated[bool, _details_opt] = False,
+            inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Describe a document"""
-    st, res = the_grist.see_doc(doc_id, team_id)
+    st, res = grist_api.see_doc(doc_id, team_id)
     _exit_if_error(st, res, inspect)
     if details:
         content = res
@@ -405,70 +407,70 @@ def see_doc(doc_id: Annotated[str, doc_id_opt] = '',
 
 @doc_app.command('update')
 def update_doc(name: Annotated[str, typer.Argument(help='The new name')],
-               pinned: Annotated[bool, typer.Option(help='Id pinned')] = False,
-               doc_id: Annotated[str, doc_id_opt] = '', 
-               team_id: Annotated[str, team_id_opt] = '',
-               inspect: Annotated[bool, inspect_opt] = False) -> None:
+               pinned: Annotated[bool, _pinned_opt] = False,
+               doc_id: Annotated[str, _doc_id_opt] = '', 
+               team_id: Annotated[str, _team_id_opt] = '',
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Modify document metadata"""
-    st, res = the_grist.update_doc(name, pinned, doc_id, team_id)
+    st, res = grist_api.update_doc(name, pinned, doc_id, team_id)
     _print_done_or_exit(st, res, inspect)
 
 @ doc_app.command('move')
 def move_doc(dest: Annotated[int, typer.Argument( 
                              help='Destination ws integer ID')],
-             doc_id: Annotated[str, doc_id_opt] = '', 
-             team_id: Annotated[str, team_id_opt] = '',
-             inspect: Annotated[bool, inspect_opt] = False) -> None:
+             doc_id: Annotated[str, _doc_id_opt] = '', 
+             team_id: Annotated[str, _team_id_opt] = '',
+             inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Move document to another workspace"""
-    st, res = the_grist.move_doc(dest, doc_id, team_id)
+    st, res = grist_api.move_doc(dest, doc_id, team_id)
     _print_done_or_exit(st, res, inspect)
 
 @doc_app.command('delete')
-def delete_doc(doc_id: Annotated[str, doc_id_opt] = '', 
-               team_id: Annotated[str, team_id_opt] = '',
-               inspect: Annotated[bool, inspect_opt] = False) -> None:
+def delete_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
+               team_id: Annotated[str, _team_id_opt] = '',
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a document"""
-    st, res = the_grist.delete_doc(doc_id, team_id)
+    st, res = grist_api.delete_doc(doc_id, team_id)
     _print_done_or_exit(st, res, inspect)
 
 @doc_app.command('purge-history')
 def delete_doc_history(keep: Annotated[int, typer.Option('--keep', '-k', 
                                        help='Latest actions to keep')] = 0,
-                       doc_id: Annotated[str, doc_id_opt] = '', 
-                       team_id: Annotated[str, team_id_opt] = '',
-                       inspect: Annotated[bool, inspect_opt] = False) -> None:
+                       doc_id: Annotated[str, _doc_id_opt] = '', 
+                       team_id: Annotated[str, _team_id_opt] = '',
+                       inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete the document action history"""
-    st, res = the_grist.delete_doc_history(keep, doc_id, team_id)
+    st, res = grist_api.delete_doc_history(keep, doc_id, team_id)
     _print_done_or_exit(st, res, inspect)
 
 @doc_app.command('reload')
-def reload_doc(doc_id: Annotated[str, doc_id_opt] = '', 
-               team_id: Annotated[str, team_id_opt] = '',
-               inspect: Annotated[bool, inspect_opt] = False) -> None:
+def reload_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
+               team_id: Annotated[str, _team_id_opt] = '',
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Reload a document"""
-    st, res = the_grist.reload_doc(doc_id, team_id)
+    st, res = grist_api.reload_doc(doc_id, team_id)
     _print_done_or_exit(st, res, inspect)
 
 @doc_app.command('users')
-def list_doc_users(doc_id: Annotated[str, doc_id_opt] = '', 
-                   team_id: Annotated[str, team_id_opt] = '',
-                   details: Annotated[bool, details_opt] = False,
-                   inspect: Annotated[bool, inspect_opt] = False) -> None:
+def list_doc_users(doc_id: Annotated[str, _doc_id_opt] = '', 
+                   team_id: Annotated[str, _team_id_opt] = '',
+                   details: Annotated[bool, _details_opt] = False,
+                   inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List users with access to document"""
-    st, res = the_grist.list_doc_users(doc_id, team_id)
+    st, res = grist_api.list_doc_users(doc_id, team_id)
     _exit_if_error(st, res, inspect)
     content = res if details else _make_user_table(res)
     _print_content(content, inspect)
 
 @doc_app.command('user-access')
 def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')], 
-                      access: Annotated[str, access_opt],
-                      max_access: Annotated[str, max_access_opt] = 'owners', 
-                      doc_id: Annotated[str, doc_id_opt] = '', 
-                      team_id: Annotated[str, team_id_opt] = '',
-                      inspect: Annotated[bool, inspect_opt] = False) -> None:
+                      access: Annotated[str, _access_opt],
+                      max_access: Annotated[str, _max_access_opt] = 'owners', 
+                      doc_id: Annotated[str, _doc_id_opt] = '', 
+                      team_id: Annotated[str, _team_id_opt] = '',
+                      inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Change user access level to a document"""
-    st, res = the_grist.list_doc_users(doc_id, team_id)
+    st, res = grist_api.list_doc_users(doc_id, team_id)
     _exit_if_error(st, res, inspect)
     usr_email = ''
     for usr in res:
@@ -477,11 +479,11 @@ def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')],
             break
     if not usr_email:
         if inspect:
-            cli_console.print(the_grist.inspect())
+            cli_console.print(grist_api.inspect())
             cli_console.rule()
         raise typer.BadParameter('User id not found.')
     users = {usr_email: access}
-    st, res = the_grist.update_doc_users(users, max_access, doc_id, team_id)
+    st, res = grist_api.update_doc_users(users, max_access, doc_id, team_id)
     _print_done_or_exit(st, res, inspect)
 
 #TODO again, this is for existing users only, but the api 
@@ -495,12 +497,12 @@ def download_db(filename: Annotated[Path, typer.Argument(help='Output file path'
                 template: Annotated[bool, 
                     typer.Option('--template/--no-template', '-P/-p', 
                                  help='Template only, no data')] = False, 
-                doc_id: Annotated[str, doc_id_opt] = '', 
-                team_id: Annotated[str, team_id_opt] = '',
-                inspect: Annotated[bool, inspect_opt] = False) -> None:
+                doc_id: Annotated[str, _doc_id_opt] = '', 
+                team_id: Annotated[str, _team_id_opt] = '',
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Download the document as sqlite file"""
     nohistory = not history
-    st, res = the_grist.download_sqlite(str(filename), nohistory, template, 
+    st, res = grist_api.download_sqlite(str(filename), nohistory, template, 
                                         doc_id, team_id)
     _print_done_or_exit(st, res, inspect)
 
@@ -509,11 +511,11 @@ def download_db(filename: Annotated[Path, typer.Argument(help='Output file path'
 # ----------------------------------------------------------------------
 
 @table_app.command('list')
-def list_tables(doc_id: Annotated[str, doc_id_opt] = '', 
-                team_id: Annotated[str, team_id_opt] = '',
-                inspect: Annotated[bool, inspect_opt] = False) -> None:
+def list_tables(doc_id: Annotated[str, _doc_id_opt] = '', 
+                team_id: Annotated[str, _team_id_opt] = '',
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List tables in a document"""
-    st, res = the_grist.list_tables(doc_id, team_id)
+    st, res = grist_api.list_tables(doc_id, team_id)
     _exit_if_error(st, res, inspect)
     table = Table('table id', 'metadata')
     for t in res:
@@ -527,10 +529,10 @@ def list_tables(doc_id: Annotated[str, doc_id_opt] = '',
 def new_table(cols: Annotated[List[str], typer.Argument(
                         callback=_column_decl_validate,
                         help='Column list, each declared as "id:type:label"')],
-              tname: Annotated[str, table_id_opt], 
-              doc_id: Annotated[str, doc_id_opt] = '', 
-              team_id: Annotated[str, team_id_opt] = '',
-              inspect: Annotated[bool, inspect_opt] = False) -> None:
+              tname: Annotated[str, _table_id_opt], 
+              doc_id: Annotated[str, _doc_id_opt] = '', 
+              team_id: Annotated[str, _team_id_opt] = '',
+              inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Add one table to a document. 
 
     Column must be declared as "id:type:label"; type is any valid Grist type:
@@ -541,17 +543,17 @@ def new_table(cols: Annotated[List[str], typer.Argument(
         column_list.append({'id': id_, 
                             'fields': {'type': type_, 'label': label}})
     table = [{'id': tname, 'columns': column_list}]
-    st, res = the_grist.add_tables(table, doc_id, team_id)
+    st, res = grist_api.add_tables(table, doc_id, team_id)
     _exit_if_error(st, res, inspect)
     _print_done_and_id(res[0], inspect)
 
 @table_app.command('update', context_settings={'allow_extra_args': True, 
                                                'ignore_unknown_options': True})
 def update_table(ctx: typer.Context,
-                 tname: Annotated[str, table_id_opt], 
-                 doc_id: Annotated[str, doc_id_opt] = '', 
-                 team_id: Annotated[str, team_id_opt] = '',
-                 inspect: Annotated[bool, inspect_opt] = False) -> None:
+                 tname: Annotated[str, _table_id_opt], 
+                 doc_id: Annotated[str, _doc_id_opt] = '', 
+                 team_id: Annotated[str, _team_id_opt] = '',
+                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Update table metadata.
     
     Pass any metadata field as an extra option, eg: 
@@ -573,7 +575,7 @@ def update_table(ctx: typer.Context,
             except ValueError:
                 raise typer.BadParameter(f'Option {k} value must be integer')
     table = [{'id': tname, 'fields': fields}]
-    st, res = the_grist.update_tables(table, doc_id, team_id)
+    st, res = grist_api.update_tables(table, doc_id, team_id)
     _print_done_or_exit(st, res, inspect)
 
 class _DownloadOption(str, Enum):
@@ -588,18 +590,18 @@ class _HeaderOption(str, Enum):
 @table_app.command('download')
 def download_table(
         filename: Annotated[Path, typer.Argument(help='Output file path')],
-        tname: Annotated[str, table_id_opt], 
+        tname: Annotated[str, _table_id_opt], 
         output: Annotated[_DownloadOption, typer.Option('--output', '-o', 
                                 help='Output type')] = _DownloadOption.csv,
         header: Annotated[_HeaderOption, typer.Option('--header', '-h', 
                                 help='Column headers')] = _HeaderOption.label,
-        doc_id: Annotated[str, doc_id_opt] = '', 
-        team_id: Annotated[str, team_id_opt] = '',
-        inspect: Annotated[bool, inspect_opt] = False) -> None:
+        doc_id: Annotated[str, _doc_id_opt] = '', 
+        team_id: Annotated[str, _team_id_opt] = '',
+        inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Dumps the content or the schema of a table to FILENAME"""
-    funcs = {_DownloadOption.csv: the_grist.download_csv, 
-             _DownloadOption.excel: the_grist.download_excel,
-             _DownloadOption.schema: the_grist.download_excel}
+    funcs = {_DownloadOption.csv: grist_api.download_csv, 
+             _DownloadOption.excel: grist_api.download_excel,
+             _DownloadOption.schema: grist_api.download_excel}
     st, res = funcs[output](str(filename), tname, header, doc_id, team_id)
     _print_done_or_exit(st, res, inspect)
 
