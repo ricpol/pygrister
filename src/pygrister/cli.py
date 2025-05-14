@@ -10,7 +10,10 @@
 # 3 -> we reserve this for errors on api call side (eg http 404)
 
 import os, os.path
+from pathlib import Path
+from enum import Enum
 import json as modjson
+from typing import List
 from typing_extensions import Annotated
 
 import typer
@@ -136,6 +139,23 @@ def _user_max_access_validate(value):
         value = None
     return value
 
+def _column_decl_validate(value):
+    res = []
+    for item in value:
+        try:
+            id_, type_, name = item.split(':')
+        except ValueError:
+            raise typer.BadParameter('Column must be declared as "id:type:label"')
+        res.append([id_, type_, name])
+    return res
+
+def _variadic_options_validate(value):
+    try:
+        return dict(zip(*[iter([i.strip('--') for i in value])]*2, strict=True))
+    except ValueError:
+        raise typer.BadParameter('Improper use of extra option(s)')
+
+
 # a few recurrent Typer options
 # ----------------------------------------------------------------------
 details_opt = typer.Option('--details/--no-details', '-T/-t',
@@ -148,6 +168,7 @@ ws_id_opt = typer.Option('--workspace', '-w',
                          help='The workspace integer ID [default: current]')
 doc_id_opt = typer.Option('--document', '-d', 
                           help='The document ID [default: current]')
+table_id_opt = typer.Option('--table', '-b',  help='The table ID name') 
 access_opt = typer.Option('--access', '-a', 
                           help='The new access level',
                           callback=_user_access_validate)
@@ -160,10 +181,12 @@ max_access_opt = typer.Option('--max-access', '-A',
 org_app = typer.Typer(help='Manage Grist teams (aka organisations)')
 ws_app = typer.Typer(help='Manage workspaces inside a team site')
 doc_app = typer.Typer(help='Manage documents inside a workspace')
+table_app = typer.Typer(help='Manage a table inside a document')
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
 app.add_typer(doc_app, name='doc', no_args_is_help=True)
+app.add_typer(table_app, name='table', no_args_is_help=True)
 
 
 # gry team -> for managing team sites (organisations)
@@ -465,7 +488,7 @@ def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')],
 # allows for adding users too. Maybe add a separate cli endpoint for this?
  
 @doc_app.command('download')
-def download_db(filename: Annotated[str, typer.Argument(help='Output file path')],
+def download_db(filename: Annotated[Path, typer.Argument(help='Output file path')],
                 history: Annotated[bool, 
                     typer.Option('--history/--no-history', '-H/-h', 
                                  help='Include history')] = False, 
@@ -477,10 +500,109 @@ def download_db(filename: Annotated[str, typer.Argument(help='Output file path')
                 inspect: Annotated[bool, inspect_opt] = False) -> None:
     """Download the document as sqlite file"""
     nohistory = not history
-    st, res = the_grist.download_sqlite(filename, nohistory, template, 
+    st, res = the_grist.download_sqlite(str(filename), nohistory, template, 
                                         doc_id, team_id)
     _print_done_or_exit(st, res, inspect)
+
+
+# gry table -> for managing tables
+# ----------------------------------------------------------------------
+
+@table_app.command('list')
+def list_tables(doc_id: Annotated[str, doc_id_opt] = '', 
+                team_id: Annotated[str, team_id_opt] = '',
+                inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """List tables in a document"""
+    st, res = the_grist.list_tables(doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    table = Table('table id', 'metadata')
+    for t in res:
+        f = t['fields']
+        mdata = '\n'.join([f'{k}: {v}' for k, v in f.items()])
+        table.add_row(t['id'], mdata)
+        table.add_section()
+    _print_content(table, inspect)
+
+@table_app.command('new')
+def new_table(cols: Annotated[List[str], typer.Argument(
+                        callback=_column_decl_validate,
+                        help='Column list, each declared as "id:type:label"')],
+              tname: Annotated[str, table_id_opt], 
+              doc_id: Annotated[str, doc_id_opt] = '', 
+              team_id: Annotated[str, team_id_opt] = '',
+              inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Add one table to a document. 
+
+    Column must be declared as "id:type:label"; type is any valid Grist type:
+
+    % gry table new name:Text:Name age:Int:Age -n People"""
+    column_list = []
+    for id_, type_, label in cols:
+        column_list.append({'id': id_, 
+                            'fields': {'type': type_, 'label': label}})
+    table = [{'id': tname, 'columns': column_list}]
+    st, res = the_grist.add_tables(table, doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    _print_done_and_id(res[0], inspect)
+
+@table_app.command('update', context_settings={'allow_extra_args': True, 
+                                               'ignore_unknown_options': True})
+def update_table(ctx: typer.Context,
+                 tname: Annotated[str, table_id_opt], 
+                 doc_id: Annotated[str, doc_id_opt] = '', 
+                 team_id: Annotated[str, team_id_opt] = '',
+                 inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Update table metadata.
     
+    Pass any metadata field as an extra option, eg: 
+    
+    % gry table update -n Mytable --tableRef 2 --onDemand false"""
+    fields = _variadic_options_validate(ctx.args)
+    # some more validation 
+    valid_keys = ('primaryViewId', 'summarySourceTable', 'onDemand', 
+                  'rawViewSectionRef', 'recordCardViewSectionRef')
+    for k in fields.keys():
+        if k not in valid_keys:
+            raise typer.BadParameter(f'Unknown option: {k}')
+        if k == 'onDemand':
+            if fields[k] not in ('true', 'false'):
+                raise typer.BadParameter(f'onDemand option must be "true" or "false"')
+        else:
+            try:
+                fields[k] = int(fields[k])
+            except ValueError:
+                raise typer.BadParameter(f'Option {k} value must be integer')
+    table = [{'id': tname, 'fields': fields}]
+    st, res = the_grist.update_tables(table, doc_id, team_id)
+    _print_done_or_exit(st, res, inspect)
+
+class _DownloadOption(str, Enum):
+    excel = 'excel'
+    csv = 'csv'
+    schema = 'schema'
+
+class _HeaderOption(str, Enum):
+    label = 'label'
+    colid = 'colId'
+
+@table_app.command('download')
+def download_table(
+        filename: Annotated[Path, typer.Argument(help='Output file path')],
+        tname: Annotated[str, table_id_opt], 
+        output: Annotated[_DownloadOption, typer.Option('--output', '-o', 
+                                help='Output type')] = _DownloadOption.csv,
+        header: Annotated[_HeaderOption, typer.Option('--header', '-h', 
+                                help='Column headers')] = _HeaderOption.label,
+        doc_id: Annotated[str, doc_id_opt] = '', 
+        team_id: Annotated[str, team_id_opt] = '',
+        inspect: Annotated[bool, inspect_opt] = False) -> None:
+    """Dumps the content or the schema of a table to FILENAME"""
+    funcs = {_DownloadOption.csv: the_grist.download_csv, 
+             _DownloadOption.excel: the_grist.download_excel,
+             _DownloadOption.schema: the_grist.download_excel}
+    st, res = funcs[output](str(filename), tname, header, doc_id, team_id)
+    _print_done_or_exit(st, res, inspect)
+
 
 
 if __name__ == '__main__':
