@@ -13,7 +13,7 @@ import os, os.path
 import json as modjson
 from pathlib import Path
 from enum import Enum
-from typing import List
+from typing import List, Optional
 from typing_extensions import Annotated
 
 import typer
@@ -22,7 +22,14 @@ from rich.table import Table
 
 from pygrister.api import GristApi
 from pygrister.config import Configurator, PYGRISTER_CONFIG
-
+try:
+    from cliconverters import cli_out_converters # type: ignore
+except (ModuleNotFoundError, ImportError):
+    cli_out_converters = dict()
+try:
+    from cliconverters import cli_in_converters # type: ignore
+except (ModuleNotFoundError, ImportError):
+    cli_in_converters = dict()
 
 class _CliConfigurator(Configurator):
     """A custom configurator intended for the Pygrister cli. 
@@ -70,6 +77,8 @@ class _CliConfigurator(Configurator):
 # all api calls (usually just one but may be more) will use this instance
 _c = _CliConfigurator()
 grist_api = GristApi(custom_configurator=_c)
+grist_api.in_converter = cli_in_converters
+grist_api.out_converter = cli_out_converters
 # the global Rich console where everything should be printed
 cli_console = Console()
 
@@ -190,6 +199,37 @@ app.add_typer(ws_app, name='ws', no_args_is_help=True)
 app.add_typer(doc_app, name='doc', no_args_is_help=True)
 app.add_typer(table_app, name='table', no_args_is_help=True)
 
+# gry sql -> post SELECT sql queries to Grist
+# ----------------------------------------------------------------------
+
+@app.command('sql')
+def run_sql(statement: Annotated[str, typer.Argument(
+                                help='The sql statement - SELECT only')],
+            params: Annotated[Optional[List[str]], typer.Option('--param', '-p',
+                                help='Query parameters')] = None,
+            timeout: Annotated[int, typer.Option('--timeout', '-t', 
+                                help='Query timeout')] = 1000,
+            doc_id: Annotated[str, _doc_id_opt] = '', 
+            team_id: Annotated[str, _team_id_opt] = '',
+            inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Run a SELECT sql query against the document. 
+    
+    Repeat PARAM for multiple parameters, eg:
+    
+    % gry sql "select (...) where x>? and x<?;" -p 10 -p 100"""
+    if params:
+        st, res = grist_api.run_sql_with_args(statement, params, timeout, 
+                                              doc_id, team_id)
+    else:
+        st, res = grist_api.run_sql(statement, doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    if not res:
+        _print_content('No records found.', inspect)
+        return
+    table = Table(*res[0].keys())
+    for row in res:
+        table.add_row(*[str(v) for v in row.values()])
+    _print_content(table, inspect)
 
 # gry team -> for managing team sites (organisations)
 # ----------------------------------------------------------------------
