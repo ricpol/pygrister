@@ -168,9 +168,11 @@ _ws_id_opt = typer.Option('--workspace', '-w',
                           help='The workspace integer ID [default: current]')
 _doc_id_opt = typer.Option('--document', '-d', 
                            help='The document ID [default: current]')
-_table_id_opt = typer.Option('--table', '-b',  help='The table ID name') 
+_table_id_opt = typer.Option('--table', '-b',  help='The table ID name', 
+                             prompt='Insert the table ID name') 
 _access_opt = typer.Option('--access', '-a', 
                            help='The new access level',
+                           prompt='Insert the new access level',
                            callback=_user_access_validate)
 _max_access_opt = typer.Option('--max-access', '-A', 
                                help='The max inherited access level',
