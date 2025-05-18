@@ -212,11 +212,13 @@ org_app = typer.Typer(help='Manage Grist teams (aka organisations)')
 ws_app = typer.Typer(help='Manage workspaces inside a team site')
 doc_app = typer.Typer(help='Manage documents inside a workspace')
 table_app = typer.Typer(help='Manage a table inside a document')
+col_app = typer.Typer(help='Manage columns inside a table')
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
 app.add_typer(doc_app, name='doc', no_args_is_help=True)
 app.add_typer(table_app, name='table', no_args_is_help=True)
+app.add_typer(col_app, name='col', no_args_is_help=True)
 
 # gry sql -> post SELECT sql queries to Grist
 # ----------------------------------------------------------------------
@@ -668,6 +670,89 @@ def download_table(
              _DownloadOption.schema: grist_api.download_excel}
     st, res = funcs[output](str(filename), tname, header, doc_id, team_id)
     _print_done_or_exit(st, res, 0, inspect) # force verbose=0 in download mode
+
+# gry col -> for managing columns
+# ----------------------------------------------------------------------
+
+@col_app.command('list')
+def list_columns(table: Annotated[str, _table_id_opt],
+                 hidden: Annotated[bool, 
+                    typer.Option('--hidden/--no-hidden', '-H/-h', 
+                                 help='Include hidden cols')] = False,
+                 doc_id: Annotated[str, _doc_id_opt] = '', 
+                 team_id: Annotated[str, _team_id_opt] = '',
+                 verbose: Annotated[int, _verbose_opt] = 0,
+                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List columns in a table"""
+    st, res = grist_api.list_cols(table, hidden, doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    content = Table('column id', 'metadata')
+    for c in res:
+        f = c['fields']
+        useful_fields = ['label', 'type', 'isFormula', 'formula']
+        mdata = '\n'.join([f'{i}: {str(f[i])}' for i in useful_fields ])
+        content.add_row(c['id'], mdata)
+        content.add_section()
+    _print_output(content, res, verbose, inspect)
+
+@col_app.command('new')
+def add_column(cols: Annotated[List[str], typer.Argument(
+                        callback=_column_decl_validate,
+                        help='Column list, each declared as "id:type:label"')],
+               table: Annotated[str, _table_id_opt],
+               doc_id: Annotated[str, _doc_id_opt] = '', 
+               team_id: Annotated[str, _team_id_opt] = '',
+               verbose: Annotated[int, _verbose_opt] = 0,
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Add columns to a table.
+    
+    Column must be declared as "id:type:label"; type is any valid Grist type:
+
+    % gry col new name:Text:Name age:Int:Age -b MyTable"""
+    columns = []
+    for id_, type_, label in cols:
+        columns.append({'id': id_, 
+                        'fields': {'type': type_, 'label': label}})
+    st, res = grist_api.add_cols(table, columns, doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    _print_done_and_id(res, res, verbose, inspect)
+
+@col_app.command('update')
+def update_column(cols: Annotated[List[str], typer.Argument(
+                        callback=_column_decl_validate,
+                        help='Column list, each declared as "id:type:label"')],
+                  table: Annotated[str, _table_id_opt],
+                  doc_id: Annotated[str, _doc_id_opt] = '', 
+                  team_id: Annotated[str, _team_id_opt] = '',
+                  verbose: Annotated[int, _verbose_opt] = 0,
+                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Update columns in a table.
+    
+    Column must be declared as "id:type:label"; type is any valid Grist type:
+
+    % gry col update name:Text:Name age:Int:Age -b MyTable"""
+    columns = []
+    for id_, type_, label in cols:
+        columns.append({'id': id_, 
+                        'fields': {'type': type_, 'label': label}})
+    st, res = grist_api.update_cols(table, columns, doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    _print_done_and_id(res, res, verbose, inspect)
+
+# Note: we don't cover add_update_cols (the PUT api) because it is too 
+# sophisticated for our very limited way of describing a column in the cli
+
+@col_app.command('delete')
+def delete_column(col: Annotated[str, typer.Argument(
+                                 help='Name ID of the column to delete')],
+                  table: Annotated[str, _table_id_opt],
+                  doc_id: Annotated[str, _doc_id_opt] = '', 
+                  team_id: Annotated[str, _team_id_opt] = '',
+                  verbose: Annotated[int, _verbose_opt] = 0,
+                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Delete a column"""
+    st, res = grist_api.delete_column(table, col, doc_id, team_id)
+    _print_done_or_exit(st, res, verbose, inspect)
 
 
 
