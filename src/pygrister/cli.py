@@ -177,6 +177,17 @@ def _column_decl_validate(value):
         res.append([id_, type_, name])
     return res
 
+def _record_decl_validate(value):
+    res = []
+    for item in value:
+        try:
+            k, v = item.split(':')
+        except ValueError:
+            raise typer.BadParameter(
+                'Record must be declared as "col:value col:value ..."')
+        res.append([k, v])
+    return res
+
 def _variadic_options_validate(value):
     try:
         return dict(zip(*[iter([i.strip('--') for i in value])]*2, strict=True))
@@ -213,12 +224,14 @@ ws_app = typer.Typer(help='Manage workspaces inside a team site')
 doc_app = typer.Typer(help='Manage documents inside a workspace')
 table_app = typer.Typer(help='Manage a table inside a document')
 col_app = typer.Typer(help='Manage columns inside a table')
+rec_app = typer.Typer(help='Manage records inside a table')
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
 app.add_typer(doc_app, name='doc', no_args_is_help=True)
 app.add_typer(table_app, name='table', no_args_is_help=True)
 app.add_typer(col_app, name='col', no_args_is_help=True)
+app.add_typer(rec_app, name='rec', no_args_is_help=True)
 
 # gry sql -> post SELECT sql queries to Grist
 # ----------------------------------------------------------------------
@@ -754,7 +767,87 @@ def delete_column(col: Annotated[str, typer.Argument(
     st, res = grist_api.delete_column(table, col, doc_id, team_id)
     _print_done_or_exit(st, res, verbose, inspect)
 
+# gry rec -> for managing records
+# ----------------------------------------------------------------------
 
+@rec_app.command('list')
+def list_records(table: Annotated[str, _table_id_opt],
+                 sort: Annotated[str, typer.Option('--sort', '-s', 
+                                 help='Order in which to return results.')] = '',
+                 limit: Annotated[int, typer.Option('--limit', '-l', 
+                                  help='Return at most this number of rows.')] = 0,
+                 hidden: Annotated[bool, typer.Option(
+                                            '--hidden/--no-hidden', '-H/-h', 
+                                            help='Include hidden cols')] = False,
+                 doc_id: Annotated[str, _doc_id_opt] = '', 
+                 team_id: Annotated[str, _team_id_opt] = '',
+                 verbose: Annotated[int, _verbose_opt] = 0,
+                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Fetch records from a table.
+    
+    No filter option is available here: 'gry sql' may be a better try."""
+    st, res = grist_api.list_records(table, sort=sort, limit=limit, 
+                            hidden=hidden, doc_id=doc_id, team_id=team_id)
+    _exit_if_error(st, res, inspect)
+    if res:
+        content = Table(*res[0].keys())
+        for row in res:
+            content.add_row(*[str(v) for v in row.values()])
+    else:
+        content = 'No records found.'
+    _print_output(content, res, verbose, inspect)
+    
+@rec_app.command('new')
+def add_record(record: Annotated[List[str], typer.Argument(
+                    callback=_record_decl_validate,
+                    help='One record, declared as "col:value col:value ..."')],
+               table: Annotated[str, _table_id_opt],
+               noparse: Annotated[bool, typer.Option('--noparse', 
+                    help='True prohibits parsing according to col type')] = False,
+               doc_id: Annotated[str, _doc_id_opt] = '', 
+               team_id: Annotated[str, _team_id_opt] = '',
+               verbose: Annotated[int, _verbose_opt] = 0,
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Add one record to a table"""
+    record = dict(record) # type: ignore
+    st, res = grist_api.add_records(table, [record], noparse, doc_id, team_id) # type: ignore
+    _exit_if_error(st, res, inspect)
+    _print_done_and_id(res[0], res, verbose, inspect)
+
+@rec_app.command('update')
+def update_record(record: Annotated[List[str], typer.Argument(
+                    callback=_record_decl_validate,
+                    help='One record, declared as "id:value col:value ..."')],
+                  table: Annotated[str, _table_id_opt],
+                  noparse: Annotated[bool, typer.Option('--noparse', 
+                    help='True prohibits parsing according to col type')] = False,
+                  doc_id: Annotated[str, _doc_id_opt] = '', 
+                  team_id: Annotated[str, _team_id_opt] = '',
+                  verbose: Annotated[int, _verbose_opt] = 0,
+                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Modify one record of a table"""
+    record = dict(record) # type: ignore
+    try:
+        record['id'] = int(record['id']) # type: ignore
+    except ValueError:
+        raise typer.BadParameter('Record ID must be a number')
+    st, res = grist_api.update_records(table, [record], noparse, doc_id, team_id) # type: ignore
+    _print_done_or_exit(st, res, verbose, inspect)
+
+# Note: again, we don't cover add_update_records because it is too 
+# sophisticated for our very limited way of describing a record in the cli
+
+@rec_app.command('delete')
+def delete_records(records: Annotated[List[int], typer.Argument(
+                                            help='ID of the records to delete')],
+                   table: Annotated[str, _table_id_opt],
+                   doc_id: Annotated[str, _doc_id_opt] = '', 
+                   team_id: Annotated[str, _team_id_opt] = '',
+                   verbose: Annotated[int, _verbose_opt] = 0,
+                   inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Delete records from a table"""
+    st, res = grist_api.delete_rows(table, records, doc_id, team_id)
+    _print_done_or_exit(st, res, verbose, inspect)
 
 if __name__ == '__main__':
     app()
