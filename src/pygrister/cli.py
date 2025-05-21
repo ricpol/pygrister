@@ -194,6 +194,21 @@ def _variadic_options_validate(value):
     except ValueError:
         raise typer.BadParameter('Improper use of extra option(s)')
 
+def _upload_path_validate(value):
+    if not Path(value).is_file():
+        raise typer.BadParameter(f'File does not exist: {value}')
+    return value
+
+def _upload_pathlist_validate(value):
+    for item in value:
+        _ = _upload_path_validate(item)
+    return value
+
+def _download_path_validate(value):
+    if not Path(value).parent.is_dir():
+        raise typer.BadParameter(f'Path does not exist: {value}')
+    return value
+    
 
 # a few recurrent Typer options
 # ----------------------------------------------------------------------
@@ -225,6 +240,7 @@ doc_app = typer.Typer(help='Manage documents inside a workspace')
 table_app = typer.Typer(help='Manage a table inside a document')
 col_app = typer.Typer(help='Manage columns inside a table')
 rec_app = typer.Typer(help='Manage records inside a table')
+att_app = typer.Typer(help='Manage attachments and attachment storage')
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
@@ -232,6 +248,7 @@ app.add_typer(doc_app, name='doc', no_args_is_help=True)
 app.add_typer(table_app, name='table', no_args_is_help=True)
 app.add_typer(col_app, name='col', no_args_is_help=True)
 app.add_typer(rec_app, name='rec', no_args_is_help=True)
+app.add_typer(att_app, name='att', no_args_is_help=True)
 
 # gry sql -> post SELECT sql queries to Grist
 # ----------------------------------------------------------------------
@@ -566,7 +583,8 @@ def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')],
 # allows for adding users too. Maybe add a separate cli endpoint for this?
  
 @doc_app.command('download')
-def download_db(filename: Annotated[Path, typer.Argument(help='Output file path')],
+def download_db(filename: Annotated[Path, typer.Argument(help='Output file path',
+                                            callback=_download_path_validate)],
                 history: Annotated[bool, 
                     typer.Option('--history/--no-history', '-H/-h', 
                                  help='Include history')] = False, 
@@ -657,7 +675,7 @@ def update_table(ctx: typer.Context,
     st, res = grist_api.update_tables(table, doc_id, team_id)
     _print_done_or_exit(st, res, verbose, inspect)
 
-class _DownloadOption(str, Enum):
+class _DownloadTableOption(str, Enum):
     excel = 'excel'
     csv = 'csv'
     schema = 'schema'
@@ -668,19 +686,20 @@ class _HeaderOption(str, Enum):
 
 @table_app.command('download')
 def download_table(
-        filename: Annotated[Path, typer.Argument(help='Output file path')],
+        filename: Annotated[Path, typer.Argument(help='Output file path', 
+                                            callback=_download_path_validate)],
         tname: Annotated[str, _table_id_opt], 
-        output: Annotated[_DownloadOption, typer.Option('--output', '-o', 
-                                help='Output type')] = _DownloadOption.csv,
+        output: Annotated[_DownloadTableOption, typer.Option('--output', '-o', 
+                                help='Output type')] = _DownloadTableOption.csv,
         header: Annotated[_HeaderOption, typer.Option('--header', '-h', 
                                 help='Column headers')] = _HeaderOption.label,
         doc_id: Annotated[str, _doc_id_opt] = '', 
         team_id: Annotated[str, _team_id_opt] = '',
         inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Dumps the content or the schema of a table to FILENAME"""
-    funcs = {_DownloadOption.csv: grist_api.download_csv, 
-             _DownloadOption.excel: grist_api.download_excel,
-             _DownloadOption.schema: grist_api.download_excel}
+    funcs = {_DownloadTableOption.csv: grist_api.download_csv, 
+             _DownloadTableOption.excel: grist_api.download_excel,
+             _DownloadTableOption.schema: grist_api.download_excel}
     st, res = funcs[output](str(filename), tname, header, doc_id, team_id)
     _print_done_or_exit(st, res, 0, inspect) # force verbose=0 in download mode
 
@@ -848,6 +867,102 @@ def delete_records(records: Annotated[List[int], typer.Argument(
     """Delete records from a table"""
     st, res = grist_api.delete_rows(table, records, doc_id, team_id)
     _print_done_or_exit(st, res, verbose, inspect)
+
+# gry att -> for managing attachments
+# ----------------------------------------------------------------------
+
+@att_app.command('list')
+def list_atts(sort: Annotated[str, typer.Option('--sort', '-s', 
+                              help='Order in which to return results.')] = '',
+              limit: Annotated[int, typer.Option('--limit', '-l', 
+                               help='Return at most this number of rows.')] = 0,
+              doc_id: Annotated[str, _doc_id_opt] = '', 
+              team_id: Annotated[str, _team_id_opt] = '',
+              verbose: Annotated[int, _verbose_opt] = 0,
+              inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List metadata of attachments in a doc. No filter option available"""
+    st, res = grist_api.list_attachments(sort=sort, limit=limit, doc_id=doc_id, 
+                                         team_id=team_id)
+    _exit_if_error(st, res, inspect)
+    content = Table('att. id', 'metadata')
+    for c in res:
+        f = c['fields']
+        mdata = '\n'.join([f'{k}: {str(v)}' for k, v in f.items()])
+        content.add_row(str(c['id']), mdata)
+        content.add_section()
+    _print_output(content, res, verbose, inspect)
+
+@att_app.command('download')
+def download_att(filename: Annotated[Path, 
+                                     typer.Argument(help='Output file path', 
+                                        callback=_download_path_validate)],
+                 attachment: Annotated[int, typer.Option('--attachment-id', '-a',
+                                                help='Integer ID of attachment')],
+                 doc_id: Annotated[str, _doc_id_opt] = '', 
+                 team_id: Annotated[str, _team_id_opt] = '',
+                 verbose: Annotated[int, _verbose_opt] = 0,
+                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Download one attachment as a file"""
+    st, res = grist_api.download_attachment(str(filename), attachment, 
+                                            doc_id, team_id)
+    _print_done_or_exit(st, res, verbose, inspect)
+    
+@att_app.command('upload')
+def upload_atts(filenames: Annotated[List[Path], 
+                                     typer.Argument(help='Files to upload', 
+                                            callback=_upload_pathlist_validate)],
+                doc_id: Annotated[str, _doc_id_opt] = '', 
+                team_id: Annotated[str, _team_id_opt] = '',
+                verbose: Annotated[int, _verbose_opt] = 0,
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Upload one or more attachments to a doc"""
+    st, res = grist_api.upload_attachments([str(i) for i in filenames], 
+                                           doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    _print_done_and_id(res, res, verbose, inspect)
+
+class _DownloadAttOption(str, Enum):
+    tar = 'tar'
+    zip = 'zip'
+
+@att_app.command('backup')
+def download_atts(filename: Annotated[Path, 
+                                      typer.Argument(help='Output file path', 
+                                            callback=_download_path_validate)],
+                  output: Annotated[_DownloadAttOption, 
+                                    typer.Option('--output', '-o', 
+                                    help='Output type')] = _DownloadAttOption.tar,
+                  doc_id: Annotated[str, _doc_id_opt] = '', 
+                  team_id: Annotated[str, _team_id_opt] = '',
+                  verbose: Annotated[int, _verbose_opt] = 0,
+                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Download all attachments as an archive file"""
+    st, res = grist_api.download_attachments(str(filename), output, 
+                                             doc_id, team_id)
+    _print_done_or_exit(st, res, verbose, inspect)
+
+@att_app.command('restore')
+def upload_restore_atts(filename: Annotated[Path, 
+                            typer.Argument(help='Archive file path', 
+                                           callback=_upload_path_validate)],
+                        doc_id: Annotated[str, _doc_id_opt] = '', 
+                        team_id: Annotated[str, _team_id_opt] = '',
+                        verbose: Annotated[int, _verbose_opt] = 0,
+                        inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Upload missing attachments from a local tar archive.
+    
+    FILENAME must be a file name without extension of a tar file"""
+    # TODO this is due to a bad design in api.py ("name without extension")
+    try:
+        st, res = grist_api.upload_restore_attachments(str(filename), 
+                                                       doc_id, team_id)
+    except FileNotFoundError:
+        raise typer.BadParameter('Incorrect filename')
+    _exit_if_error(st, res, inspect)
+    _print_output(res, res, verbose, inspect)
+
+
+
 
 if __name__ == '__main__':
     app()
