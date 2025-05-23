@@ -107,8 +107,8 @@ default_config = {
     "GRIST_API_ROOT": "api",
     "GRIST_RAISE_ERROR": "Y",
     "GRIST_SAFEMODE": "N",
-    "GRIST_WORKSPACE_ID": "_bogus_", # no test should ever hit this
-    "GRIST_DOC_ID": "_bogus_",       # no test should ever hit this
+    "GRIST_WORKSPACE_ID": "1000000000000", # no test should ever hit this
+    "GRIST_DOC_ID": "_bogus_",             # no test should ever hit this
 }
 
 HERE = Path(__file__).absolute().parent
