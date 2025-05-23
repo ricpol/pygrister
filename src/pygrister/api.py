@@ -40,9 +40,9 @@ for more usage examples.
 """
 from __future__ import annotations
 
-import os, os.path
 import json as modjson # "json" is a common name for request params...
 import functools
+from pathlib import Path
 from urllib.parse import urlencode, quote
 from typing import Any
 from inspect import currentframe, getframeinfo
@@ -168,7 +168,8 @@ class GristApi:
     
     def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
                 params: dict|None = None, json: dict|None = None, 
-                filename: str = '', upload_files: list|None = None) -> Apiresp:
+                filename: Path|None = None, 
+                upload_files: list|None = None) -> Apiresp:
         """The engine responsible for actually calling the Apis."""
         self.apicalls += 1
         call = self.session.request if self.session else request
@@ -178,7 +179,7 @@ class GristApi:
         headers.update(
             {'Authorization': f'Bearer {self.configurator.config["GRIST_API_KEY"]}'})
 
-        if filename: # download mode, method *must* be GET!
+        if filename is not None: # download mode, method *must* be GET!
             with call('GET', url, headers=headers, params=params, 
                       stream=True, **self.request_options) as resp:
                 self.ok = resp.ok
@@ -803,7 +804,7 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/access'
         return self.apicall(url, 'PATCH', json=json)
 
-    def download_sqlite(self, filename: str, nohistory: bool = False, 
+    def download_sqlite(self, filename: Path, nohistory: bool = False, 
                         template: bool = False, doc_id: str = '', 
                         team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/download``.
@@ -817,7 +818,7 @@ class GristApi:
         return self.apicall(url, headers=headers, params=params, 
                             filename=filename)
 
-    def download_excel(self, filename: str, table_id: str, 
+    def download_excel(self, filename: Path, table_id: str, 
                        header: str = 'label', doc_id: str = '', 
                        team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/download/xlsx``.
@@ -831,7 +832,7 @@ class GristApi:
         return self.apicall(url, headers=headers, params=params, 
                             filename=filename)
 
-    def download_csv(self, filename: str, table_id: str, 
+    def download_csv(self, filename: Path, table_id: str, 
                      header: str = 'label', doc_id: str = '', 
                      team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/download/csv``.
@@ -848,7 +849,7 @@ class GristApi:
                             filename=filename)
 
     def download_schema(self, table_id: str, header: str = 'label',
-                        filename: str = '', doc_id: str = '', 
+                        filename: Path|None = None, doc_id: str = '', 
                         team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/download/table-schema``.
         
@@ -1169,7 +1170,7 @@ class GristApi:
             return st, res
 
     @check_safemode
-    def upload_attachment(self, filename: str, 
+    def upload_attachment(self, filename: Path, 
                           doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/attachments`` for one file only.
         
@@ -1182,7 +1183,7 @@ class GristApi:
         return self.upload_attachments([filename], doc_id, team_id)
     
     @check_safemode
-    def upload_attachments(self, filenames: list, doc_id: str = '', 
+    def upload_attachments(self, filenames: list[Path], doc_id: str = '', 
                            team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/attachments``.
         
@@ -1191,7 +1192,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments'
         headers = dict()
-        fileobjs = [('upload', (f, open(f, 'rb'))) for f in filenames]
+        fileobjs = [('upload', (str(f), open(f, 'rb'))) for f in filenames]
         try:
             st, res = self.apicall(url, 'POST', headers=headers, 
                                    upload_files=fileobjs)
@@ -1201,11 +1202,11 @@ class GristApi:
         return st, res
 
     @check_safemode
-    def upload_restore_attachments(self, filename: str, 
+    def upload_restore_attachments(self, filename: Path, 
                                    doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/attachments/archive``.
         
-        ``filename``: must be a file name without extension of a *tar* file.
+        ``filename``: must be a *tar* file.
         If successful, response will be a summary ``dict`` of attachments used.
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
@@ -1213,8 +1214,8 @@ class GristApi:
         headers = {'Accept': 'application/json'
                    #'Content-Type': 'multipart/form-data', # do not use,
                   }   # or Requests won't add boundaries and Grist will complain
-        with open(filename+'.tar', 'rb') as f:
-            fileobj = [('file', (filename+'.tar', f, 'application/x-tar'))]
+        with open(filename, 'rb') as f:
+            fileobj = [('file', (str(filename), f, 'application/x-tar'))]
             st, res = self.apicall(url, method='POST', headers=headers, 
                                    upload_files=fileobj) 
         return st, res
@@ -1229,7 +1230,7 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/attachments/{attachment_id}'
         return self.apicall(url)
 
-    def download_attachment(self, filename: str, attachment_id: int, 
+    def download_attachment(self, filename: Path, attachment_id: int, 
                             doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/attachments/{attachmentId}/download``.
         
@@ -1240,22 +1241,20 @@ class GristApi:
         headers = {'accept': '*/*'}
         return self.apicall(url, headers=headers, filename=filename)
     
-    def download_attachments(self, filename: str = '', format: str = 'tar', 
+    def download_attachments(self, filename: Path|None = None, format: str = 'tar', 
                              doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/attachments/archive``.
         
-        ``filename``: must be a file name without extension and defaults 
-        to ``doc_<doc_id>_attachments.<format>``. 
+        ``filename``: must be a file name matching with ``format`` 
+        and defaults to ``doc_<doc_id>_attachments.<format>``. 
         If successful, response will be ``None``.
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/archive'
         headers = {'accept': '*/*'}
         params = {'format': format}
-        if filename:
-            filename = f'{filename}.{format}'
-        else:
-            filename = f'doc_{doc_id}_attachments.{format}'
+        if filename is None:
+            filename = Path(f'doc_{doc_id}_attachments.{format}') 
         return self.apicall(url, headers=headers, params=params, 
                             filename=filename)
 
