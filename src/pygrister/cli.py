@@ -885,6 +885,21 @@ def list_atts(sort: Annotated[str, typer.Option('--sort', '-s',
         content.add_section()
     _print_output(content, res, verbose, inspect)
 
+@att_app.command('see')
+def see_attachment(att_id: Annotated[int, typer.Argument(help='Attachment ID')],
+                   doc_id: Annotated[str, _doc_id_opt] = '', 
+                   team_id: Annotated[str, _team_id_opt] = '',
+                   verbose: Annotated[int, _verbose_opt] = 0,
+                   inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Get the metadata for an attachment"""
+    st, res = grist_api.see_attachment(att_id, doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    content = Table('key', 'value')
+    content.add_row('ID', str(att_id))
+    for k, v in res.items():
+        content.add_row(k, str(v))
+    _print_output(content, res, verbose, inspect)
+
 @att_app.command('download')
 def download_att(filename: Annotated[Path, 
                                      typer.Argument(help='Output file path', 
@@ -945,7 +960,57 @@ def upload_restore_atts(filename: Annotated[Path,
     _exit_if_error(st, res, inspect)
     _print_output(res, res, verbose, inspect)
 
+@att_app.command('store')
+def see_att_store(doc_id: Annotated[str, _doc_id_opt] = '', 
+                  team_id: Annotated[str, _team_id_opt] = '',
+                  verbose: Annotated[int, _verbose_opt] = 0,
+                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Get the attachments storage type"""
+    st, res = grist_api.see_attachment_store(doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    _print_output(res, res, verbose, inspect)
 
+@att_app.command('set-store')
+def change_att_store(internal: Annotated[bool, 
+                                typer.Option('--internal/--external', '-i/-e', 
+                                help='Set internal/external storage')] = True,
+                     doc_id: Annotated[str, _doc_id_opt] = '', 
+                     team_id: Annotated[str, _team_id_opt] = '',
+                     verbose: Annotated[int, _verbose_opt] = 0,
+                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Set the attachments storage type"""
+    st, res = grist_api.update_attachment_store(internal, doc_id, team_id)
+    _print_done_or_exit(st, res, verbose, inspect)
+
+@att_app.command('store-settings')
+def list_store_settings(doc_id: Annotated[str, _doc_id_opt] = '', 
+                        team_id: Annotated[str, _team_id_opt] = '',
+                        verbose: Annotated[int, _verbose_opt] = 0,
+                        inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Get the attachments storage settings"""
+    st, res = grist_api.list_store_settings(doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    _print_output(res, res, verbose, inspect)
+
+@att_app.command('transfer')
+def transfer_atts(doc_id: Annotated[str, _doc_id_opt] = '', 
+                  team_id: Annotated[str, _team_id_opt] = '',
+                  verbose: Annotated[int, _verbose_opt] = 0,
+                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Start transferring attachments"""
+    st, res = grist_api.transfer_attachments(doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    _print_output(res, res, verbose, inspect)
+
+@att_app.command('transfer-status')
+def transfer_status(doc_id: Annotated[str, _doc_id_opt] = '', 
+                    team_id: Annotated[str, _team_id_opt] = '',
+                    verbose: Annotated[int, _verbose_opt] = 0,
+                    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Get attachment transfer status"""
+    st, res = grist_api.see_transfer_status(doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    _print_output(res, res, verbose, inspect)
 
 
 if __name__ == '__main__':
