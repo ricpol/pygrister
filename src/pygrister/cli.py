@@ -9,7 +9,7 @@
 #      ie errors in cli invocation, see click/exceptions.py
 # 3 -> we reserve this for errors on api call side (eg http 404)
 
-import os, os.path
+import os
 import json as modjson
 from pathlib import Path
 from enum import Enum
@@ -43,12 +43,13 @@ class _CliConfigurator(Configurator):
     @staticmethod
     def get_config() -> dict[str, str]:
         config = dict(PYGRISTER_CONFIG)
-        pth = os.path.join(os.path.expanduser('~'), '.gristapi/config.json')
-        if os.path.isfile(pth):
-            with open(pth, 'r') as f:
+        pth = Path('~/.gristapi/config.json').expanduser()
+        if pth.is_file():
+            with open(pth, 'r', encoding='utf8') as f:
                 config.update(modjson.loads(f.read()))
-        if os.path.isfile('gryconf.json'): 
-            with open('gryconf.json', 'r', encoding='utf8') as f:
+        pth = Path('gryconf.json')
+        if pth.is_file(): 
+            with open(pth, 'r', encoding='utf8') as f:
                 config.update(modjson.loads(f.read()))
         for k in config.keys():
             try:
@@ -58,14 +59,6 @@ class _CliConfigurator(Configurator):
         # overrides
         config['GRIST_RAISE_ERROR'] = 'N'
         config['GRIST_SAFEMODE'] = 'N'
-        # GristApi will happily crash with a ValueError when ws_id (an int!) 
-        # is needed but left unspecified (eg, the default str(!) in the 
-        # static config). As a fix, we replace the default with '0': still 
-        # an invalid id, but a number, so it won't crash and return http404
-        try:
-            int(config['GRIST_WORKSPACE_ID'])
-        except ValueError:
-            config['GRIST_WORKSPACE_ID'] = '0'
         return config
 
     def update_config(self, config: dict[str, str]):
@@ -194,18 +187,18 @@ def _variadic_options_validate(value):
     except ValueError:
         raise typer.BadParameter('Improper use of extra option(s)')
 
-def _upload_path_validate(value):
-    if not Path(value).is_file():
+def _upload_path_validate(value: Path):
+    if not value.is_file():
         raise typer.BadParameter(f'File does not exist: {value}')
     return value
 
-def _upload_pathlist_validate(value):
+def _upload_pathlist_validate(value: list[Path]):
     for item in value:
         _ = _upload_path_validate(item)
     return value
 
-def _download_path_validate(value):
-    if not Path(value).parent.is_dir():
+def _download_path_validate(value: Path):
+    if not value.parent.is_dir():
         raise typer.BadParameter(f'Path does not exist: {value}')
     return value
     
@@ -596,7 +589,7 @@ def download_db(filename: Annotated[Path, typer.Argument(help='Output file path'
                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Download the document as sqlite file"""
     nohistory = not history
-    st, res = grist_api.download_sqlite(str(filename), nohistory, template, 
+    st, res = grist_api.download_sqlite(filename, nohistory, template, 
                                         doc_id, team_id)
     _print_done_or_exit(st, res, 0, inspect) # force verbose=0 in download mode
 
@@ -700,7 +693,7 @@ def download_table(
     funcs = {_DownloadTableOption.csv: grist_api.download_csv, 
              _DownloadTableOption.excel: grist_api.download_excel,
              _DownloadTableOption.schema: grist_api.download_excel}
-    st, res = funcs[output](str(filename), tname, header, doc_id, team_id)
+    st, res = funcs[output](filename, tname, header, doc_id, team_id)
     _print_done_or_exit(st, res, 0, inspect) # force verbose=0 in download mode
 
 # gry col -> for managing columns
@@ -903,7 +896,7 @@ def download_att(filename: Annotated[Path,
                  verbose: Annotated[int, _verbose_opt] = 0,
                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Download one attachment as a file"""
-    st, res = grist_api.download_attachment(str(filename), attachment, 
+    st, res = grist_api.download_attachment(filename, attachment, 
                                             doc_id, team_id)
     _print_done_or_exit(st, res, verbose, inspect)
     
@@ -916,8 +909,7 @@ def upload_atts(filenames: Annotated[List[Path],
                 verbose: Annotated[int, _verbose_opt] = 0,
                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Upload one or more attachments to a doc"""
-    st, res = grist_api.upload_attachments([str(i) for i in filenames], 
-                                           doc_id, team_id)
+    st, res = grist_api.upload_attachments(filenames, doc_id, team_id)
     _exit_if_error(st, res, inspect)
     _print_done_and_id(res, res, verbose, inspect)
 
@@ -937,8 +929,7 @@ def download_atts(filename: Annotated[Path,
                   verbose: Annotated[int, _verbose_opt] = 0,
                   inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Download all attachments as an archive file"""
-    st, res = grist_api.download_attachments(str(filename), output, 
-                                             doc_id, team_id)
+    st, res = grist_api.download_attachments(filename, output, doc_id, team_id)
     _print_done_or_exit(st, res, verbose, inspect)
 
 @att_app.command('restore')
@@ -949,15 +940,8 @@ def upload_restore_atts(filename: Annotated[Path,
                         team_id: Annotated[str, _team_id_opt] = '',
                         verbose: Annotated[int, _verbose_opt] = 0,
                         inspect: Annotated[bool, _inspect_opt] = False) -> None:
-    """Upload missing attachments from a local tar archive.
-    
-    FILENAME must be a file name without extension of a tar file"""
-    # TODO this is due to a bad design in api.py ("name without extension")
-    try:
-        st, res = grist_api.upload_restore_attachments(str(filename), 
-                                                       doc_id, team_id)
-    except FileNotFoundError:
-        raise typer.BadParameter('Incorrect filename')
+    """Upload missing attachments from a local tar archive"""
+    st, res = grist_api.upload_restore_attachments(filename, doc_id, team_id)
     _exit_if_error(st, res, inspect)
     _print_output(res, res, verbose, inspect)
 
