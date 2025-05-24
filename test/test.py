@@ -89,7 +89,7 @@ in normal usage it's just ``<grist>.add_records(<table>, records)``.
 
 """
 
-import os, os.path
+from pathlib import Path
 import time
 from datetime import datetime
 import json
@@ -107,12 +107,12 @@ default_config = {
     "GRIST_API_ROOT": "api",
     "GRIST_RAISE_ERROR": "Y",
     "GRIST_SAFEMODE": "N",
-    "GRIST_WORKSPACE_ID": "_bogus_", # no test should ever hit this
-    "GRIST_DOC_ID": "_bogus_",       # no test should ever hit this
+    "GRIST_WORKSPACE_ID": "1000000000000", # no test should ever hit this
+    "GRIST_DOC_ID": "_bogus_",             # no test should ever hit this
 }
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-with open(os.path.join(HERE, 'config_test.json')) as f:
+HERE = Path(__file__).absolute().parent
+with open(HERE / 'config_test.json') as f:
     TEST_CONFIGURATION = json.loads(f.read())
 TEST_CONFIGURATION.update(default_config)
 
@@ -225,7 +225,7 @@ class TestVarious(BaseTestPyGrister):
                                       doc_id=doc_id, team_id=self.team_id)
         self.assertEqual(st, 200)
         # POST in upload mode
-        f = os.path.join(HERE, 'imgtest.jpg')
+        f = HERE / 'imgtest.jpg'
         st, res = self.g.upload_attachments([f], doc_id=doc_id, team_id=self.team_id)
         self.assertEqual(st, 200)
         # PATCH
@@ -606,7 +606,7 @@ class TestDocs(BaseTestPyGrister):
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
         self.assertIsInstance(doc_id, str)
         self.assertEqual(st, 200)
-        st, res = self.g.download_sqlite(name+'.sqlite', 
+        st, res = self.g.download_sqlite(Path(f'{name}.sqlite'), 
             nohistory=True, template=True, doc_id=doc_id, team_id=self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
@@ -616,7 +616,7 @@ class TestDocs(BaseTestPyGrister):
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
         self.assertIsInstance(doc_id, str)
         self.assertEqual(st, 200)
-        st, res = self.g.download_excel(name+'.xls', table_id='Table1',
+        st, res = self.g.download_excel(Path(f'{name}.xls'), table_id='Table1',
                                         doc_id=doc_id, team_id=self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
@@ -626,7 +626,7 @@ class TestDocs(BaseTestPyGrister):
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
         self.assertIsInstance(doc_id, str)
         self.assertEqual(st, 200)
-        st, res = self.g.download_csv(name+'.csv', table_id='Table1',
+        st, res = self.g.download_csv(Path(f'{name}.csv'), table_id='Table1',
                                       doc_id=doc_id, team_id=self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
@@ -640,7 +640,7 @@ class TestDocs(BaseTestPyGrister):
                                           team_id=self.team_id)
         self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
-        st, res = self.g.download_schema('Table1', filename=name+'.json', 
+        st, res = self.g.download_schema('Table1', filename=Path(f'{name}.json'), 
                                          doc_id=doc_id, team_id=self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
@@ -1053,7 +1053,7 @@ class TestAttachments(BaseTestPyGrister):
         self.assertEqual(st, 200)
 
     def test_upload_download_attachments(self):
-        f = os.path.join(HERE, 'imgtest.jpg')
+        f = HERE / 'imgtest.jpg'
         st, res = self.g.upload_attachments([f], doc_id=self.doc_id, 
                                             team_id=self.team_id)
         self.assertIsInstance(res, list)
@@ -1065,7 +1065,7 @@ class TestAttachments(BaseTestPyGrister):
         self.assertIsInstance(res, list)
         self.assertEqual(len(res), 3)
         self.assertEqual(st, 200)
-        name = 'att_'+str(time.time_ns())+'.jpg'
+        name = Path(f'att_{time.time_ns()}.jpg')
         st, res = self.g.download_attachment(name, 1, doc_id=self.doc_id, 
                                              team_id=self.team_id)
         self.assertIsNone(res)
@@ -1073,16 +1073,16 @@ class TestAttachments(BaseTestPyGrister):
     
     def test_download_restore_attachments(self):
         # this is for the download/upload "archive" apis
-        f = os.path.join(HERE, 'imgtest.jpg')
+        f = HERE / 'imgtest.jpg'
         st, res = self.g.upload_attachments([f], doc_id=self.doc_id, 
                                             team_id=self.team_id)
         self.assertEqual(st, 200)
-        name = 'downloaded_atts_'+str(time.time_ns())
+        name = Path(f'downloaded_atts_{time.time_ns()}.tar')
         st, res = self.g.download_attachments(name, doc_id=self.doc_id, 
                                               team_id=self.team_id)
         self.assertEqual(st, 200)
         self.assertIsNone(res)
-        self.assertTrue(os.path.isfile(name+'.tar'))
+        self.assertTrue(name.is_file())
         # now we re-upload the tar file
         st, res = self.g.upload_restore_attachments(name, doc_id=self.doc_id, 
                                                     team_id=self.team_id)
@@ -1096,7 +1096,7 @@ class TestAttachments(BaseTestPyGrister):
 
     def test_see_attachment(self):
         # make sure we have at least one attachment to see
-        f = os.path.join(HERE, 'imgtest.jpg')
+        f = HERE / 'imgtest.jpg'
         st, res = self.g.upload_attachments([f], doc_id=self.doc_id, 
                                             team_id=self.team_id)
         self.assertIsInstance(res, list)
@@ -1139,7 +1139,7 @@ class TestExternalAttachments(BaseTestPyGrister):
         st, res = self.g.see_attachment_store(doc_id=self.doc_id, 
                                               team_id=self.team_id)
         self.assertEqual(res, 'internal')
-        f = os.path.join(HERE, 'imgtest.jpg')
+        f = HERE / 'imgtest.jpg'
         st, res = self.g.upload_attachments([f, f, f], doc_id=self.doc_id, 
                                             team_id=self.team_id)
         st, res = self.g.update_attachment_store(internal_store=False, 

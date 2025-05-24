@@ -16,7 +16,7 @@ PYGRISTER_CONFIG = {
     'GRIST_API_SERVER': 'getgrist.com',
     'GRIST_API_ROOT': 'api',
     'GRIST_TEAM_SITE': 'docs',
-    'GRIST_WORKSPACE_ID': '<your_ws_id_here>',
+    'GRIST_WORKSPACE_ID': '0', # this should be a string castable to int
     'GRIST_DOC_ID': '<your_doc_id_here>',
     'GRIST_RAISE_ERROR': 'Y',
     'GRIST_SAFEMODE': 'N',
@@ -108,6 +108,12 @@ class Configurator:
     def _post_reconfig(self): # check and cleanup after config is changed
         if not self.config or not all(self.config.values()):
             msg = f'Missing config values.\n{self.config2output(self.config)}'
+            raise GristApiNotConfigured(msg)
+        ws_id = self.config['GRIST_WORKSPACE_ID']
+        try:
+            _ = int(ws_id)
+        except ValueError:
+            msg = f'Workspace ID must be castable to integer, not "{ws_id}".'
             raise GristApiNotConfigured(msg)
         self.server = self.make_server()
         self.raise_option = (self.config['GRIST_RAISE_ERROR'] == 'Y')

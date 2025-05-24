@@ -4,7 +4,25 @@ NEWS
 Bleeding edge: committed to the repo, not yet released on PyPI
 --------------------------------------------------------------
 
-Nothing right now.
+Changed APIs:
+  - we are now consistently using pathlib.Path objects instead of os.path 
+    strings to express files and paths. This may help client programs down 
+    the line, but it's really just a cosmetic change for Pygrister itself. 
+    Since we don't use Path-specific operations internally, you may still 
+    pass strings, as long as you don't mind being scolded by your type checker.
+    This is issue #9.
+  - GristApi.upload_restore_attachments and GristApi.download_attachments 
+    used to accept target filenames *without extension*, a dubious design 
+    decision which has now been reversed. Pass regular pathlib.Path objects 
+    (or just strings) instead, complete with the filename extension. 
+
+Other changes:
+  - Since workspace IDs are, in fact, integers, "GRIST_WORKSPACE_ID" now 
+    defaults to "0"; additionally, Pygrister will check your configuration 
+    and throw a GristApiNotConfigured if you set this ID to a non-castable 
+    string. Python function calls (as in grist.delete_workspace(42)) 
+    will accept integers as before. 
+    This will help avoiding some odd-looking exceptions, see issue #8.
 
 v0.7.0, 2025.05.01
 ------------------
