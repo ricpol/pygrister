@@ -183,7 +183,7 @@ values, as defined in the ``config.py`` module::
         'GRIST_API_SERVER': 'getgrist.com',
         'GRIST_API_ROOT': 'api',
         'GRIST_TEAM_SITE': 'docs',
-        'GRIST_WORKSPACE_ID': '<your_ws_id_here>',
+        'GRIST_WORKSPACE_ID': '0',  # this should be a string castable to int
         'GRIST_DOC_ID': '<your_doc_id_here>',
         'GRIST_RAISE_ERROR': 'Y',
         'GRIST_SAFEMODE': 'N',
@@ -208,7 +208,8 @@ are the remaining components of the SaaS Grist Api url: you should never
 override the default values unless you know what you are doing.
 
 ``GRIST_WORKSPACE_ID`` is your workspace ID: in fact, very few APIs make use 
-of this value, and you may not need it at all. 
+of this value, and you may not need it at all. In Grist, workspace IDs are 
+integers, so you must provide a string castable to ``int`` (eg. ``"42"``).
 
 ``GRIST_DOC_ID`` should be set to the ID of the document you work with the most. 
 If your workflow involves constant switching between various documents, you may 
