@@ -234,6 +234,7 @@ table_app = typer.Typer(help='Manage a table inside a document')
 col_app = typer.Typer(help='Manage columns inside a table')
 rec_app = typer.Typer(help='Manage records inside a table')
 att_app = typer.Typer(help='Manage attachments and attachment storage')
+hook_app = typer.Typer(help='Manage document webhooks')
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
@@ -242,6 +243,7 @@ app.add_typer(table_app, name='table', no_args_is_help=True)
 app.add_typer(col_app, name='col', no_args_is_help=True)
 app.add_typer(rec_app, name='rec', no_args_is_help=True)
 app.add_typer(att_app, name='att', no_args_is_help=True)
+app.add_typer(hook_app, name='hook', no_args_is_help=True)
 
 # gry sql -> post SELECT sql queries to Grist
 # ----------------------------------------------------------------------
@@ -1011,6 +1013,109 @@ def transfer_status(doc_id: Annotated[str, _doc_id_opt] = '',
     st, res = grist_api.see_transfer_status(doc_id, team_id)
     _exit_if_error(st, res, inspect)
     _print_output(res, res, verbose, inspect)
+
+# gry hook -> for managing webhooks
+# ----------------------------------------------------------------------
+
+@hook_app.command('list')
+def list_hooks(doc_id: Annotated[str, _doc_id_opt] = '', 
+               team_id: Annotated[str, _team_id_opt] = '',
+               verbose: Annotated[int, _verbose_opt] = 0,
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List webhooks associated with a document"""
+    st, res = grist_api.list_webhooks(doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    if not res:
+        content = 'No webhooks.'
+    else:
+        content = Table('webhook data')
+        for wh in res:
+            data = f'id: {wh["id"]}\n'
+            data += f'name: {wh["fields"]["name"]}\n'
+            data += f'url: {wh["fields"]["url"]}\n'
+            data += f'enabled: {wh["fields"]["enabled"]}\n'
+            data += f'table: {wh["fields"]["tableId"]}\n'
+            data += f'events: {", ".join(wh["fields"]["eventTypes"])}'
+            content.add_row(data)
+    _print_output(content, res, verbose, inspect)
+
+@hook_app.command('new')
+def add_hook(name: Annotated[str, typer.Argument(help='Webhook name')],
+             url: Annotated[str, typer.Argument(help='Webhook url')],
+             table: Annotated[str, _table_id_opt],
+             events: Annotated[str,
+                        typer.Option('--events', '-e', 
+                        help='Event types :-separated, eg "add:update"')] = 'add',
+             readycol: Annotated[str|None, 
+                        typer.Option('--ready', '-r', 
+                        help='Is Ready Columm (str or null)')] = None,
+             enabled: Annotated[bool, 
+                                typer.Option('--enabled/--disabled', '-N/-n', 
+                                help='Webhook is enabled')] = True,
+             doc_id: Annotated[str, _doc_id_opt] = '', 
+             team_id: Annotated[str, _team_id_opt] = '',
+             verbose: Annotated[int, _verbose_opt] = 0,
+             inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Add one webhook to a document"""
+    evts = events.split(':')
+    wh = {'fields': {'name': name, 'memo': '', 'url': url, 'enabled': enabled, 
+          'eventTypes': evts, 'isReadyColumn': readycol, 'tableId': table}}
+    st, res = grist_api.add_webhooks([wh], doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    _print_output(res[0], res, verbose, inspect)
+
+@hook_app.command('update')
+def update_hook(hook_id: Annotated[str, typer.Argument(help='Webhook ID')],
+                name: Annotated[str, 
+                        typer.Option('--name', help='Webhook name')] = '<same>',
+                url: Annotated[str, 
+                        typer.Option('--url', help='Webhook url')] = '<same>',
+                table: Annotated[str, 
+                        typer.Option('--table', help='Table ID name')] = '<same>',
+                events: Annotated[str, typer.Option('--events', 
+                        help='Event types :-separated, eg "add:update"')] = '<same>',
+                readycol: Annotated[str|None, typer.Option('--ready',
+                        help='Is Ready Columm (str or null)')] = '<same>',
+                enabled: Annotated[bool|None, typer.Option('--enabled/--disabled',  
+                        help='Webhook is enabled')] = None,
+                doc_id: Annotated[str, _doc_id_opt] = '', 
+                team_id: Annotated[str, _team_id_opt] = '',
+                verbose: Annotated[int, _verbose_opt] = 0,
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Modify a webhook"""
+    fields = dict()
+    for option, label in ((name, 'name'), (url, 'url'), (table, 'tableId'),
+                          (readycol, 'isReadyColumn')):
+        if option != '<same>':
+            fields[label] = option
+    if enabled is not None:
+        fields['enabled'] = enabled
+    if events != '<same>':
+        evts = events.split(':')
+        fields['eventTypes'] = evts
+    wh = {'fields': fields}
+    st, res = grist_api.update_webhook(hook_id, wh, doc_id, team_id)
+    _exit_if_error(st, res, inspect)
+    _print_done_or_exit(st, res, verbose, inspect)
+
+@hook_app.command('delete')
+def delete_hook(hook_id: Annotated[str, typer.Argument(help='Webhook ID')],
+                doc_id: Annotated[str, _doc_id_opt] = '', 
+                team_id: Annotated[str, _team_id_opt] = '',
+                verbose: Annotated[int, _verbose_opt] = 0,
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Delete a webhook"""
+    st, res = grist_api.delete_webhook(hook_id, doc_id, team_id)
+    _print_done_or_exit(st, res, verbose, inspect)
+
+@hook_app.command('empty-queue')
+def empty_hook_queue(doc_id: Annotated[str, _doc_id_opt] = '', 
+                     team_id: Annotated[str, _team_id_opt] = '',
+                     verbose: Annotated[int, _verbose_opt] = 0,
+                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Empty a document's queue of undelivered payloads"""
+    st, res = grist_api.empty_payloads_queue(doc_id, team_id)
+    _print_done_or_exit(st, res, verbose, inspect)
 
 
 if __name__ == '__main__':
