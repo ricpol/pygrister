@@ -144,6 +144,20 @@ def _make_user_table(response) -> Table:
                       str(usr['access']))
     return table
 
+def _make_scim_user_data(user, table: Table) -> Table:
+    table.add_row('id', str(user['id']))
+    table.add_row('name', user['userName'])
+    table.add_row('display name', user['displayName'])
+    emails = []
+    for email in user['emails']:
+        e = email['value']
+        if email['primary']:
+            e += ' (primary)'
+        emails.append(e)
+    table.add_row('email', '\n'.join(emails))
+    table.add_section()
+    return table
+
 def _user_access_validate(value):
     legal = 'owners editors viewers members none'
     if value not in legal.split():
@@ -209,6 +223,7 @@ _verbose_opt = typer.Option('--verbose', '-v', count=True,
                             help='Verbose level (0-2)')
 _inspect_opt = typer.Option('--inspect', '-i', 
                             help = 'Print inspect output after api call')
+_user_id_arg = typer.Argument(help='The user ID')
 _team_id_opt = typer.Option('--team', '-m', 
                             help='The team ID [default: current]')
 _ws_id_opt = typer.Option('--workspace', '-w', 
@@ -227,6 +242,7 @@ _max_access_opt = typer.Option('--max-access', '-A',
 
 # Typer sub-commands
 # ----------------------------------------------------------------------
+user_app = typer.Typer(help='Manage users (SCIM must be enabled!)')
 org_app = typer.Typer(help='Manage Grist teams (aka organisations)')
 ws_app = typer.Typer(help='Manage workspaces inside a team site')
 doc_app = typer.Typer(help='Manage documents inside a workspace')
@@ -236,6 +252,7 @@ rec_app = typer.Typer(help='Manage records inside a table')
 att_app = typer.Typer(help='Manage attachments and attachment storage')
 hook_app = typer.Typer(help='Manage document webhooks')
 app = typer.Typer(no_args_is_help=True)
+app.add_typer(user_app, name='user', no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
 app.add_typer(doc_app, name='doc', no_args_is_help=True)
@@ -277,6 +294,78 @@ def run_sql(statement: Annotated[str, typer.Argument(
     else:
         content = 'No records found.'
     _print_output(content, res, verbose, inspect)
+
+# gry user -> for managing users with SCIM apis
+# ----------------------------------------------------------------------
+
+@user_app.command('me')
+def see_me(verbose: Annotated[int, _verbose_opt] = 0,
+           inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve information about oneself"""
+    st, res = grist_api.see_myself()
+    _exit_if_error(st, res, inspect)
+    content = Table('key', 'value')
+    content = _make_scim_user_data(res, content)
+    _print_output(content, res, verbose, inspect)
+
+@user_app.command('see')
+def see_user(user: Annotated[int, _user_id_arg],
+             verbose: Annotated[int, _verbose_opt] = 0,
+             inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve user by ID"""
+    st, res = grist_api.see_user(user)
+    _exit_if_error(st, res, inspect)
+    content = Table('key', 'value')
+    content = _make_scim_user_data(res, content)
+    _print_output(content, res, verbose, inspect)
+
+@user_app.command('list')
+def list_users(start: Annotated[int, typer.Option('--start', '-s', 
+                                                  help='Start by ID')] = 1,
+               retrieve: Annotated[int, typer.Option('--retrieve', '-r', 
+                                            help='Max users to retrieve')] = 10,
+               verbose: Annotated[int, _verbose_opt] = 0,
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve user by ID. No filter option available"""
+    st, res = grist_api.list_users_raw(start, retrieve)
+    _exit_if_error(st, res, inspect)
+    if start > res['totalResults']:
+        content = 'No users.'
+    else:
+        content = Table('key', 'value')
+        for user in res['Resources']:
+            content = _make_scim_user_data(user, content)
+    _print_output(content, res, verbose, inspect)
+    
+@user_app.command('new')
+def new_user(name: Annotated[str, typer.Argument(help="User display name")],
+             email: Annotated[str, typer.Argument(help='User email')],
+             display: Annotated[str, typer.Option('--display', '-d', 
+                                        help='User display name')] = '',
+             formatted: Annotated[str, typer.Option('--formatted', '-f', 
+                                        help='User formatted name')] = '',
+             lang: Annotated[str, typer.Option('--language', '-g', 
+                                        help='User language')] = 'en', 
+             locale: Annotated[str, typer.Option('--locale', '-l', 
+                                        help='User locale')] = 'en',
+             picture: Annotated[str, typer.Option('--picture', '-p', 
+                                        help='User picture url')] = '',
+             verbose: Annotated[int, _verbose_opt] = 0,
+             inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Add a user"""
+    photos = [picture] if picture else None
+    st, res = grist_api.add_user(name, [email], formatted, display, lang, 
+                                 locale, photos) 
+    _exit_if_error(st, res, inspect)
+    _print_done_and_id(res, res, verbose, inspect)
+
+@user_app.command('delete')
+def delete_user(user: Annotated[int, _user_id_arg],
+                verbose: Annotated[int, _verbose_opt] = 0,
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Remove a user"""
+    st, res = grist_api.delete_user(user)
+    _print_done_or_exit(st, res, verbose, inspect)
 
 # gry team -> for managing team sites (organisations)
 # ----------------------------------------------------------------------
