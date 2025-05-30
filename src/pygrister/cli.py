@@ -253,6 +253,7 @@ col_app = typer.Typer(help='Manage columns inside a table')
 rec_app = typer.Typer(help='Manage records inside a table')
 att_app = typer.Typer(help='Manage attachments and attachment storage')
 hook_app = typer.Typer(help='Manage document webhooks')
+scim_app = typer.Typer(help='Metadata about SCIM services (if enabled!)')
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(user_app, name='user', no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
@@ -263,6 +264,7 @@ app.add_typer(col_app, name='col', no_args_is_help=True)
 app.add_typer(rec_app, name='rec', no_args_is_help=True)
 app.add_typer(att_app, name='att', no_args_is_help=True)
 app.add_typer(hook_app, name='hook', no_args_is_help=True)
+app.add_typer(scim_app, name='scim', no_args_is_help=True)
 
 # gry sql -> post SELECT sql queries to Grist
 # ----------------------------------------------------------------------
@@ -382,6 +384,25 @@ def new_user(name: Annotated[str, typer.Argument(help="User display name")],
     _exit_if_error(st, res, inspect)
     _print_done_and_id(res, res, verbose, inspect)
 
+class _OperationTypes(str, Enum):
+    add = 'add'
+    repl = 'replace'
+    remove = 'remove'
+
+@user_app.command('update')
+def update_user(user_id: Annotated[int, typer.Argument(help="User ID")],
+                op_path: Annotated[str, typer.Argument(help="Operation path")],
+                op_value: Annotated[str, typer.Argument(help="Operation value")],
+                operation: Annotated[_OperationTypes, 
+                            typer.Option('--operation', '-o', 
+                            help="Operation to perform")] = _OperationTypes.repl,
+                verbose: Annotated[int, _verbose_opt] = 0,
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Update a user. Only one update operation is possible"""
+    op = {'op': operation, 'path': op_path, 'value': op_value}
+    st, res = grist_api.update_user(user_id, [op])
+    _print_done_or_exit(st, res, verbose, inspect)
+
 @user_app.command('delete')
 def delete_user(user: Annotated[int, _user_id_arg],
                 verbose: Annotated[int, _verbose_opt] = 0,
@@ -389,6 +410,36 @@ def delete_user(user: Annotated[int, _user_id_arg],
     """Remove a user"""
     st, res = grist_api.delete_user(user)
     _print_done_or_exit(st, res, verbose, inspect)
+
+# TODO we don't implement "search" for now because we don't have a good way 
+# to express filters in the shell. 
+
+# gry scim -> metadata about SCIM service
+# ----------------------------------------------------------------------
+
+@scim_app.command('schemas')
+def scim_schemas(verbose: Annotated[int, _verbose_opt] = 0,
+                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve SCIM schemas"""
+    st, res = grist_api.see_scim_schemas()
+    _exit_if_error(st, res, inspect)
+    _print_output(res, res, verbose, inspect)
+
+@scim_app.command('config')
+def scim_config(verbose: Annotated[int, _verbose_opt] = 0,
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve SCIM configuration"""
+    st, res = grist_api.see_scim_config()
+    _exit_if_error(st, res, inspect)
+    _print_output(res, res, verbose, inspect)
+
+@scim_app.command('resources')
+def scim_resources(verbose: Annotated[int, _verbose_opt] = 0,
+                   inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve SCIM resources"""
+    st, res = grist_api.see_scim_resources()
+    _exit_if_error(st, res, inspect)
+    _print_output(res, res, verbose, inspect)
 
 # gry team -> for managing team sites (organisations)
 # ----------------------------------------------------------------------
