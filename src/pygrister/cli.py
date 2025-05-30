@@ -10,7 +10,9 @@
 # 3 -> we reserve this for errors on api call side (eg http 404)
 
 import os
+import subprocess
 import json as modjson
+from sys import executable
 from pathlib import Path
 from enum import Enum
 from typing import List, Optional
@@ -294,6 +296,27 @@ def run_sql(statement: Annotated[str, typer.Argument(
     else:
         content = 'No records found.'
     _print_output(content, res, verbose, inspect)
+
+# gry python -> open a Gry-aware Python shell
+# ----------------------------------------------------------------------
+
+@app.command('python')
+def open_python(idle: Annotated[bool, typer.Option('--idle', 
+                                help='Open the Idle shell')] = False):
+    """Open a Python shell with Pygrister pre-loaded"""
+    start = Path(__file__).absolute().parent / '_pygrystart.py'
+    oldstartup = os.environ.get('PYTHONSTARTUP', None)
+    os.environ['PYTHONSTARTUP'] = str(start)
+    if idle:
+        to_run = [executable, '-m', 'idlelib', '-s']
+    else:
+        to_run = [executable, '-q']
+    try:
+        subprocess.run(to_run)
+    finally:
+        if oldstartup:
+            os.environ['PYTHONSTARTUP'] = oldstartup
+        print('Done. Welcome back to Gry.')
 
 # gry user -> for managing users with SCIM apis
 # ----------------------------------------------------------------------
