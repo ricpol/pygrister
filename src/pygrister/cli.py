@@ -272,6 +272,15 @@ app.add_typer(att_app, name='att', no_args_is_help=True)
 app.add_typer(hook_app, name='hook', no_args_is_help=True)
 app.add_typer(scim_app, name='scim', no_args_is_help=True)
 
+# gry test -> a quick configuration check
+# ----------------------------------------------------------------------
+
+@app.command('test')
+def grytest() -> None:
+    """Run a quick configuration test for your Gry console."""
+    #TODO need a fix for issue #7 first... 
+    cli_console.print('Sorry! Not implemented yet.')
+
 # gry sql -> post SELECT sql queries to Grist
 # ----------------------------------------------------------------------
 
