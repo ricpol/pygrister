@@ -9,4 +9,6 @@ Pygrister docs.
     types
     misc
     scim
+    gry
     api_doc
+    apitable
