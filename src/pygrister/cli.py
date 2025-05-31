@@ -15,7 +15,7 @@ import json as modjson
 from sys import executable
 from pathlib import Path
 from enum import Enum
-from typing import List, Optional
+from typing import Any, List, Optional
 from typing_extensions import Annotated
 
 import typer
@@ -83,7 +83,7 @@ ERRMSG = '[bold red]Error![/bold red]'
 
 # a few helper functions
 # ----------------------------------------------------------------------
-def _exit_with_error(st, res, quiet, inspect) -> None:
+def _exit_with_error(st: int, res: Any, quiet: bool, inspect: bool) -> None:
     if not quiet:
         if inspect:
             cli_console.print(grist_api.inspect())
@@ -91,7 +91,7 @@ def _exit_with_error(st, res, quiet, inspect) -> None:
         cli_console.print(ERRMSG, 'Status:', st, res)
     raise typer.Exit(BADCALL)
 
-def _exit_if_error(st, res, quiet, inspect) -> None:
+def _exit_if_error(st: int, res: Any, quiet: bool, inspect: bool) -> None:
     # no need to differenciate by verbosity if st>=300 
     # because Pygrister already reports the api response as it is
     if not grist_api.ok:
@@ -102,7 +102,8 @@ def _exit_if_error(st, res, quiet, inspect) -> None:
             cli_console.print(ERRMSG, 'Status:', st, res)
         raise typer.Exit(BADCALL)
 
-def _print_done_or_exit(st, res, quiet, verbose, inspect) -> None:
+def _print_done_or_exit(st: int, res: Any, quiet: bool, 
+                        verbose: int, inspect: bool) -> None:
     if inspect and not quiet:
         cli_console.print(grist_api.inspect())
         cli_console.rule()
@@ -118,7 +119,8 @@ def _print_done_or_exit(st, res, quiet, verbose, inspect) -> None:
         cli_console.print(ERRMSG, 'Status:', st, res)
         raise typer.Exit(BADCALL)
 
-def _print_output(content, res, quiet, verbose, inspect) -> None:
+def _print_output(content: Any, res: int, quiet: bool, 
+                  verbose: int, inspect: bool) -> None:
     if inspect and not quiet:
         cli_console.print(grist_api.inspect())
         cli_console.rule()
@@ -132,7 +134,8 @@ def _print_output(content, res, quiet, verbose, inspect) -> None:
         else: # the original Grist api response (json)
             cli_console.print(grist_api.resp_content)
 
-def _print_done_and_id(content, res, quiet, verbose, inspect) -> None:
+def _print_done_and_id(content: Any, res: int, quiet: bool, 
+                       verbose: int, inspect: bool) -> None:
     if not quiet:
         if inspect:
             cli_console.print(grist_api.inspect())
@@ -144,14 +147,14 @@ def _print_done_and_id(content, res, quiet, verbose, inspect) -> None:
         else:
             cli_console.print(grist_api.resp_content)
 
-def _make_user_table(response) -> Table:
+def _make_user_table(response: list[dict]) -> Table:
     table = Table('id', 'name', 'email', 'access')
     for usr in response:
         table.add_row(str(usr['id']), usr['name'], usr['email'], 
                       str(usr['access']))
     return table
 
-def _make_scim_user_data(user, table: Table) -> Table:
+def _make_scim_user_data(user: dict, table: Table) -> Table:
     table.add_row('id', str(user['id']))
     table.add_row('name', user['userName'])
     table.add_row('display name', user['displayName'])
@@ -165,7 +168,7 @@ def _make_scim_user_data(user, table: Table) -> Table:
     table.add_section()
     return table
 
-def _user_access_validate(value):
+def _user_access_validate(value: str|None):
     legal = 'owners editors viewers members none'
     if value not in legal.split():
         raise typer.BadParameter(f'Access must be one of: {legal}')
@@ -173,7 +176,7 @@ def _user_access_validate(value):
         value = None
     return value
 
-def _user_max_access_validate(value):
+def _user_max_access_validate(value: str|None):
     legal = 'owners editors viewers'
     if value not in legal.split():
         raise typer.BadParameter(f'Access must be one of: {legal}')
@@ -181,7 +184,7 @@ def _user_max_access_validate(value):
         value = None
     return value
 
-def _column_decl_validate(value):
+def _column_decl_validate(value: list[str]):
     res = []
     for item in value:
         try:
@@ -191,7 +194,7 @@ def _column_decl_validate(value):
         res.append([id_, type_, name])
     return res
 
-def _record_decl_validate(value):
+def _record_decl_validate(value: list[str]):
     res = []
     for item in value:
         try:
@@ -202,7 +205,7 @@ def _record_decl_validate(value):
         res.append([k, v])
     return res
 
-def _variadic_options_validate(value):
+def _variadic_options_validate(value: list[str]):
     try:
         return dict(zip(*[iter([i.strip('--') for i in value])]*2, strict=True))
     except ValueError:
