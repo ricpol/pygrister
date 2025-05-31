@@ -1,13 +1,61 @@
-# this is a first draft for a Pygrister cli. 
+"""
+Gry: the GRist pYthon command line, powered by Pygrister.
+=========================================================
 
+Gry is a command line tool for interacting with the Grist API. 
+Gry is based on the Pygrister library and maps almost all the Grist APIs, 
+even if offering sometimes a simplified, easier to type syntax. 
 
-#TODO exit codes for the cli:
-# 0 -> ok
-# 1 -> error on our side (Python/Requests/Pygrister exception raised), 
-#      managed by Typer (ie, nicely formatted stacktrace)
-# 2 -> unclear but I *think* it's used by Click/Typer for usage errors, 
-#      ie errors in cli invocation, see click/exceptions.py
-# 3 -> we reserve this for errors on api call side (eg http 404)
+Gry shares the Pygrister configuration system, meaning that, if you already 
+have working Pygrister config files/env variables in place, then Gry will 
+also work. In addition, you may put a ``gryconf.json`` file in the current 
+directory, and Gry (but not Pygrister) will look there too. Read the 
+documentation for more info about the Gry/Pygrister configuration system. 
+
+Gry is organized in "commands", *nouns* referring to the various sections 
+of the Grist API: ``gry doc``, ``gry table``, ``gry team`` and so on.
+Each command has "sub-commands", actions to perform (mostly *verbs*). 
+Sub-commands tend to repeat across commands: ``gry doc new`` adds 
+a document, ``gry table new`` adds a table, ``gry col new`` adds a column...
+
+Type ``% gry --help`` to get a list of available commands. Then type, 
+for instance, ``% gry doc --help`` to list the sub-commands available 
+for ``gry doc``. Finally, something like ``% gry doc new --help`` will show 
+how to use a particular sub-command.
+
+Default output is human-readable; pass ``-v`` to get the original Pygrister 
+output instead; pass ``-vv`` to get the underlying Grist response (as parsable 
+json). Add ``-i`` to also get a dump of request metadata, for inspection. 
+Pass ``-q`` to suppress all output. 
+
+Use ``% gry python`` to open a special Python shell, pre-loaded with a 
+working Pygrister instance: this way, you can alternate between Gry and 
+Pygrister in the same session when needed. 
+
+Example usage::
+
+    % gry team see # get info on the "default" team as per config
+    % gry doc see  # the "default" document as per config
+    % gry doc see -d f4Y8Tov7TRkTQfUuj7TVdh # select a specific document
+    # the best way to switch to another document, from now on: 
+    % export GRIST_DOC_ID=f4Y8Tov7TRkTQfUuj7TVdh # or "set" in windows
+    % gry doc see # the same as above, but no need to add the "-d" option
+    % gry doc see -d bogus_doc # now this will fail...
+    % gry doc see -d bogus_doc -i # ...so let's see the request details 
+    % gry ws see -w 42 # workspace info, in a nicely formatted table
+    % gry ws see -w 42 -vv # the same, in the original raw json
+    % gry table new --help # how do I add a table?
+    % gry table new name:Text:Name age:Int:Age --table People # like this!
+    % gry col list -b People # the columns of our new table
+    % gry rec new name:"John Doe" age:42 -b People # populate the table
+    % gry sql "select * from People where age>?" -p 35 # run an sql query
+    % gry python # let's open a Python shell now!
+    >>> gry.list_cols(table_id='People') # "gry" is now a python object
+    >>> exit() # and we are back to the shell
+
+`Full documentation <https://pygrister.readthedocs.io>`_ 
+`Grist API reference documentation <https://support.getgrist.com/api/>`_
+"""
 
 import os
 import subprocess
@@ -71,7 +119,7 @@ class _CliConfigurator(Configurator):
 # the global GristApi (re-creadted at every cli call): inside a cli function, 
 # all api calls (usually just one but may be more) will use this instance
 _c = _CliConfigurator()
-grist_api = GristApi(custom_configurator=_c)
+grist_api = GristApi(custom_configurator = _c)
 grist_api.in_converter = cli_in_converters
 grist_api.out_converter = cli_out_converters
 # the global Rich console where everything should be printed
@@ -83,14 +131,6 @@ ERRMSG = '[bold red]Error![/bold red]'
 
 # a few helper functions
 # ----------------------------------------------------------------------
-def _exit_with_error(st: int, res: Any, quiet: bool, inspect: bool) -> None:
-    if not quiet:
-        if inspect:
-            cli_console.print(grist_api.inspect())
-            cli_console.rule()
-        cli_console.print(ERRMSG, 'Status:', st, res)
-    raise typer.Exit(BADCALL)
-
 def _exit_if_error(st: int, res: Any, quiet: bool, inspect: bool) -> None:
     # no need to differenciate by verbosity if st>=300 
     # because Pygrister already reports the api response as it is
@@ -225,7 +265,6 @@ def _download_path_validate(value: Path):
     if not value.parent.is_dir():
         raise typer.BadParameter(f'Path does not exist: {value}')
     return value
-    
 
 # a few recurrent Typer options
 # ----------------------------------------------------------------------
@@ -235,7 +274,7 @@ _quiet_opt = typer.Option('--quiet', '-q', help='All output will be suppressed')
 _inspect_opt = typer.Option('--inspect', '-i', 
                             help = 'Print inspect output after api call')
 _user_id_arg = typer.Argument(help='The user ID')
-_team_id_opt = typer.Option('--team', '-m', 
+_team_id_opt = typer.Option('--team', '-t', 
                             help='The team ID [default: current]')
 _ws_id_opt = typer.Option('--workspace', '-w', 
                           help='The workspace integer ID [default: current]')
@@ -250,19 +289,28 @@ _access_opt = typer.Option('--access', '-a',
 _max_access_opt = typer.Option('--max-access', '-A', 
                                help='The max inherited access level',
                                callback=_user_max_access_validate)
+_pinned_opt = typer.Option('--pinned/--no-pinned', '-P/-p', help='Is pinned')
+_hidden_opt = typer.Option('--hidden/--no-hidden', '-H/-h', 
+                           help='Include hidden cols')
+_limit_opt = typer.Option('--limit', '-l', 
+                          help='Return at most this number of rows.')
+_sort_opt = typer.Option('--sort', '-s', 
+                         help='Order in which to return results.')
+_noparse_opt = typer.Option('--noparse', 
+                            help='True prohibits parsing according to col type')
 
 # Typer sub-commands
 # ----------------------------------------------------------------------
-user_app = typer.Typer(help='Manage users (SCIM must be enabled!)')
-org_app = typer.Typer(help='Manage Grist teams (aka organisations)')
+user_app = typer.Typer(help='Manage users, SCIM must be enabled')
+org_app = typer.Typer(help='Manage Grist teams, aka organisations')
 ws_app = typer.Typer(help='Manage workspaces inside a team site')
 doc_app = typer.Typer(help='Manage documents inside a workspace')
-table_app = typer.Typer(help='Manage a table inside a document')
+table_app = typer.Typer(help='Manage tables inside a document')
 col_app = typer.Typer(help='Manage columns inside a table')
 rec_app = typer.Typer(help='Manage records inside a table')
 att_app = typer.Typer(help='Manage attachments and attachment storage')
 hook_app = typer.Typer(help='Manage document webhooks')
-scim_app = typer.Typer(help='Metadata about SCIM services (if enabled!)')
+scim_app = typer.Typer(help='Metadata about SCIM services, if enabled')
 app = typer.Typer(no_args_is_help=True)
 app.add_typer(user_app, name='user', no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
@@ -277,28 +325,27 @@ app.add_typer(scim_app, name='scim', no_args_is_help=True)
 
 # gry test -> a quick configuration check
 # ----------------------------------------------------------------------
-
 @app.command('test')
 def grytest() -> None:
-    """Run a quick configuration test for your Gry console."""
+    """Run a quick configuration test for your Gry console"""
     #TODO need a fix for issue #7 first... 
     cli_console.print('Sorry! Not implemented yet.')
 
 # gry sql -> post SELECT sql queries to Grist
 # ----------------------------------------------------------------------
-
 @app.command('sql')
-def run_sql(statement: Annotated[str, typer.Argument(
-                                help='The sql statement - SELECT only')],
-            params: Annotated[Optional[List[str]], typer.Option('--param', '-p',
-                                help='Query parameters')] = None,
-            timeout: Annotated[int, typer.Option('--timeout', '-t', 
-                                help='Query timeout')] = 1000,
-            doc_id: Annotated[str, _doc_id_opt] = '', 
-            team_id: Annotated[str, _team_id_opt] = '',
-            quiet: Annotated[bool, _quiet_opt] = False,
-            verbose: Annotated[int, _verbose_opt] = 0,
-            inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def run_sql(
+    statement: Annotated[str, typer.Argument(
+                         help='The sql statement - SELECT only')],
+    params: Annotated[Optional[List[str]], typer.Option('--param', '-p',
+                      help='Query parameters')] = None,
+    timeout: Annotated[int, typer.Option('--timeout', '-t', 
+                       help='Query timeout')] = 1000,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Run a SELECT sql query against the document. 
     
     Repeat PARAM for multiple parameters, eg:
@@ -320,7 +367,6 @@ def run_sql(statement: Annotated[str, typer.Argument(
 
 # gry python -> open a Gry-aware Python shell
 # ----------------------------------------------------------------------
-
 @app.command('python')
 def open_python(idle: Annotated[bool, typer.Option('--idle', 
                                 help='Open the Idle shell')] = False):
@@ -341,6 +387,25 @@ def open_python(idle: Annotated[bool, typer.Option('--idle',
 
 # gry user -> for managing users with SCIM apis
 # ----------------------------------------------------------------------
+@user_app.command('list')
+def list_users(
+    start: Annotated[int, typer.Option('--start', '-s', 
+                     help='First ID to retrieve')] = 1,
+    retrieve: Annotated[int, typer.Option('--retrieve', '-r', 
+                        help='Max users to retrieve')] = 10,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List users. No filter option available"""
+    st, res = grist_api.list_users_raw(start, retrieve)
+    _exit_if_error(st, res, quiet, inspect)
+    if start > res['totalResults']:
+        content = 'No users.'
+    else:
+        content = Table('key', 'value')
+        for user in res['Resources']:
+            content = _make_scim_user_data(user, content)
+    _print_output(content, res, quiet, verbose, inspect)
 
 @user_app.command('me')
 def see_me(quiet: Annotated[bool, _quiet_opt] = False,
@@ -364,42 +429,24 @@ def see_user(user: Annotated[int, _user_id_arg],
     content = Table('key', 'value')
     content = _make_scim_user_data(res, content)
     _print_output(content, res, quiet, verbose, inspect)
-
-@user_app.command('list')
-def list_users(start: Annotated[int, typer.Option('--start', '-s', 
-                                                  help='Start by ID')] = 1,
-               retrieve: Annotated[int, typer.Option('--retrieve', '-r', 
-                                            help='Max users to retrieve')] = 10,
-               quiet: Annotated[bool, _quiet_opt] = False,
-               verbose: Annotated[int, _verbose_opt] = 0,
-               inspect: Annotated[bool, _inspect_opt] = False) -> None:
-    """Retrieve user by ID. No filter option available"""
-    st, res = grist_api.list_users_raw(start, retrieve)
-    _exit_if_error(st, res, quiet, inspect)
-    if start > res['totalResults']:
-        content = 'No users.'
-    else:
-        content = Table('key', 'value')
-        for user in res['Resources']:
-            content = _make_scim_user_data(user, content)
-    _print_output(content, res, quiet, verbose, inspect)
     
 @user_app.command('new')
-def new_user(name: Annotated[str, typer.Argument(help="User display name")],
-             email: Annotated[str, typer.Argument(help='User email')],
-             display: Annotated[str, typer.Option('--display', '-d', 
-                                        help='User display name')] = '',
-             formatted: Annotated[str, typer.Option('--formatted', '-f', 
-                                        help='User formatted name')] = '',
-             lang: Annotated[str, typer.Option('--language', '-g', 
-                                        help='User language')] = 'en', 
-             locale: Annotated[str, typer.Option('--locale', '-l', 
-                                        help='User locale')] = 'en',
-             picture: Annotated[str, typer.Option('--picture', '-p', 
-                                        help='User picture url')] = '',
-             quiet: Annotated[bool, _quiet_opt] = False,
-             verbose: Annotated[int, _verbose_opt] = 0,
-             inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def new_user(
+    name: Annotated[str, typer.Argument(help="User name")],
+    email: Annotated[str, typer.Argument(help='User email')],
+    display: Annotated[str, typer.Option('--display', '-d', 
+                       help='User display name')] = '',
+    formatted: Annotated[str, typer.Option('--formatted', '-f', 
+                         help='User formatted name')] = '',
+    lang: Annotated[str, typer.Option('--language', '-g', 
+                    help='User language')] = 'en', 
+    locale: Annotated[str, typer.Option('--locale', '-l', 
+                      help='User locale')] = 'en',
+    picture: Annotated[str, typer.Option('--picture', '-p', 
+                       help='User picture url')] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Add a user"""
     photos = [picture] if picture else None
     st, res = grist_api.add_user(name, [email], formatted, display, lang, 
@@ -413,15 +460,15 @@ class _OperationTypes(str, Enum):
     remove = 'remove'
 
 @user_app.command('update')
-def update_user(user_id: Annotated[int, typer.Argument(help="User ID")],
-                op_path: Annotated[str, typer.Argument(help="Operation path")],
-                op_value: Annotated[str, typer.Argument(help="Operation value")],
-                operation: Annotated[_OperationTypes, 
-                            typer.Option('--operation', '-o', 
-                            help="Operation to perform")] = _OperationTypes.repl,
-                quiet: Annotated[bool, _quiet_opt] = False,
-                verbose: Annotated[int, _verbose_opt] = 0,
-                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def update_user(
+    user_id: Annotated[int, typer.Argument(help="User ID")],
+    op_path: Annotated[str, typer.Argument(help="Operation path")],
+    op_value: Annotated[str, typer.Argument(help="Operation value")],
+    operation: Annotated[_OperationTypes, typer.Option('--operation', '-o',         
+                         help="Operation to perform")] = _OperationTypes.repl,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Update a user. Only one update operation is possible"""
     op = {'op': operation, 'path': op_path, 'value': op_value}
     st, res = grist_api.update_user(user_id, [op])
@@ -441,7 +488,6 @@ def delete_user(user: Annotated[int, _user_id_arg],
 
 # gry scim -> metadata about SCIM service
 # ----------------------------------------------------------------------
-
 @scim_app.command('schemas')
 def scim_schemas(quiet: Annotated[bool, _quiet_opt] = False,
                  verbose: Annotated[int, _verbose_opt] = 0,
@@ -572,17 +618,6 @@ def list_ws(team_id: Annotated[str, _team_id_opt] = '',
                         ws['owner']['email'], str(numdocs))
     _print_output(content, res, quiet, verbose, inspect)
 
-@ws_app.command('new')
-def add_ws(name: Annotated[str, typer.Argument(help='The name of new ws')], 
-           team_id: Annotated[str, _team_id_opt] = '',
-           quiet: Annotated[bool, _quiet_opt] = False,
-           verbose: Annotated[int, _verbose_opt] = 0,
-           inspect: Annotated[bool, _inspect_opt] = False) -> None:
-    """Create an empty workspace"""
-    st, res = grist_api.add_workspace(name, team_id)
-    _exit_if_error(st, res, quiet, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
-
 @ws_app.command('see')
 def see_ws(ws_id: Annotated[int, _ws_id_opt] = 0,
            quiet: Annotated[bool, _quiet_opt] = False,
@@ -599,6 +634,17 @@ def see_ws(ws_id: Annotated[int, _ws_id_opt] = 0,
     for doc in res.get('docs', []):
         content.add_row('doc', f"{doc['id']} - {doc['name']}")
     _print_output(content, res, quiet, verbose, inspect)
+
+@ws_app.command('new')
+def add_ws(name: Annotated[str, typer.Argument(help='The name of new workspace')], 
+           team_id: Annotated[str, _team_id_opt] = '',
+           quiet: Annotated[bool, _quiet_opt] = False,
+           verbose: Annotated[int, _verbose_opt] = 0,
+           inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Create an empty workspace"""
+    st, res = grist_api.add_workspace(name, team_id)
+    _exit_if_error(st, res, quiet, inspect)
+    _print_done_and_id(res, res, quiet, verbose, inspect)
 
 @ws_app.command('update')
 def update_ws(name: Annotated[str, typer.Argument(help='The new name')], 
@@ -659,21 +705,6 @@ def change_ws_access(uid: Annotated[int, typer.Argument(help='The user ID')],
 
 # gry doc -> for managing documents
 # ----------------------------------------------------------------------
-
-_pinned_opt = typer.Option('--pinned/--no-pinned', '-P/-p', help='Is pinned')
-
-@doc_app.command('new')
-def add_doc(name: Annotated[str, typer.Argument(help='The name of new doc')], 
-            pinned: Annotated[bool, _pinned_opt] = False,
-            ws_id: Annotated[int, _ws_id_opt] = 0, 
-            quiet: Annotated[bool, _quiet_opt] = False,
-            verbose: Annotated[int, _verbose_opt] = 0,
-            inspect: Annotated[bool, _inspect_opt] = False) -> None:
-    """Create an empty document"""
-    st, res = grist_api.add_doc(name, pinned, ws_id)
-    _exit_if_error(st, res, quiet, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
-
 @doc_app.command('see')
 def see_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
             team_id: Annotated[str, _team_id_opt] = '',
@@ -693,6 +724,18 @@ def see_doc(doc_id: Annotated[str, _doc_id_opt] = '',
         f"{res['workspace']['org']['id']} - {res['workspace']['org']['name']}")
     _print_output(content, res, quiet, verbose, inspect)
 
+@doc_app.command('new')
+def add_doc(name: Annotated[str, typer.Argument(help='The name of new doc')], 
+            pinned: Annotated[bool, _pinned_opt] = False,
+            ws_id: Annotated[int, _ws_id_opt] = 0, 
+            quiet: Annotated[bool, _quiet_opt] = False,
+            verbose: Annotated[int, _verbose_opt] = 0,
+            inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Create an empty document"""
+    st, res = grist_api.add_doc(name, pinned, ws_id)
+    _exit_if_error(st, res, quiet, inspect)
+    _print_done_and_id(res, res, quiet, verbose, inspect)
+
 @doc_app.command('update')
 def update_doc(name: Annotated[str, typer.Argument(help='The new name')],
                pinned: Annotated[bool, _pinned_opt] = False,
@@ -706,8 +749,7 @@ def update_doc(name: Annotated[str, typer.Argument(help='The new name')],
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
 @ doc_app.command('move')
-def move_doc(dest: Annotated[int, typer.Argument( 
-                             help='Destination ws integer ID')],
+def move_doc(dest: Annotated[int, typer.Argument(help='Destination workspace ID')],
              doc_id: Annotated[str, _doc_id_opt] = '', 
              team_id: Annotated[str, _team_id_opt] = '',
              quiet: Annotated[bool, _quiet_opt] = False,
@@ -728,13 +770,14 @@ def delete_doc(doc_id: Annotated[str, _doc_id_opt] = '',
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
 @doc_app.command('purge-history')
-def delete_doc_history(keep: Annotated[int, typer.Option('--keep', '-k', 
-                                       help='Latest actions to keep')] = 0,
-                       doc_id: Annotated[str, _doc_id_opt] = '', 
-                       team_id: Annotated[str, _team_id_opt] = '',
-                       quiet: Annotated[bool, _quiet_opt] = False,
-                       verbose: Annotated[int, _verbose_opt] = 0,
-                       inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def delete_doc_history(
+    keep: Annotated[int, typer.Option('--keep', '-k', 
+                    help='Latest actions to keep')] = 0,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete the document action history"""
     st, res = grist_api.delete_doc_history(keep, doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
@@ -748,6 +791,24 @@ def reload_doc(doc_id: Annotated[str, _doc_id_opt] = '',
     """Reload a document"""
     st, res = grist_api.reload_doc(doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
+
+@doc_app.command('download')
+def download_db(
+    filename: Annotated[Path, typer.Argument(help='Output file path',
+                        callback=_download_path_validate)],
+    history: Annotated[bool, typer.Option('--history/--no-history', '-H/-h', 
+                       help='Include history')] = False, 
+    template: Annotated[bool, typer.Option('--template/--no-template', '-P/-p', 
+                        help='Template only, no data')] = False, 
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    quiet: Annotated[bool, _quiet_opt] = False,
+    team_id: Annotated[str, _team_id_opt] = '',
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Download the document as sqlite file"""
+    nohistory = not history
+    st, res = grist_api.download_sqlite(filename, nohistory, template, 
+                                        doc_id, team_id)
+    _print_done_or_exit(st, res, quiet, 0, inspect) # force verbose=0 in download mode
 
 @doc_app.command('users')
 def list_doc_users(doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -789,30 +850,9 @@ def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')],
 
 #TODO again, this is for existing users only, but the api 
 # allows for adding users too. Maybe add a separate cli endpoint for this?
- 
-@doc_app.command('download')
-def download_db(filename: Annotated[Path, typer.Argument(help='Output file path',
-                                            callback=_download_path_validate)],
-                history: Annotated[bool, 
-                    typer.Option('--history/--no-history', '-H/-h', 
-                                 help='Include history')] = False, 
-                template: Annotated[bool, 
-                    typer.Option('--template/--no-template', '-P/-p', 
-                                 help='Template only, no data')] = False, 
-                doc_id: Annotated[str, _doc_id_opt] = '', 
-                quiet: Annotated[bool, _quiet_opt] = False,
-                team_id: Annotated[str, _team_id_opt] = '',
-                inspect: Annotated[bool, _inspect_opt] = False) -> None:
-    """Download the document as sqlite file"""
-    nohistory = not history
-    st, res = grist_api.download_sqlite(filename, nohistory, template, 
-                                        doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, 0, inspect) # force verbose=0 in download mode
-
 
 # gry table -> for managing tables
 # ----------------------------------------------------------------------
-
 @table_app.command('list')
 def list_tables(doc_id: Annotated[str, _doc_id_opt] = '', 
                 team_id: Annotated[str, _team_id_opt] = '',
@@ -831,15 +871,15 @@ def list_tables(doc_id: Annotated[str, _doc_id_opt] = '',
     _print_output(content, res, quiet, verbose, inspect)
 
 @table_app.command('new')
-def new_table(cols: Annotated[List[str], typer.Argument(
-                        callback=_column_decl_validate,
-                        help='Column list, each declared as "id:type:label"')],
-              tname: Annotated[str, _table_id_opt], 
-              doc_id: Annotated[str, _doc_id_opt] = '', 
-              team_id: Annotated[str, _team_id_opt] = '',
-              quiet: Annotated[bool, _quiet_opt] = False,
-              verbose: Annotated[int, _verbose_opt] = 0,
-              inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def new_table(
+    cols: Annotated[List[str], typer.Argument(callback=_column_decl_validate,
+                    help='Column list, each declared as "id:type:label"')],
+    tname: Annotated[str, _table_id_opt], 
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Add one table to a document. 
 
     Column must be declared as "id:type:label"; type is any valid Grist type:
@@ -898,18 +938,18 @@ class _HeaderOption(str, Enum):
 
 @table_app.command('download')
 def download_table(
-        filename: Annotated[Path, typer.Argument(help='Output file path', 
-                                            callback=_download_path_validate)],
-        tname: Annotated[str, _table_id_opt], 
-        output: Annotated[_DownloadTableOption, typer.Option('--output', '-o', 
-                                help='Output type')] = _DownloadTableOption.csv,
-        header: Annotated[_HeaderOption, typer.Option('--header', '-h', 
-                                help='Column headers')] = _HeaderOption.label,
-        doc_id: Annotated[str, _doc_id_opt] = '', 
-        team_id: Annotated[str, _team_id_opt] = '',
-        quiet: Annotated[bool, _quiet_opt] = False,
-        inspect: Annotated[bool, _inspect_opt] = False) -> None:
-    """Dumps the content or the schema of a table to FILENAME"""
+    filename: Annotated[Path, typer.Argument(help='Output file path', 
+                        callback=_download_path_validate)],
+    tname: Annotated[str, _table_id_opt], 
+    output: Annotated[_DownloadTableOption, typer.Option('--output', '-o', 
+                      help='Output type')] = _DownloadTableOption.csv,
+    header: Annotated[_HeaderOption, typer.Option('--header', '-h', 
+                      help='Column headers')] = _HeaderOption.label,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Dumps content or schema of a table to FILENAME"""
     funcs = {_DownloadTableOption.csv: grist_api.download_csv, 
              _DownloadTableOption.excel: grist_api.download_excel,
              _DownloadTableOption.schema: grist_api.download_excel}
@@ -918,17 +958,15 @@ def download_table(
 
 # gry col -> for managing columns
 # ----------------------------------------------------------------------
-
 @col_app.command('list')
-def list_columns(table: Annotated[str, _table_id_opt],
-                 hidden: Annotated[bool, 
-                    typer.Option('--hidden/--no-hidden', '-H/-h', 
-                                 help='Include hidden cols')] = False,
-                 doc_id: Annotated[str, _doc_id_opt] = '', 
-                 team_id: Annotated[str, _team_id_opt] = '',
-                 quiet: Annotated[bool, _quiet_opt] = False,
-                 verbose: Annotated[int, _verbose_opt] = 0,
-                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def list_columns(
+    table: Annotated[str, _table_id_opt],
+    hidden: Annotated[bool, _hidden_opt] = False,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List columns in a table"""
     st, res = grist_api.list_cols(table, hidden, doc_id, team_id)
     _exit_if_error(st, res, quiet, inspect)
@@ -942,15 +980,15 @@ def list_columns(table: Annotated[str, _table_id_opt],
     _print_output(content, res, quiet, verbose, inspect)
 
 @col_app.command('new')
-def add_column(cols: Annotated[List[str], typer.Argument(
-                        callback=_column_decl_validate,
-                        help='Column list, each declared as "id:type:label"')],
-               table: Annotated[str, _table_id_opt],
-               doc_id: Annotated[str, _doc_id_opt] = '', 
-               team_id: Annotated[str, _team_id_opt] = '',
-               quiet: Annotated[bool, _quiet_opt] = False,
-               verbose: Annotated[int, _verbose_opt] = 0,
-               inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def add_column(
+    cols: Annotated[List[str], typer.Argument(callback=_column_decl_validate,
+                    help='Column list, each declared as "id:type:label"')],
+    table: Annotated[str, _table_id_opt],
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Add columns to a table.
     
     Column must be declared as "id:type:label"; type is any valid Grist type:
@@ -965,15 +1003,15 @@ def add_column(cols: Annotated[List[str], typer.Argument(
     _print_done_and_id(res, res, quiet, verbose, inspect)
 
 @col_app.command('update')
-def update_column(cols: Annotated[List[str], typer.Argument(
-                        callback=_column_decl_validate,
-                        help='Column list, each declared as "id:type:label"')],
-                  table: Annotated[str, _table_id_opt],
-                  doc_id: Annotated[str, _doc_id_opt] = '', 
-                  team_id: Annotated[str, _team_id_opt] = '',
-                  quiet: Annotated[bool, _quiet_opt] = False,
-                  verbose: Annotated[int, _verbose_opt] = 0,
-                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def update_column(
+    cols: Annotated[List[str], typer.Argument(callback=_column_decl_validate,
+                    help='Column list, each declared as "id:type:label"')],
+    table: Annotated[str, _table_id_opt],
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Update columns in a table.
     
     Column must be declared as "id:type:label"; type is any valid Grist type:
@@ -991,30 +1029,25 @@ def update_column(cols: Annotated[List[str], typer.Argument(
 # sophisticated for our very limited way of describing a column in the cli
 
 @col_app.command('delete')
-def delete_column(col: Annotated[str, typer.Argument(
-                                 help='Name ID of the column to delete')],
-                  table: Annotated[str, _table_id_opt],
-                  doc_id: Annotated[str, _doc_id_opt] = '', 
-                  team_id: Annotated[str, _team_id_opt] = '',
-                  quiet: Annotated[bool, _quiet_opt] = False,
-                  verbose: Annotated[int, _verbose_opt] = 0,
-                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def delete_column(
+    col: Annotated[str, typer.Argument(help='Name ID of the column to delete')],
+    table: Annotated[str, _table_id_opt],
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a column"""
     st, res = grist_api.delete_column(table, col, doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
 # gry rec -> for managing records
 # ----------------------------------------------------------------------
-
 @rec_app.command('list')
 def list_records(table: Annotated[str, _table_id_opt],
-                 sort: Annotated[str, typer.Option('--sort', '-s', 
-                                 help='Order in which to return results.')] = '',
-                 limit: Annotated[int, typer.Option('--limit', '-l', 
-                                  help='Return at most this number of rows.')] = 0,
-                 hidden: Annotated[bool, typer.Option(
-                                            '--hidden/--no-hidden', '-H/-h', 
-                                            help='Include hidden cols')] = False,
+                 sort: Annotated[str, _sort_opt] = '',
+                 limit: Annotated[int, _limit_opt] = 0,
+                 hidden: Annotated[bool, _hidden_opt] = False,
                  doc_id: Annotated[str, _doc_id_opt] = '', 
                  team_id: Annotated[str, _team_id_opt] = '',
                  quiet: Annotated[bool, _quiet_opt] = False,
@@ -1035,17 +1068,16 @@ def list_records(table: Annotated[str, _table_id_opt],
     _print_output(content, res, quiet, verbose, inspect)
     
 @rec_app.command('new')
-def add_record(record: Annotated[List[str], typer.Argument(
-                    callback=_record_decl_validate,
-                    help='One record, declared as "col:value col:value ..."')],
-               table: Annotated[str, _table_id_opt],
-               noparse: Annotated[bool, typer.Option('--noparse', 
-                    help='True prohibits parsing according to col type')] = False,
-               doc_id: Annotated[str, _doc_id_opt] = '', 
-               team_id: Annotated[str, _team_id_opt] = '',
-               quiet: Annotated[bool, _quiet_opt] = False,
-               verbose: Annotated[int, _verbose_opt] = 0,
-               inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def add_record(
+    record: Annotated[List[str], typer.Argument(callback=_record_decl_validate,
+                      help='One record, declared as "col:value col:value ..."')],
+    table: Annotated[str, _table_id_opt],
+    noparse: Annotated[bool, _noparse_opt] = False,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Add one record to a table"""
     record = dict(record) # type: ignore
     st, res = grist_api.add_records(table, [record], noparse, doc_id, team_id) # type: ignore
@@ -1053,17 +1085,16 @@ def add_record(record: Annotated[List[str], typer.Argument(
     _print_done_and_id(res[0], res, quiet, verbose, inspect)
 
 @rec_app.command('update')
-def update_record(record: Annotated[List[str], typer.Argument(
-                    callback=_record_decl_validate,
-                    help='One record, declared as "id:value col:value ..."')],
-                  table: Annotated[str, _table_id_opt],
-                  noparse: Annotated[bool, typer.Option('--noparse', 
-                    help='True prohibits parsing according to col type')] = False,
-                  doc_id: Annotated[str, _doc_id_opt] = '', 
-                  team_id: Annotated[str, _team_id_opt] = '',
-                  quiet: Annotated[bool, _quiet_opt] = False,
-                  verbose: Annotated[int, _verbose_opt] = 0,
-                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def update_record(
+    record: Annotated[List[str], typer.Argument(callback=_record_decl_validate,
+                      help='One record, declared as "id:value col:value ..."')],
+    table: Annotated[str, _table_id_opt],
+    noparse: Annotated[bool, _noparse_opt] = False,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Modify one record of a table"""
     record = dict(record) # type: ignore
     try:
@@ -1077,26 +1108,24 @@ def update_record(record: Annotated[List[str], typer.Argument(
 # sophisticated for our very limited way of describing a record in the cli
 
 @rec_app.command('delete')
-def delete_records(records: Annotated[List[int], typer.Argument(
-                                            help='ID of the records to delete')],
-                   table: Annotated[str, _table_id_opt],
-                   doc_id: Annotated[str, _doc_id_opt] = '', 
-                   team_id: Annotated[str, _team_id_opt] = '',
-                   quiet: Annotated[bool, _quiet_opt] = False,
-                   verbose: Annotated[int, _verbose_opt] = 0,
-                   inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def delete_records(
+    records: Annotated[List[int], typer.Argument(
+                       help='ID of the records to delete')],
+    table: Annotated[str, _table_id_opt],
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete records from a table"""
     st, res = grist_api.delete_rows(table, records, doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
 # gry att -> for managing attachments
 # ----------------------------------------------------------------------
-
 @att_app.command('list')
-def list_atts(sort: Annotated[str, typer.Option('--sort', '-s', 
-                              help='Order in which to return results.')] = '',
-              limit: Annotated[int, typer.Option('--limit', '-l', 
-                               help='Return at most this number of rows.')] = 0,
+def list_atts(sort: Annotated[str, _sort_opt] = '',
+              limit: Annotated[int, _limit_opt] = 0,
               doc_id: Annotated[str, _doc_id_opt] = '', 
               team_id: Annotated[str, _team_id_opt] = '',
               quiet: Annotated[bool, _quiet_opt] = False,
@@ -1115,7 +1144,7 @@ def list_atts(sort: Annotated[str, typer.Option('--sort', '-s',
     _print_output(content, res, quiet, verbose, inspect)
 
 @att_app.command('see')
-def see_attachment(att_id: Annotated[int, typer.Argument(help='Attachment ID')],
+def see_attachment(att_id: Annotated[int, typer.Argument(help='The attachment ID')],
                    doc_id: Annotated[str, _doc_id_opt] = '', 
                    team_id: Annotated[str, _team_id_opt] = '',
                    quiet: Annotated[bool, _quiet_opt] = False,
@@ -1131,30 +1160,30 @@ def see_attachment(att_id: Annotated[int, typer.Argument(help='Attachment ID')],
     _print_output(content, res, quiet, verbose, inspect)
 
 @att_app.command('download')
-def download_att(filename: Annotated[Path, 
-                                     typer.Argument(help='Output file path', 
-                                        callback=_download_path_validate)],
-                 attachment: Annotated[int, typer.Option('--attachment-id', '-a',
-                                                help='Integer ID of attachment')],
-                 doc_id: Annotated[str, _doc_id_opt] = '', 
-                 team_id: Annotated[str, _team_id_opt] = '',
-                 quiet: Annotated[bool, _quiet_opt] = False,
-                 verbose: Annotated[int, _verbose_opt] = 0,
-                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def download_att(
+    filename: Annotated[Path, typer.Argument(help='Output file path', 
+                        callback=_download_path_validate)],
+    attachment: Annotated[int, typer.Option('--attachment', '-a',
+                          help='The attachment ID')],
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Download one attachment as a file"""
     st, res = grist_api.download_attachment(filename, attachment, 
                                             doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
     
 @att_app.command('upload')
-def upload_atts(filenames: Annotated[List[Path], 
-                                     typer.Argument(help='Files to upload', 
-                                            callback=_upload_pathlist_validate)],
-                doc_id: Annotated[str, _doc_id_opt] = '', 
-                team_id: Annotated[str, _team_id_opt] = '',
-                quiet: Annotated[bool, _quiet_opt] = False,
-                verbose: Annotated[int, _verbose_opt] = 0,
-                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def upload_atts(
+    filenames: Annotated[List[Path], typer.Argument(help='Files to upload', 
+                         callback=_upload_pathlist_validate)],
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Upload one or more attachments to a doc"""
     st, res = grist_api.upload_attachments(filenames, doc_id, team_id)
     _exit_if_error(st, res, quiet, inspect)
@@ -1165,30 +1194,29 @@ class _DownloadAttOption(str, Enum):
     zip = 'zip'
 
 @att_app.command('backup')
-def download_atts(filename: Annotated[Path, 
-                                      typer.Argument(help='Output file path', 
-                                            callback=_download_path_validate)],
-                  output: Annotated[_DownloadAttOption, 
-                                    typer.Option('--output', '-o', 
-                                    help='Output type')] = _DownloadAttOption.tar,
-                  doc_id: Annotated[str, _doc_id_opt] = '', 
-                  team_id: Annotated[str, _team_id_opt] = '',
-                  quiet: Annotated[bool, _quiet_opt] = False,
-                  verbose: Annotated[int, _verbose_opt] = 0,
-                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def download_atts(
+    filename: Annotated[Path, typer.Argument(help='Output file path', 
+                        callback=_download_path_validate)],
+    output: Annotated[_DownloadAttOption, typer.Option('--output', '-o', 
+                      help='Output type')] = _DownloadAttOption.tar,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Download all attachments as an archive file"""
     st, res = grist_api.download_attachments(filename, output, doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
 @att_app.command('restore')
-def upload_restore_atts(filename: Annotated[Path, 
-                            typer.Argument(help='Archive file path', 
-                                           callback=_upload_path_validate)],
-                        doc_id: Annotated[str, _doc_id_opt] = '', 
-                        team_id: Annotated[str, _team_id_opt] = '',
-                        quiet: Annotated[bool, _quiet_opt] = False,
-                        verbose: Annotated[int, _verbose_opt] = 0,
-                        inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def upload_restore_atts(
+    filename: Annotated[Path, typer.Argument(help='Archive file path', 
+                        callback=_upload_path_validate)],
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Upload missing attachments from a local tar archive"""
     st, res = grist_api.upload_restore_attachments(filename, doc_id, team_id)
     _exit_if_error(st, res, quiet, inspect)
@@ -1206,14 +1234,14 @@ def see_att_store(doc_id: Annotated[str, _doc_id_opt] = '',
     _print_output(res, res, quiet, verbose, inspect)
 
 @att_app.command('set-store')
-def change_att_store(internal: Annotated[bool, 
-                                typer.Option('--internal/--external', '-i/-e', 
-                                help='Set internal/external storage')] = True,
-                     doc_id: Annotated[str, _doc_id_opt] = '', 
-                     team_id: Annotated[str, _team_id_opt] = '',
-                     quiet: Annotated[bool, _quiet_opt] = False,
-                     verbose: Annotated[int, _verbose_opt] = 0,
-                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def change_att_store(
+    internal: Annotated[bool, typer.Option('--internal/--external', '-i/-e', 
+                        help='The storage type')] = True,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Set the attachments storage type"""
     st, res = grist_api.update_attachment_store(internal, doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
@@ -1253,7 +1281,6 @@ def transfer_status(doc_id: Annotated[str, _doc_id_opt] = '',
 
 # gry hook -> for managing webhooks
 # ----------------------------------------------------------------------
-
 @hook_app.command('list')
 def list_hooks(doc_id: Annotated[str, _doc_id_opt] = '', 
                team_id: Annotated[str, _team_id_opt] = '',
@@ -1278,23 +1305,21 @@ def list_hooks(doc_id: Annotated[str, _doc_id_opt] = '',
     _print_output(content, res, quiet, verbose, inspect)
 
 @hook_app.command('new')
-def add_hook(name: Annotated[str, typer.Argument(help='Webhook name')],
-             url: Annotated[str, typer.Argument(help='Webhook url')],
-             table: Annotated[str, _table_id_opt],
-             events: Annotated[str,
-                        typer.Option('--events', '-e', 
-                        help='Event types :-separated, eg "add:update"')] = 'add',
-             readycol: Annotated[str|None, 
-                        typer.Option('--ready', '-r', 
+def add_hook(
+    name: Annotated[str, typer.Argument(help='Webhook name')],
+    url: Annotated[str, typer.Argument(help='Webhook url')],
+    table: Annotated[str, _table_id_opt],
+    events: Annotated[str, typer.Option('--events',  
+                      help='Event types :-separated, eg "add:update"')] = 'add',
+    readycol: Annotated[str|None, typer.Option('--ready',  
                         help='Is Ready Columm (str or null)')] = None,
-             enabled: Annotated[bool, 
-                                typer.Option('--enabled/--disabled', '-N/-n', 
-                                help='Webhook is enabled')] = True,
-             doc_id: Annotated[str, _doc_id_opt] = '', 
-             team_id: Annotated[str, _team_id_opt] = '',
-             quiet: Annotated[bool, _quiet_opt] = False,
-             verbose: Annotated[int, _verbose_opt] = 0,
-             inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    enabled: Annotated[bool, typer.Option('--enabled/--disabled',  
+                       help='Webhook is enabled')] = True,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Add one webhook to a document"""
     evts = events.split(':')
     wh = {'fields': {'name': name, 'memo': '', 'url': url, 'enabled': enabled, 
@@ -1304,24 +1329,22 @@ def add_hook(name: Annotated[str, typer.Argument(help='Webhook name')],
     _print_output(res[0], res, quiet, verbose, inspect)
 
 @hook_app.command('update')
-def update_hook(hook_id: Annotated[str, typer.Argument(help='Webhook ID')],
-                name: Annotated[str, 
-                        typer.Option('--name', help='Webhook name')] = '<same>',
-                url: Annotated[str, 
-                        typer.Option('--url', help='Webhook url')] = '<same>',
-                table: Annotated[str, 
-                        typer.Option('--table', help='Table ID name')] = '<same>',
-                events: Annotated[str, typer.Option('--events', 
-                        help='Event types :-separated, eg "add:update"')] = '<same>',
-                readycol: Annotated[str|None, typer.Option('--ready',
+def update_hook(
+    hook_id: Annotated[str, typer.Argument(help='The webhook ID')],
+    name: Annotated[str, typer.Option('--name', help='Webhook name')] = '<same>',
+    url: Annotated[str, typer.Option('--url', help='Webhook url')] = '<same>',
+    table: Annotated[str, typer.Option('--table', help='Table ID name')] = '<same>',
+    events: Annotated[str, typer.Option('--events', 
+                      help='Event types :-separated, eg "add:update"')] = '<same>',
+    readycol: Annotated[str|None, typer.Option('--ready',
                         help='Is Ready Columm (str or null)')] = '<same>',
-                enabled: Annotated[bool|None, typer.Option('--enabled/--disabled',  
-                        help='Webhook is enabled')] = None,
-                doc_id: Annotated[str, _doc_id_opt] = '', 
-                team_id: Annotated[str, _team_id_opt] = '',
-                quiet: Annotated[bool, _quiet_opt] = False,
-                verbose: Annotated[int, _verbose_opt] = 0,
-                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    enabled: Annotated[bool|None, typer.Option('--enabled/--disabled',  
+                       help='Webhook is enabled')] = None,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Modify a webhook"""
     fields = dict()
     for option, label in ((name, 'name'), (url, 'url'), (table, 'tableId'),
@@ -1339,7 +1362,7 @@ def update_hook(hook_id: Annotated[str, typer.Argument(help='Webhook ID')],
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
 @hook_app.command('delete')
-def delete_hook(hook_id: Annotated[str, typer.Argument(help='Webhook ID')],
+def delete_hook(hook_id: Annotated[str, typer.Argument(help='The webhook ID')],
                 doc_id: Annotated[str, _doc_id_opt] = '', 
                 team_id: Annotated[str, _team_id_opt] = '',
                 quiet: Annotated[bool, _quiet_opt] = False,
