@@ -298,6 +298,7 @@ _sort_opt = typer.Option('--sort', '-s',
                          help='Order in which to return results.')
 _noparse_opt = typer.Option('--noparse', 
                             help='True prohibits parsing according to col type')
+_outmode_opt = typer.Option('--output-mode', '-m', help='Output type')
 
 # Typer sub-commands
 # ----------------------------------------------------------------------
@@ -941,8 +942,7 @@ def download_table(
     filename: Annotated[Path, typer.Argument(help='Output file path', 
                         callback=_download_path_validate)],
     tname: Annotated[str, _table_id_opt], 
-    output: Annotated[_DownloadTableOption, typer.Option('--output', '-o', 
-                      help='Output type')] = _DownloadTableOption.csv,
+    output: Annotated[_DownloadTableOption, _outmode_opt] = _DownloadTableOption.csv,
     header: Annotated[_HeaderOption, typer.Option('--header', '-h', 
                       help='Column headers')] = _HeaderOption.label,
     doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1198,8 +1198,7 @@ class _DownloadAttOption(str, Enum):
 def download_atts(
     filename: Annotated[Path, typer.Argument(help='Output file path', 
                         callback=_download_path_validate)],
-    output: Annotated[_DownloadAttOption, typer.Option('--output', '-o', 
-                      help='Output type')] = _DownloadAttOption.tar,
+    output: Annotated[_DownloadAttOption, _outmode_opt] = _DownloadAttOption.tar,
     doc_id: Annotated[str, _doc_id_opt] = '', 
     team_id: Annotated[str, _team_id_opt] = '',
     quiet: Annotated[bool, _quiet_opt] = False,
