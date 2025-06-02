@@ -312,7 +312,9 @@ rec_app = typer.Typer(help='Manage records inside a table')
 att_app = typer.Typer(help='Manage attachments and attachment storage')
 hook_app = typer.Typer(help='Manage document webhooks')
 scim_app = typer.Typer(help='Metadata about SCIM services, if enabled')
-app = typer.Typer(no_args_is_help=True)
+_help = 'Gry, a command line tool for the Grist API - powered by Pygrister'
+_epilog = 'Learn more: https://pygrister.readthedocs.io - https://github.com/ricpol/pygrister '
+app = typer.Typer(no_args_is_help=True, help=_help, epilog=_epilog)
 app.add_typer(user_app, name='user', no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
