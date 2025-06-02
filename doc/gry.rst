@@ -72,6 +72,30 @@ The only commands without sub-commands are
 - ``gry python`` opens a Grist-aware Python shell, 
 - ``gry sql`` allows you to enter an Sql query directly.
 
+Interactive prompt.
+^^^^^^^^^^^^^^^^^^^
+
+Traditionally, in a cli program *arguments* are required, *options* like 
+``--foo, -f`` should be... well, optional (ie., with a default value). 
+However, sometimes it makes sense having *required options* too - that is, 
+asking for some *required* input using the more flexible *option* syntax. 
+Although we try to keep this to a minimum, sometimes we can't avoid it. 
+Consult the ``--help`` section of a command to find out if some options are, 
+in fact, required. 
+
+Every time an option is required, Gry also offer an *interactive prompt* for 
+it: meaning, if you forget to fill in the option, Gry will offer you a second 
+chance instead of just crashing out::
+
+   % gry table new name:Text:Name age:Int:Age # ops!, forgot to specify --table
+   Insert the table ID name:
+
+This is the *only* use we make of interactive prompts, since Gry is not designed 
+to be an interactive cli tool.
+
+Please be extra careful with this feature: while it is meant as a help in the 
+interactive shell, it could just hang indefinitely a *script*!
+
 Exit codes.
 -----------
 
