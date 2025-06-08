@@ -910,7 +910,7 @@ def update_table(ctx: typer.Context,
     
     Pass any metadata field as an extra option, eg: 
     
-    % gry table update -n Mytable --tableRef 2 --onDemand false"""
+    % gry table update -b Mytable --tableRef 2 --onDemand false"""
     fields = _variadic_options_validate(ctx.args)
     # some more validation 
     valid_keys = ('primaryViewId', 'summarySourceTable', 'onDemand', 
