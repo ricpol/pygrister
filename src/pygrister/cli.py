@@ -277,7 +277,7 @@ _user_id_arg = typer.Argument(help='The user ID')
 _team_id_opt = typer.Option('--team', '-t', 
                             help='The team ID [default: current]')
 _ws_id_opt = typer.Option('--workspace', '-w', 
-                          help='The workspace integer ID [default: current]')
+                          help='The workspace integer ID (0 means current)')
 _doc_id_opt = typer.Option('--document', '-d', 
                            help='The document ID [default: current]')
 _table_id_opt = typer.Option('--table', '-b',  help='The table ID name', 
