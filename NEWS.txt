@@ -4,6 +4,9 @@ NEWS
 Bleeding edge: committed to the repo, not yet released on PyPI
 --------------------------------------------------------------
 
+- The new Gry cli tool is here! Basically, you can try "gry --help" in 
+your shell and figure it out. But there is also an online doc page, of course. 
+
 Changed APIs:
   - we are now consistently using pathlib.Path objects instead of os.path 
     strings to express files and paths. This may help client programs down 

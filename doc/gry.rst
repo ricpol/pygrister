@@ -69,6 +69,7 @@ will show you how to use a particular sub-command.
 The only commands without sub-commands are 
 
 - ``gry test`` performs a few sanity checks on your Grist setup, 
+- ``gry conf`` prints your current Gry configuration,
 - ``gry python`` opens a Grist-aware Python shell, 
 - ``gry sql`` allows you to enter an Sql query directly.
 
@@ -134,7 +135,7 @@ if you are using ``gry`` for some specific task and you don't want to change you
 Pygrister configuration, or maybe you are only interested in ``gry``, and you 
 don't care about Pygrister. 
 
-The ``gryconf.json`` config file is specific to ``gry`` and Pygrister will 
+The ``gryconf.json`` config file is specific to ``gry``, and Pygrister will 
 ignore it. To sum up,
 
 - when you instantiate the ``GristApi`` class (``grist=GristApi()``), Pygrister 
@@ -153,6 +154,8 @@ ignore it. To sum up,
 As usual, the topmost options overwrite the lower ones: environment variable, if 
 given, will always take precedence.
 
+Try ``% gry conf`` to print your current Gry configuration.
+
 Runtime configuration.
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -160,8 +163,8 @@ On top of the "static" configuration declared in json files and variables, all
 commands in ``gry`` accept common options to specify documents, teams, workspaces::
 
     % export GRIST_DOC_ID=aaaaa   # windows: set GRIST_DOC_ID=aaaaa
-    % gry doc see                 # retrieve data about doc aaaaa
-    % gry doc see -d bbbbb        # fetch doc bbbbb instead
+    % gry doc see                 # retrieve data about doc "aaaaa"
+    % gry doc see -d bbbbb        # fetch doc "bbbbb" instead
 
 is the equivalent of Pygrister's ::
 
@@ -342,9 +345,9 @@ Finally, keep in mind that ``gry``, being written in Python, is *slow*:
 every time you enter a ``gry`` command, the Python interpreter must be loaded 
 (and then some) before your command is parsed and executed, then shut down. 
 In normal, interactive usage you won't even notice (because the real bottleneck 
-will be the network latency anyway). However, you might want to think twice 
-before, say, queuing many ``gry`` commands in a script. If you want to load 
-100 records into a table, something like this ::
+will be the network latency anyway). However, think twice before, say, 
+queuing many ``gry`` commands in a script. If you want to load 100 records 
+into a table, something like this ::
 
     >>> records = [[...], [...], ...]
     >>> grist = GristApi()
