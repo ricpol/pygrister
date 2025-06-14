@@ -71,7 +71,7 @@ from rich.console import Console
 from rich.table import Table
 
 from pygrister.api import GristApi
-from pygrister.config import Configurator, PYGRISTER_CONFIG
+from pygrister.config import Configurator, apikey2output, PYGRISTER_CONFIG
 try:
     from cliconverters import cli_out_converters # type: ignore
 except (ModuleNotFoundError, ImportError):
@@ -333,6 +333,29 @@ def grytest() -> None:
     """Run a quick configuration test for your Gry console"""
     #TODO need a fix for issue #7 first... 
     cli_console.print('Sorry! Not implemented yet.')
+
+# gry conf -> print the current Grist configuration
+# ----------------------------------------------------------------------
+@app.command('conf')
+def gryconf(
+    showkey: Annotated[bool, 
+                       typer.Option('--show-apikey/--hide-apikey', '-K/-k', 
+                       help='Show in full or obfuscate apikey')] = False,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0) -> None:
+    """Print the current Gry configuration"""
+    res = grist_api.configurator.config
+    if not showkey:
+        res['GRIST_API_KEY'] = apikey2output(res['GRIST_API_KEY'])
+    table = Table('key', 'value')
+    for k, v in res.items():
+        table.add_row(k, str(v))
+    # _print_output is not quite made for this use case!
+    if not quiet:
+        if verbose == 0:
+            cli_console.print(table)
+        else:
+            cli_console.print(res)
 
 # gry sql -> post SELECT sql queries to Grist
 # ----------------------------------------------------------------------
