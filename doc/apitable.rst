@@ -1,5 +1,7 @@
 Grist/Pygrister/Gry API list.
 =============================
+Grist/Pygrister/Gry API list.
+=============================
 
 This is a list of all the documented Grist APIs, as they are mapped in 
 the Pygrister library and Gry command line tool. 
@@ -58,6 +60,8 @@ Users and SCIM
 * Grist: ``GET /scim/v2/ResourceTypes``  
   - Pygrister: ``GristApi.see_scim_resources`` 
   - Gry: ``gry scim resources``
+  - Pygrister: ``GristApi.see_scim_resources`` 
+  - Gry: ``gry scim resources``
 
 Teams (organisations)
 ---------------------
@@ -93,6 +97,8 @@ Teams (organisations)
 * Grist: ``POST /{orgId}/workspaces``
   - Pygrister: ``GristApi.add_workspace``
   - Gry: ``gry ws new``
+  - Pygrister: ``GristApi.add_workspace``
+  - Gry: ``gry ws new``
 
 Workspaces
 ----------
@@ -118,6 +124,8 @@ Workspaces
   - Gry: ``gry ws user-access``
 
 * Grist: ``POST /workspaces/{workspaceId}/docs``
+  - Pygrister: ``GristApi.add_doc``
+  - Gry: ``gry doc new``
   - Pygrister: ``GristApi.add_doc``
   - Gry: ``gry doc new``
 
@@ -159,6 +167,8 @@ Documents
 * Grist: ``POST /docs/{docId}/force-reload``
   - Pygrister: ``GristApi.reload_doc``
   - Gry: ``gry doc reload``
+  - Pygrister: ``GristApi.reload_doc``
+  - Gry: ``gry doc reload``
 
 Tables
 ------
@@ -186,6 +196,8 @@ Tables
 * Grist: ``GET /docs/{docId}/download/table-schema``
   - Pygrister: ``GristApi.download_schema``
   - Gry: ``gry table download -o schema``
+  - Pygrister: ``GristApi.download_schema``
+  - Gry: ``gry table download -o schema``
 
 Columns
 -------
@@ -209,6 +221,8 @@ Columns
 * Grist: ``DELETE /docs/{docId}/tables/{tableId}/columns/{colId}``
   - Pygrister: ``GristApi.delete_column``
   - Gry: ``gry col delete``
+  - Pygrister: ``GristApi.delete_column``
+  - Gry: ``gry col delete``
 
 Records
 -------
@@ -230,6 +244,8 @@ Records
   - Gry: *not implemented*
 
 * Grist: ``POST /docs/{docId}/tables/{tableId}/data/delete``
+  - Pygrister: ``GristApi.delete_rows``
+  - Gry: ``gry rec delete``
   - Pygrister: ``GristApi.delete_rows``
   - Gry: ``gry rec delete``
 
@@ -279,6 +295,8 @@ Attachments
 * Grist: ``GET /docs/{docId}/attachments/transferStatus``
   - Pygrister: ``GristApi.see_transfer_status``
   - Gry: ``gry att transfer-status``
+  - Pygrister: ``GristApi.see_transfer_status``
+  - Gry: ``gry att transfer-status``
 
 Webhooks
 --------
@@ -302,6 +320,8 @@ Webhooks
 * Grist: ``DELETE /docs/{docId}/webhooks/queue``
   - Pygrister: ``GristApi.empty_payloads_queue``
   - Gry: ``gry hook empty-queue``
+  - Pygrister: ``GristApi.empty_payloads_queue``
+  - Gry: ``gry hook empty-queue``
 
 Sql
 ---
@@ -311,5 +331,7 @@ Sql
   - Gry: ``gry sql``
 
 * Grist: ``POST /docs/{docId}/sql``
+  - Pygrister: ``GristApi.run_sql_with_args``
+  - Gry: ``gry sql --param``
   - Pygrister: ``GristApi.run_sql_with_args``
   - Gry: ``gry sql --param``
