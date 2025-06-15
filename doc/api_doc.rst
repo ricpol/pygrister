@@ -1,5 +1,5 @@
-API reference.
-==============
+Pygrister API reference.
+========================
 
 .. automodule:: pygrister.api
     :members:

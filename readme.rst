@@ -46,24 +46,29 @@ and find out what Gry can do for you (or, read the online documentation!).
 
 Basic usage goes as follows::
 
-    % gry team see # get info on the "default" team as per config
+    % gry team see  # get info on the "default" team as per config
     % gry doc see  # the "default" document as per config
-    % gry doc see -d f4Y8Tov7TRkTQfUuj7TVdh # select a specific document
+    % gry doc see -d f4Y8Tov7TRkTQfUuj7TVdh  # select a specific document
+    
     # the best way to switch to another document, from now on: 
-    % export GRIST_DOC_ID=f4Y8Tov7TRkTQfUuj7TVdh # or "set" in windows
-    % gry doc see # the same as above, but no need to add the "-d" option
-    % gry doc see -d bogus_doc # now this will fail...
-    % gry doc see -d bogus_doc -i # ...so let's see the request details 
-    % gry ws see -w 42 # workspace info, in a nicely formatted table
-    % gry ws see -w 42 -vv # the same, in the original raw json
-    % gry table new --help # how do I add a table?
-    % gry table new name:Text:Name age:Int:Age --table People # like this!
-    % gry col list -b People # the columns of our new table
-    % gry rec new name:"John Doe" age:42 -b People # populate the table
-    % gry sql "select * from People where age>?" -p 35 # run an sql query
-    % gry python # let's open a Python shell now!
-    >>> gry.list_cols(table_id='People') # "gry" is now a python object
-    >>> exit() # and we are back to the shell
+    % export GRIST_DOC_ID=f4Y8Tov7TRkTQfUuj7TVdh  # or "set" in windows
+    % gry doc see  # the same as above, but no need to add the "-d" option
+    % gry doc see -d bogus_doc  # now this will fail...
+    % gry doc see -d bogus_doc -i  # ...so let's see the request details 
+    
+    % gry ws see -w 42  # workspace info, in a nicely formatted table
+    % gry ws see -w 42 -vv  # the same, in the original raw json
+    
+    % gry table new --help  # how do I add a table?
+    % gry table new name:Text:Name age:Int:Age --table People  # like this!
+    
+    % gry col list -b People  # the columns of our new table
+    % gry rec new name:"John Doe" age:42 -b People  # populate the table
+    
+    % gry sql "select * from People where age>?" -p 35  # run an sql query
+    % gry python  # let's open a Python shell now!
+    >>> gry.list_cols(table_id='People')  # "gry" is now a python object
+    >>> exit()  # and we are back to the shell
 
 *Note*: Gry is not yet distributed on PyPI - to try it out, you must install 
 Pygrister from this GitHub repo (see below). 
