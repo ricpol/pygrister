@@ -95,7 +95,6 @@ class GristApi:
     def __init__(self, config: dict[str, str]|None = None,
                  in_converter: dict|None = None, 
                  out_converter: dict|None = None, 
-                 request_options: dict|None = None,  
                  custom_configurator: Configurator|None = None, 
                  custom_apicaller: ApiCaller|None = None):
         if config is not None and custom_configurator is not None:
@@ -106,7 +105,7 @@ class GristApi:
         else:
             self.configurator = custom_configurator
         if custom_apicaller is None:
-            self.caller = ApiCaller(self.configurator, request_options)
+            self.caller = ApiCaller(self.configurator)
         else:
             self.caller = custom_apicaller
         self.req_url: str = ''            #: last request url
