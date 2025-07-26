@@ -126,14 +126,14 @@ def _make_ws(team_id):
     gristapi = api.GristApi(config=TEST_CONFIGURATION)
     name = 'ws'+str(time.time_ns())
     st, ws_id = gristapi.add_workspace(name, team_id)
-    total_apicalls.append(gristapi.apicalls)
+    total_apicalls.append(gristapi.caller.apicalls)
     return ws_id, name
 
 def _make_doc(ws_id):
     gristapi = api.GristApi(config=TEST_CONFIGURATION)
     name = 'doc'+str(time.time_ns())
     st, doc_id = gristapi.add_doc(name, ws_id=ws_id)
-    total_apicalls.append(gristapi.apicalls)
+    total_apicalls.append(gristapi.caller.apicalls)
     return doc_id
 
 
@@ -142,7 +142,7 @@ class BaseTestPyGrister(unittest.TestCase):
         self.g = api.GristApi(config=TEST_CONFIGURATION)
     
     def tearDown(self):
-        total_apicalls.append(self.g.apicalls)
+        total_apicalls.append(self.g.caller.apicalls)
 
 
 class TestVarious(BaseTestPyGrister):
@@ -216,7 +216,7 @@ class TestVarious(BaseTestPyGrister):
         # POST
         st, ws_id = self.g.add_workspace(name, self.team_id)
         self.assertEqual(st, 200)
-        self.assertIn('Cookie', self.g.req_headers) # the session thing is working
+        self.assertIn('Cookie', self.g.caller.req_headers) # the session thing is working
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=ws_id)
         self.assertEqual(st, 200)
@@ -429,7 +429,7 @@ class TestWorkspaces(BaseTestPyGrister):
         st, res = gristapi.list_workspaces(cls.team_id) # should work :)
         cls.workspace_id = res[0]['id']
         cls.workspace_name = res[0]['name']
-        total_apicalls.append(gristapi.apicalls)
+        total_apicalls.append(gristapi.caller.apicalls)
 
     def test_list_workspaces(self):
         st, res = self.g.list_workspaces(self.team_id)
@@ -660,7 +660,7 @@ class TestRecordAccess(BaseTestPyGrister):
         gristapi = api.GristApi(config=TEST_CONFIGURATION)
         st, res = gristapi.add_tables(tables, cls.doc_id, cls.team_id)
         cls.table_id = res[0]
-        total_apicalls.append(gristapi.apicalls)
+        total_apicalls.append(gristapi.caller.apicalls)
     
     def test_list_records(self):
         records = [{'Astr': 'test 1', 'Bnum': 1.1, 'Cint': 1, 'Dbol': True},
@@ -777,7 +777,7 @@ class TestConverters(BaseTestPyGrister):
         gristapi = api.GristApi(config=TEST_CONFIGURATION)
         st, res = gristapi.add_tables(tables, cls.doc_id, cls.team_id)
         cls.table_id = res[0]
-        total_apicalls.append(gristapi.apicalls)
+        total_apicalls.append(gristapi.caller.apicalls)
 
     def test_list_records(self):
         records = [{'Test': 'list_records', 'Sort': 'a', 

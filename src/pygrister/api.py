@@ -44,17 +44,11 @@ import json as modjson # "json" is a common name for request params...
 import functools
 from pathlib import Path
 from urllib.parse import urlencode, quote
-from typing import Any
 from inspect import currentframe, getframeinfo
 from warnings import showwarning
-
-from requests import request, Session, JSONDecodeError
-
-from pygrister.config import Configurator, apikey2output
+from pygrister.apicaller import ApiCaller, Apiresp
+from pygrister.config import Configurator
 from pygrister.exceptions import *
-
-MAXSAVEDRESP = 5000 #: max length of resp. content, saved for inspection
-SAVEBINARYRESP = False #: if binary resp. content should be saved for inspection
 
 get_config = Configurator.get_config #: the global, "static" configuration
 
@@ -69,8 +63,6 @@ def check_safemode(funct):
             raise GristApiInSafeMode(msg)
         return funct(self, *a, **k)
     return wrapper
-
-Apiresp = tuple[int, Any] #: the return type of all api call functions
 
 class Paginator:
     """A simple iterable object to wrap Api calls that needs pagination."""
@@ -103,8 +95,9 @@ class GristApi:
     def __init__(self, config: dict[str, str]|None = None,
                  in_converter: dict|None = None, 
                  out_converter: dict|None = None, 
-                 request_options: dict|None = None, 
-                 custom_configurator: Configurator|None = None):
+                 request_options: dict|None = None,  
+                 custom_configurator: Configurator|None = None, 
+                 custom_apicaller: ApiCaller|None = None):
         if config is not None and custom_configurator is not None:
             msg = 'Do not pass both config and custom_configurator arguments.'
             raise GristApiNotConfigured(msg)
@@ -112,8 +105,10 @@ class GristApi:
             self.configurator = Configurator(config)
         else:
             self.configurator = custom_configurator
-        self.apicalls: int = 0            #: total number of API calls
-        self.ok: bool = True              #: if an HTTPError occurred
+        if custom_apicaller is None:
+            self.caller = ApiCaller(self.configurator, request_options)
+        else:
+            self.caller = custom_apicaller
         self.req_url: str = ''            #: last request url
         self.req_body: str = ''           #: last request body
         self.req_headers: dict = dict()   #: last request headers
@@ -122,16 +117,12 @@ class GristApi:
         self.resp_code: str = ''          #: last response status code
         self.resp_reason: str = ''        #: last response status reason
         self.resp_headers: dict = dict()  #: last reponse headers
-        self.session = None               #: Requests session object, or None
         self.in_converter = {}            #: converters for input data
         self.out_converter = {}           #: converters for output data
-        self.request_options = {}         #: other options to pass to request
         if in_converter:
             self.in_converter = in_converter
         if out_converter:
             self.out_converter = out_converter
-        if request_options:
-            self.request_options = request_options
 
     def reconfig(self, config: dict[str, str]|None = None) -> None:
         """Reload the configuration options. 
@@ -153,105 +144,31 @@ class GristApi:
         A shortcut for ``self.configurator.make_server(team_name)``.
         """
         return self.configurator.make_server(team_name)
-
+    
     def open_session(self) -> None:
-        """Open a Requests sessions for all subsequent Api calls."""
-        if self.session:
-            self.session.close()
-        self.session = Session()
+        """Open a Requests sessions for all subsequent Api calls.
+        
+        A shortcut for ``self.caller.open_session()``."""
+        return self.caller.open_session()
     
     def close_session(self) -> None:
-        """Close an open session, if any."""
-        if self.session:
-            self.session.close()
-        self.session = None
+        """Close an open session, if any.
+        
+        A shortcut for ``self.caller.close_session()``."""
+        return self.caller.close_session()
     
-    def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
-                params: dict|None = None, json: dict|None = None, 
-                filename: Path|None = None, 
-                upload_files: list|None = None) -> Apiresp:
-        """The engine responsible for actually calling the Apis."""
-        self.apicalls += 1
-        call = self.session.request if self.session else request
-        if headers is None:
-            headers = {'Content-Type': 'application/json',
-                       'Accept': 'application/json'}
-        headers.update(
-            {'Authorization': f'Bearer {self.configurator.config["GRIST_API_KEY"]}'})
+    @property
+    def ok(self) -> bool:
+        """Check if an HTTPError occurred. 
 
-        if filename is not None: # download mode, method *must* be GET!
-            with call('GET', url, headers=headers, params=params, 
-                      stream=True, **self.request_options) as resp:
-                self.ok = resp.ok
-                self._save_request_data(resp)
-                if self.configurator.raise_option:
-                    resp.raise_for_status()
-                if resp.ok:
-                    with open(filename, 'wb') as f:
-                        for chunk in resp.iter_content(chunk_size=1024*100):
-                            f.write(chunk)
-            return resp.status_code, None
-        elif upload_files: # upload mode, method *must* be POST!
-            # TODO: "uploaded_files" must be ready for the call, 
-            # i.e. opening/closing files is handled by the calling function
-            # not sure if it's the best option, but for now...
-            resp = call('POST', url, headers=headers, 
-                        files=upload_files, **self.request_options)
-            self.ok = resp.ok
-            self._save_request_data(resp)
-            if self.configurator.raise_option:
-                resp.raise_for_status()
-            return resp.status_code, resp.json() if resp.content else None
-        else: # ordinary request
-            resp = call(method, url, headers=headers, params=params, 
-                        json=json, **self.request_options) 
-            self.ok = resp.ok
-            self._save_request_data(resp)
-            if self.configurator.raise_option:
-                resp.raise_for_status()
-            return resp.status_code, resp.json() if resp.content else None
-
-    def _save_request_data(self, response):
-        self.req_url = response.request.url
-        self.req_body = response.request.body
-        self.req_headers = response.request.headers
-        self.req_method = response.request.method
-        if response.content:
-            try:
-                self.resp_content = str(response.json())[:MAXSAVEDRESP]
-            except JSONDecodeError:
-                if SAVEBINARYRESP:
-                    self.resp_content = response.content[:MAXSAVEDRESP]
-                else:
-                    self.resp_content = '<not a valid json>'
-        else:
-            self.resp_content = '<no response body>'
-        self.resp_code = response.status_code
-        self.resp_reason = response.reason
-        self.resp_headers = response.headers
+        A shortcut for ``self.caller.ok``."""
+        return self.caller.ok
 
     def inspect(self) -> str:
         """Collect info on the last api call that was responded to by the server. 
-        
-        Intended for debug: add a ``print(self.inspect())`` right after the 
-        call to inspect. Works even if the server returned a "bad" status 
-        code (aka HTTPError). Does not work if the call itself was not 
-        successful (eg., timed out). 
-        """
-        hdcopy = dict(self.req_headers)
-        prot, key = hdcopy['Authorization'].split()
-        key = apikey2output(key)
-        hdcopy['Authorization'] = f'{prot} {key}'
-        txt = f'->Url: {self.req_url}\n'
-        txt += f'->Method: {self.req_method}\n'
-        txt += f'->Headers: {hdcopy}\n'
-        txt += f'->Body: {self.req_body}\n'
-        txt += f'->Response: {self.resp_code}, {self.resp_reason}\n'
-        txt += f'->Resp. headers: {self.resp_headers}\n'
-        txt += f'->Resp. content: {self.resp_content}\n'
-        cf = self.configurator
-        txt += f'->Config: {cf.config2output(cf.config)}'
-        return txt
+
+        A shortcut for ``self.caller.inspect()``."""
+        return self.caller.inspect()
 
     # USERS (/scim/v2 and /user endpoints)
     # ------------------------------------------------------------------
@@ -263,8 +180,8 @@ class GristApi:
         If scim is not enabled, will return Http 501.
         """
         url = f'{self.configurator.server}/scim/v2/Users/{user_id}'
-        return self.apicall(url, 
-                            headers={'Content-Type': 'application/scim+json'})
+        return self.caller.apicall(url, 
+                    headers={'Content-Type': 'application/scim+json'})
 
     def see_myself(self) -> Apiresp:
         """Implement GET ``/scim/v2/Me``. 
@@ -273,8 +190,8 @@ class GristApi:
         If scim is not enabled, will return Http 501.
         """
         url = f'{self.configurator.server}/scim/v2/Me'
-        return self.apicall(url,
-                            headers={'Content-Type': 'application/scim+json'})
+        return self.caller.apicall(url,
+                    headers={'Content-Type': 'application/scim+json'})
 
     def list_users(self, start: int = 1, chunk: int = 10, 
                    filter: str = '') -> Paginator:
@@ -301,11 +218,12 @@ class GristApi:
             params = {'startIndex': start, 'count': chunk, 
                       'filter': modjson.dumps(filter)}
             encoded_params = urlencode(params, quote_via=quote)
-            st, res = self.apicall(url+'?'+encoded_params, headers=headers)
+            st, res = self.caller.apicall(url+'?'+encoded_params, 
+                                          headers=headers)
         else:
             # the usual way
-            st, res = self.apicall(url, headers=headers, 
-                                   params={'startIndex': start, 'count': chunk})
+            st, res = self.caller.apicall(url, headers=headers, 
+                            params={'startIndex': start, 'count': chunk})
         return st, res
 
     def _make_user_data(self, username, emails, formatted_name, display_name, 
@@ -344,8 +262,8 @@ class GristApi:
         json = self._make_user_data(username, emails, formatted_name, 
                                     display_name,lang, locale, photos, schemas)
         url = f'{self.configurator.server}/scim/v2/Users'
-        st, res = self.apicall(url, 'POST', json=json, 
-                               headers={'Content-Type': 'application/scim+json'})
+        st, res = self.caller.apicall(url, 'POST', json=json, 
+                        headers={'Content-Type': 'application/scim+json'})
         try:
             return st, int(res['id'])
         except KeyError:
@@ -368,8 +286,8 @@ class GristApi:
         json = self._make_user_data(username, emails, formatted_name, 
                                     display_name,lang, locale, photos, schemas)
         url = f'{self.configurator.server}/scim/v2/Users/{user_id}'
-        st, res = self.apicall(url, 'PUT', json=json, 
-                               headers={'Content-Type': 'application/scim+json'})
+        st, res = self.caller.apicall(url, 'PUT', json=json, 
+                        headers={'Content-Type': 'application/scim+json'})
         try:
             _ = res['id']
             return st, None
@@ -391,8 +309,8 @@ class GristApi:
             schemas = ['urn:ietf:params:scim:api:messages:2.0:PatchOp']
         json = {'Operations': operations, 'schemas': schemas}
         url = f'{self.configurator.server}/scim/v2/Users/{user_id}'
-        st, res = self.apicall(url, 'PATCH', json=json, 
-                               headers={'Content-Type': 'application/scim+json'})
+        st, res = self.caller.apicall(url, 'PATCH', json=json, 
+                        headers={'Content-Type': 'application/scim+json'})
         try:
             _ = res['id']
             return st, None
@@ -407,8 +325,8 @@ class GristApi:
         If scim is not enabled, will return Http 501.
         """
         url = f'{self.configurator.server}/scim/v2/Users/{user_id}'
-        return self.apicall(url, 'DELETE', 
-                            headers={'Content-Type': 'application/scim+json'})
+        return self.caller.apicall(url, 'DELETE', 
+                    headers={'Content-Type': 'application/scim+json'})
 
     @check_safemode
     def delete_myself(self, user: str, doc_id: str = '', 
@@ -476,7 +394,7 @@ class GristApi:
             json['attributes'] = attrib
         if no_attrib is not None:
             json['excludedAttributes'] = no_attrib
-        return self.apicall(url, 'POST', headers=headers, json=json)
+        return self.caller.apicall(url, 'POST', headers=headers, json=json)
 
     @check_safemode
     def bulk_users(self, operations: list[dict], 
@@ -495,8 +413,8 @@ class GristApi:
             schemas = ['urn:ietf:params:scim:api:messages:2.0:BulkRequest']
         json = {'Operations': operations, 'schemas': schemas}
         url = f'{self.configurator.server}/scim/v2/Bulk'
-        st, res = self.apicall(url, 'POST', json=json, 
-                               headers={'Content-Type': 'application/scim+json'})
+        st, res = self.caller.apicall(url, 'POST', json=json, 
+                        headers={'Content-Type': 'application/scim+json'})
         if st == 200:
             return st, [int(i['status']) for i in res['Operations']]
         else:
@@ -509,8 +427,8 @@ class GristApi:
         If scim is not enabled, will return Http 501.
         """
         url = f'{self.configurator.server}/scim/v2/Schemas'
-        return self.apicall(url, 
-                            headers={'Content-Type': 'application/scim+json'})
+        return self.caller.apicall(url, 
+                    headers={'Content-Type': 'application/scim+json'})
 
     def see_scim_config(self) -> Apiresp:
         """Implement GET ``/scim/v2/ServiceProviderConfig``. 
@@ -519,8 +437,8 @@ class GristApi:
         If scim is not enabled, will return Http 501.
         """
         url = f'{self.configurator.server}/scim/v2/ServiceProviderConfig'
-        return self.apicall(url, 
-                            headers={'Content-Type': 'application/scim+json'})
+        return self.caller.apicall(url, 
+                    headers={'Content-Type': 'application/scim+json'})
 
     def see_scim_resources(self) -> Apiresp:
         """Implement GET ``/scim/v2/ResourceTypes``. 
@@ -529,8 +447,8 @@ class GristApi:
         If scim is not enabled, will return Http 501.
         """
         url = f'{self.configurator.server}/scim/v2/ResourceTypes'
-        return self.apicall(url, 
-                            headers={'Content-Type': 'application/scim+json'})
+        return self.caller.apicall(url, 
+                    headers={'Content-Type': 'application/scim+json'})
 
     # TEAM SITES (organisations)
     # ------------------------------------------------------------------
@@ -541,7 +459,7 @@ class GristApi:
         If successful, response will be a ``list[dict]`` of site details.
         """
         url = f'{self.configurator.server}/orgs'
-        return self.apicall(url)
+        return self.caller.apicall(url)
     
     def see_team(self, team_id: str = '') -> Apiresp:
         """Implement GET ``/orgs/{orgId}``.
@@ -550,7 +468,7 @@ class GristApi:
         """
         team_id = team_id or 'current'
         url = f'{self.configurator.server}/orgs/{team_id}'
-        return self.apicall(url)
+        return self.caller.apicall(url)
 
     @check_safemode
     def update_team(self, new_name: str, team_id: str = '') -> Apiresp:
@@ -562,7 +480,7 @@ class GristApi:
         team_id = team_id or 'current'
         url = f'{self.configurator.server}/orgs/{team_id}'
         json = {'name': new_name}
-        return self.apicall(url, method='PATCH', json=json)
+        return self.caller.apicall(url, method='PATCH', json=json)
 
     @check_safemode
     def delete_team(self, team_id: str = '') -> Apiresp:
@@ -572,7 +490,7 @@ class GristApi:
         """
         team_id = team_id or 'current'
         url = f'{self.configurator.server}/orgs/{team_id}'
-        st, res = self.apicall(url, 'DELETE')
+        st, res = self.caller.apicall(url, 'DELETE')
         if self.ok:
             res = None
         return st, res
@@ -584,7 +502,7 @@ class GristApi:
         """
         team_id = team_id or 'current'
         url = f'{self.configurator.server}/orgs/{team_id}/access'
-        st, res = self.apicall(url)
+        st, res = self.caller.apicall(url)
         try:
             return st, res['users']
         except KeyError:
@@ -600,7 +518,7 @@ class GristApi:
         team_id = team_id or 'current'
         json = {'delta': {'users': users}}
         url = f'{self.configurator.server}/orgs/{team_id}/access'
-        return self.apicall(url, 'PATCH', json=json)
+        return self.caller.apicall(url, 'PATCH', json=json)
 
     # WORKSPACES
     # ------------------------------------------------------------------
@@ -612,7 +530,7 @@ class GristApi:
         """
         team_id = team_id or 'current'
         url = f'{self.configurator.server}/orgs/{team_id}/workspaces'
-        return self.apicall(url)
+        return self.caller.apicall(url)
 
     @check_safemode
     def add_workspace(self, name: str, team_id: str = '') -> Apiresp:
@@ -623,7 +541,7 @@ class GristApi:
         team_id = team_id or 'current'
         url = f'{self.configurator.server}/orgs/{team_id}/workspaces'
         json = {'name': name}
-        return self.apicall(url, method='POST', json=json)
+        return self.caller.apicall(url, method='POST', json=json)
 
     def see_workspace(self, ws_id: int = 0) -> Apiresp: 
         """Implement GET ``/workspaces/{workspaceId}``.
@@ -632,7 +550,7 @@ class GristApi:
         """
         ws_id = ws_id or int(self.configurator.config['GRIST_WORKSPACE_ID'])
         url = f'{self.configurator.server}/workspaces/{ws_id}'
-        return self.apicall(url)
+        return self.caller.apicall(url)
 
     @check_safemode
     def update_workspace(self, new_name: str, ws_id: int = 0) -> Apiresp: 
@@ -643,7 +561,7 @@ class GristApi:
         ws_id = ws_id or int(self.configurator.config['GRIST_WORKSPACE_ID'])
         url = f'{self.configurator.server}/workspaces/{ws_id}'
         json = {'name': new_name}
-        st, res = self.apicall(url, method='PATCH', json=json)
+        st, res = self.caller.apicall(url, method='PATCH', json=json)
         if res == ws_id:
             res = None
         return st, res
@@ -656,7 +574,7 @@ class GristApi:
         """
         ws_id = ws_id or int(self.configurator.config['GRIST_WORKSPACE_ID'])
         url = f'{self.configurator.server}/workspaces/{ws_id}'
-        st, res = self.apicall(url, method='DELETE')
+        st, res = self.caller.apicall(url, method='DELETE')
         if res == ws_id:
             res = None
         return st, res
@@ -668,7 +586,7 @@ class GristApi:
         """
         ws_id = ws_id or int(self.configurator.config['GRIST_WORKSPACE_ID'])
         url = f'{self.configurator.server}/workspaces/{ws_id}/access'
-        st, res = self.apicall(url)
+        st, res = self.caller.apicall(url)
         try:
             # note: we leave out the 'maxInheritedRole' information here!
             return st, res['users']
@@ -685,7 +603,7 @@ class GristApi:
         ws_id = ws_id or int(self.configurator.config['GRIST_WORKSPACE_ID'])
         json = {'delta': {'users': users}}
         url = f'{self.configurator.server}/workspaces/{ws_id}/access'
-        return self.apicall(url, 'PATCH', json=json)
+        return self.caller.apicall(url, 'PATCH', json=json)
 
     # DOCUMENTS
     # ------------------------------------------------------------------
@@ -700,7 +618,7 @@ class GristApi:
         ws_id = ws_id or int(self.configurator.config['GRIST_WORKSPACE_ID'])
         json = {'name': name, 'isPinned': pinned}
         url = f'{self.configurator.server}/workspaces/{ws_id}/docs'
-        return self.apicall(url, method='POST', json=json)
+        return self.caller.apicall(url, method='POST', json=json)
 
     def see_doc(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}``.
@@ -709,7 +627,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}'
-        return self.apicall(url)
+        return self.caller.apicall(url)
 
     @check_safemode
     def update_doc(self, new_name: str = '', pinned: bool = False, 
@@ -723,7 +641,7 @@ class GristApi:
         json = {'isPinned': pinned}
         if new_name:
             json.update({'name': new_name}) # type:ignore
-        st, res = self.apicall(url, method='PATCH', json=json)
+        st, res = self.caller.apicall(url, method='PATCH', json=json)
         if res == doc_id:
             res = None
         return st, res
@@ -736,7 +654,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}'
-        st, res = self.apicall(url, method='DELETE')
+        st, res = self.caller.apicall(url, method='DELETE')
         if res == doc_id:
             res = None
         return st, res
@@ -751,7 +669,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/states/remove'
         json = {'keep': keep}
-        return self.apicall(url, method='POST', json=json)
+        return self.caller.apicall(url, method='POST', json=json)
 
     @check_safemode
     def move_doc(self, ws_id: int, doc_id: str = '', 
@@ -763,7 +681,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/move'
         json = {'workspace': ws_id}
-        st, res = self.apicall(url, method='PATCH', json=json)
+        st, res = self.caller.apicall(url, method='PATCH', json=json)
         if res == doc_id:
             res = None
         return st, res
@@ -776,7 +694,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/force-reload'
-        return self.apicall(url, method='POST')
+        return self.caller.apicall(url, method='POST')
 
     def list_doc_users(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/access``.
@@ -785,7 +703,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/access'
-        st, res = self.apicall(url)
+        st, res = self.caller.apicall(url)
         try:
             # note: we leave out the 'maxInheritedRole' information here!
             return st, res['users']
@@ -802,7 +720,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         json = {'delta': {'maxInheritedRole': max, 'users': users}}
         url = f'{server}/docs/{doc_id}/access'
-        return self.apicall(url, 'PATCH', json=json)
+        return self.caller.apicall(url, 'PATCH', json=json)
 
     def download_sqlite(self, filename: Path, nohistory: bool = False, 
                         template: bool = False, doc_id: str = '', 
@@ -815,8 +733,8 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/download'
         headers = {'Accept': 'application/x-sqlite3'}
         params = {'nohistory': nohistory, 'template': template}
-        return self.apicall(url, headers=headers, params=params, 
-                            filename=filename)
+        return self.caller.apicall(url, headers=headers, params=params, 
+                                   filename=filename)
 
     def download_excel(self, filename: Path, table_id: str, 
                        header: str = 'label', doc_id: str = '', 
@@ -829,8 +747,8 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/download/xlsx'
         headers = {'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
         params = {'header': header, 'tableId': table_id}
-        return self.apicall(url, headers=headers, params=params, 
-                            filename=filename)
+        return self.caller.apicall(url, headers=headers, params=params, 
+                                   filename=filename)
 
     def download_csv(self, filename: Path, table_id: str, 
                      header: str = 'label', doc_id: str = '', 
@@ -845,8 +763,8 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/download/csv'
         headers = {'Accept': 'text/csv'}
         params = {'header': header, 'tableId': table_id}
-        return self.apicall(url, headers=headers, params=params, 
-                            filename=filename)
+        return self.caller.apicall(url, headers=headers, params=params, 
+                                   filename=filename)
 
     def download_schema(self, table_id: str, header: str = 'label',
                         filename: Path|None = None, doc_id: str = '', 
@@ -860,8 +778,8 @@ class GristApi:
         params = {'tableId': table_id, 'header': header}
         url = f'{server}/docs/{doc_id}/download/table-schema'
         headers = {'Accept': 'text/csv'}
-        return self.apicall(url, headers=headers, params=params, 
-                            filename=filename)
+        return self.caller.apicall(url, headers=headers, params=params, 
+                                   filename=filename)
 
     # RECORDS
     # ------------------------------------------------------------------
@@ -910,11 +828,12 @@ class GristApi:
             # instead, so we need to skip Request and manually compose the url
             params = {'hidden': hidden, 'filter': modjson.dumps(filter)}
             encoded_params = urlencode(params, quote_via=quote)
-            st, res = self.apicall(url+'?'+encoded_params, headers=headers)
+            st, res = self.caller.apicall(url+'?'+encoded_params, 
+                                          headers=headers)
         else:
             # the usual way
-            st, res = self.apicall(url, headers=headers, 
-                                   params={'hidden': hidden})
+            st, res = self.caller.apicall(url, headers=headers, 
+                                          params={'hidden': hidden})
         try:
             records = [{'id': r['id']}|r['fields'] for r in res['records']]
         except KeyError: # an error occurred
@@ -943,7 +862,7 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
         params = {'noparse': noparse}
         json = {'records': [{'fields': r} for r in records]}
-        st, res = self.apicall(url, 'POST', params=params, json=json)
+        st, res = self.caller.apicall(url, 'POST', params=params, json=json)
         try:
             return st, [i['id'] for i in res['records']]
         except KeyError:
@@ -967,7 +886,7 @@ class GristApi:
         params = {'noparse': noparse}
         json = {'records': [{'id': rec.pop('id'), 'fields': rec} 
                             for rec in records]}
-        return self.apicall(url, 'PATCH', params=params, json=json)
+        return self.caller.apicall(url, 'PATCH', params=params, json=json)
 
     @check_safemode
     def add_update_records(self, table_id: str, records: list[dict], 
@@ -988,7 +907,7 @@ class GristApi:
         params = {'noparse': noparse, 'onmany': onmany, 'noadd': noadd, 
                   'noupdate': noupdate, 'allow_empty_require': allow_empty_require}
         json = {'records': records}
-        return self.apicall(url, 'PUT', params=params, json=json)
+        return self.caller.apicall(url, 'PUT', params=params, json=json)
 
     # TABLES
     # ------------------------------------------------------------------
@@ -1000,7 +919,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables'
-        st, res = self.apicall(url)
+        st, res = self.caller.apicall(url)
         try:
             return st, res['tables']
         except KeyError:
@@ -1016,7 +935,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables'
         json = {'tables': tables}
-        st, res = self.apicall(url, 'POST', json=json)
+        st, res = self.caller.apicall(url, 'POST', json=json)
         try:
             return st, [i['id'] for i in res['tables']]
         except KeyError:
@@ -1032,7 +951,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables'
         json = {'tables': tables}
-        return self.apicall(url, 'PATCH', json=json)
+        return self.caller.apicall(url, 'PATCH', json=json)
 
     # COLUMNS
     # ------------------------------------------------------------------
@@ -1046,7 +965,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns'
         params = {'hidden': hidden}
-        st, res = self.apicall(url, params=params)
+        st, res = self.caller.apicall(url, params=params)
         try:
             return st, res['columns']
         except KeyError:
@@ -1076,7 +995,7 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns'
         cols = self._jsonize_col_options(cols)
         json = {'columns': cols}
-        st, res = self.apicall(url, 'POST', json=json)
+        st, res = self.caller.apicall(url, 'POST', json=json)
         try:
             return st, [i['id'] for i in res['columns']]
         except KeyError:
@@ -1093,7 +1012,7 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns'
         cols = self._jsonize_col_options(cols)
         json = {'columns': cols}
-        return self.apicall(url, 'PATCH', json=json)
+        return self.caller.apicall(url, 'PATCH', json=json)
 
     @check_safemode
     def add_update_cols(self, table_id: str, cols: list[dict], 
@@ -1109,7 +1028,7 @@ class GristApi:
         params = {'noadd': noadd, 'noupdate': noupdate, 'replaceall': replaceall}
         cols = self._jsonize_col_options(cols)
         json = {'columns': cols}
-        return self.apicall(url, 'PUT', params=params, json=json)
+        return self.caller.apicall(url, 'PUT', params=params, json=json)
 
     @check_safemode
     def delete_column(self, table_id: str, col_id: str, doc_id: str = '', 
@@ -1120,7 +1039,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns/{col_id}'
-        return self.apicall(url, 'DELETE')
+        return self.caller.apicall(url, 'DELETE')
 
     # DATA
     # ------------------------------------------------------------------
@@ -1136,7 +1055,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/data/delete'
         # this is the *only* api endpoint where "json" is a list, not a dict
-        return self.apicall(url, 'POST', json=rows) # type: ignore
+        return self.caller.apicall(url, 'POST', json=rows) # type: ignore
 
     # ATTACHMENTS
     # ------------------------------------------------------------------
@@ -1160,10 +1079,10 @@ class GristApi:
             # instead, so we need to skip Request and manually compose the url
             params.update({'filter': modjson.dumps(filter)})
             encoded_params = urlencode(params, quote_via=quote)
-            st, res = self.apicall(url+'?'+encoded_params)
+            st, res = self.caller.apicall(url+'?'+encoded_params)
         else:
             # the usual way
-            st, res = self.apicall(url, params=params)
+            st, res = self.caller.apicall(url, params=params)
         try:
             return st, res['records']
         except KeyError:
@@ -1194,8 +1113,8 @@ class GristApi:
         headers = dict()
         fileobjs = [('upload', (str(f), open(f, 'rb'))) for f in filenames]
         try:
-            st, res = self.apicall(url, 'POST', headers=headers, 
-                                   upload_files=fileobjs)
+            st, res = self.caller.apicall(url, 'POST', headers=headers, 
+                                          upload_files=fileobjs)
         finally:
             for obj in fileobjs:
                 obj[1][1].close()
@@ -1216,8 +1135,8 @@ class GristApi:
                   }   # or Requests won't add boundaries and Grist will complain
         with open(filename, 'rb') as f:
             fileobj = [('file', (str(filename), f, 'application/x-tar'))]
-            st, res = self.apicall(url, method='POST', headers=headers, 
-                                   upload_files=fileobj) 
+            st, res = self.caller.apicall(url, method='POST', headers=headers, 
+                                          upload_files=fileobj) 
         return st, res
 
     def see_attachment(self, attachment_id: int, doc_id: str = '',
@@ -1228,7 +1147,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/{attachment_id}'
-        return self.apicall(url)
+        return self.caller.apicall(url)
 
     def download_attachment(self, filename: Path, attachment_id: int, 
                             doc_id: str = '', team_id: str = '') -> Apiresp:
@@ -1239,7 +1158,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/{attachment_id}/download'
         headers = {'accept': '*/*'}
-        return self.apicall(url, headers=headers, filename=filename)
+        return self.caller.apicall(url, headers=headers, filename=filename)
     
     def download_attachments(self, filename: Path|None = None, format: str = 'tar', 
                              doc_id: str = '', team_id: str = '') -> Apiresp:
@@ -1255,8 +1174,8 @@ class GristApi:
         params = {'format': format}
         if filename is None:
             filename = Path(f'doc_{doc_id}_attachments.{format}') 
-        return self.apicall(url, headers=headers, params=params, 
-                            filename=filename)
+        return self.caller.apicall(url, headers=headers, params=params, 
+                                   filename=filename)
 
     def see_attachment_store(self, 
                              doc_id: str = '', team_id: str = '') -> Apiresp:
@@ -1266,7 +1185,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/store'
-        st, res = self.apicall(url)
+        st, res = self.caller.apicall(url)
         return st, res['type']
 
     def update_attachment_store(self, internal_store: bool = True, 
@@ -1282,7 +1201,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/store'
         json = {'type': {True:'internal', False:'external'}[internal_store]}
-        st, res = self.apicall(url, 'POST', json=json)
+        st, res = self.caller.apicall(url, 'POST', json=json)
         if self.ok:
             res = None
         return st, res
@@ -1295,7 +1214,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/stores'
-        st, res = self.apicall(url)
+        st, res = self.caller.apicall(url)
         return st, res['stores']
 
     def transfer_attachments(self,  
@@ -1307,7 +1226,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/transferAll'
-        return self.apicall(url, 'POST')
+        return self.caller.apicall(url, 'POST')
 
     def see_transfer_status(self,  
                             doc_id: str = '', team_id: str = '') -> Apiresp:
@@ -1318,7 +1237,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/transferStatus'
-        return self.apicall(url)
+        return self.caller.apicall(url)
 
     # WEBHOOKS
     # ------------------------------------------------------------------
@@ -1330,7 +1249,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks'
-        st, res = self.apicall(url)
+        st, res = self.caller.apicall(url)
         try:
             return st, res['webhooks']
         except KeyError:
@@ -1345,7 +1264,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks'
-        st, res = self.apicall(url, 'POST', json={'webhooks': webhooks})
+        st, res = self.caller.apicall(url, 'POST', json={'webhooks': webhooks})
         try:
             return st, [i['id'] for i in res['webhooks']]
         except KeyError:
@@ -1360,7 +1279,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks/{webhook_id}'
-        st, res = self.apicall(url, 'PATCH', json=webhook)
+        st, res = self.caller.apicall(url, 'PATCH', json=webhook)
         if st <= 200:
             return st, None # Grist api returns "{success: true}" here
         else:
@@ -1375,7 +1294,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks/{webhook_id}'
-        st, res = self.apicall(url, 'DELETE')
+        st, res = self.caller.apicall(url, 'DELETE')
         if st <= 200:
             return st, None # Grist api returns "{success: true}" here
         else:
@@ -1390,7 +1309,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/webhooks/queue'
-        st, res = self.apicall(url, 'DELETE')
+        st, res = self.caller.apicall(url, 'DELETE')
         if st <= 200:
             return st, None # Grist api returns "{success: true}" here
         else:
@@ -1409,7 +1328,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/sql'
         params = {'q': sql}
-        st, res = self.apicall(url, params=params)
+        st, res = self.caller.apicall(url, params=params)
         try:
             records = [r['fields'] for r in res['records']]
         except KeyError:
@@ -1431,7 +1350,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/sql'
         json = {'sql': sql, 'args': qargs, 'timeout': timeout}
-        st, res = self.apicall(url, method='POST', json=json)
+        st, res = self.caller.apicall(url, method='POST', json=json)
         try:
             records = [r['fields'] for r in res['records']]
         except KeyError:
