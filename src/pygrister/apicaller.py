@@ -1,7 +1,8 @@
 from pathlib import Path
 from typing import Any
-
-from requests import request, Session, JSONDecodeError
+#TODO remove unused imports from Requests
+from requests import (request, Request, PreparedRequest, 
+                      Response, Session, JSONDecodeError)
 
 from pygrister.config import Configurator, apikey2output
 
@@ -23,6 +24,9 @@ class ApiCaller:
             self.request_options = request_options
         self.apicalls: int = 0     #: total number of API calls
         self.ok: bool = True       #: if an HTTPError occurred
+        self.dry_run: bool = False #: prepare, do not post request
+        self.request: PreparedRequest|None = None #: last request posted
+        self.response: Response|None = None #: last response retrieved
 
     def open_session(self) -> None:
         """Open a Requests sessions for all subsequent Api calls."""
@@ -36,11 +40,11 @@ class ApiCaller:
             self.session.close()
         self.session = None
     
-    def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
+    def _xxx_apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
                 params: dict|None = None, json: dict|None = None, 
                 filename: Path|None = None, 
                 upload_files: list|None = None) -> Apiresp:
-        """The engine responsible for actually calling the Apis."""
+        #TODO this is the old apicall, to be removed soon
         self.apicalls += 1
         call = self.session.request if self.session else request
         if headers is None:
@@ -81,7 +85,51 @@ class ApiCaller:
                 resp.raise_for_status()
             return resp.status_code, resp.json() if resp.content else None
 
-    def _save_request_data(self, response):
+    def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
+                params: dict|None = None, json: dict|None = None, 
+                filename: Path|None = None, 
+                upload_files: list|None = None) -> Apiresp:
+        """The engine responsible for actually calling the Apis."""
+        # TODO: in upload mode, "upload_files" must be ready for the call, 
+        # i.e. opening/closing files is handled by the calling function
+        # not sure if it's the best option, but for now...
+        self.request: PreparedRequest|None = None
+        self.response: Response|None = None
+        if headers is None:
+            headers = {'Content-Type': 'application/json',
+                       'Accept': 'application/json'}
+        headers.update({'Authorization': 
+                        f'Bearer {self.configurator.config["GRIST_API_KEY"]}'})
+        # first, we prepare the request
+        req_opts = self.request_options
+        if filename: # download mode, method *must* be GET!
+            method = 'GET'
+            req_opts = {'stream': True, **self.request_options}
+        elif upload_files: # upload mode, method *must* be POST!
+            method = 'POST'
+        r = Request(method, url, headers=headers, params=params, 
+                    json=json, files=upload_files)
+        session = self.session or Session()
+        self.request = session.prepare_request(r)
+        if self.dry_run: # we want to fake an ok call as far as possibile
+            self.ok = True
+            return 200, {'Error: No Content': 'Pygrister is running dry!'}
+        # then, we post the prepared request
+        self.response = session.send(self.request, **req_opts)
+        self.apicalls += 1
+        self.ok = self.response.ok
+        if self.configurator.raise_option:
+            self.response.raise_for_status()
+        if filename and self.ok:
+            with open(filename, 'wb') as f:
+                for chunk in self.response.iter_content(chunk_size=1024*100):
+                    f.write(chunk)
+            self.response.close()
+            return self.response.status_code, None
+        return (self.response.status_code, 
+                self.response.json() if self.response.content else None)
+
+    def _save_request_data(self, response): #TODO not used anymore, to be removed
         self.req_url = response.request.url
         self.req_body = response.request.body
         self.req_headers = response.request.headers
@@ -100,7 +148,7 @@ class ApiCaller:
         self.resp_reason = response.reason
         self.resp_headers = response.headers
 
-    def inspect(self) -> str:
+    def inspect(self) -> str: #TODO rewrite this
         """Collect info on the last api call that was responded to by the server. 
         
         Intended for debug: add a ``print(self.inspect())`` right after the 
