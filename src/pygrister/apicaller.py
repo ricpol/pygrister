@@ -119,7 +119,7 @@ class ApiCaller:
         self.request = session.prepare_request(r)
         if self.dry_run: # we want to fake an ok call as far as possibile
             self.ok = True
-            return 200, {'Error: No Content': 'Pygrister is running dry!'}
+            return 200, {'No Content': 'Pygrister is running dry!'}
         # then, we post the prepared request
         self.response = session.send(self.request, **req_opts)
         self.apicalls += 1
