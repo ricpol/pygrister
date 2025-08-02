@@ -6,9 +6,6 @@ from requests import (request, Request, PreparedRequest,
 
 from pygrister.config import Configurator, apikey2output
 
-MAXSAVEDRESP = 5000 #: max length of resp. content, saved for inspection
-SAVEBINARYRESP = False #: if binary resp. content should be saved for inspection
-
 Apiresp = tuple[int, Any] #: the return type of all api call functions
 
 class ApiCaller:
@@ -22,11 +19,11 @@ class ApiCaller:
         self.request_options = dict() #: other options to pass to Requests
         if request_options:
             self.request_options = request_options
-        self.apicalls: int = 0     #: total number of API calls
-        self.ok: bool = True       #: if an HTTPError occurred
-        self.dry_run: bool = False #: prepare, do not post request
+        self.apicalls: int = 0        #: total number of API calls
+        self.ok: bool = True          #: if an HTTPError occurred
+        self.dry_run: bool = False    #: prepare, do not post request
         self.request: PreparedRequest|None = None #: last request posted
-        self.response: Response|None = None #: last response retrieved
+        self.response: Response|None = None       #: last response retrieved
 
     def open_session(self) -> None:
         """Open a Requests sessions for all subsequent Api calls."""
@@ -40,6 +37,15 @@ class ApiCaller:
             self.session.close()
         self.session = None
     
+    def response_as_json(self) -> str:
+        """Return the response content as (unicode) parsable json."""
+        if self.response is not None: 
+            try:
+                return self.response.text
+            except RuntimeError as e: # from Requests, if we just downloaded a file
+                return f'"RuntimeError: {e}"' #TODO maybe just return 'null' ?
+        return 'null' # hopefully still valid json!
+        
     def _xxx_apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
                 params: dict|None = None, json: dict|None = None, 
                 filename: Path|None = None, 
@@ -129,44 +135,37 @@ class ApiCaller:
         return (self.response.status_code, 
                 self.response.json() if self.response.content else None)
 
-    def _save_request_data(self, response): #TODO not used anymore, to be removed
-        self.req_url = response.request.url
-        self.req_body = response.request.body
-        self.req_headers = response.request.headers
-        self.req_method = response.request.method
-        if response.content:
-            try:
-                self.resp_content = str(response.json())[:MAXSAVEDRESP]
-            except JSONDecodeError:
-                if SAVEBINARYRESP:
-                    self.resp_content = response.content[:MAXSAVEDRESP]
-                else:
-                    self.resp_content = '<not a valid json>'
-        else:
-            self.resp_content = '<no response body>'
-        self.resp_code = response.status_code
-        self.resp_reason = response.reason
-        self.resp_headers = response.headers
+    def inspect(self, sep: str = '\n', max_content: int = 1000) -> str:
+        """Collect info on the last api call that was requested (and possibly 
+        responded to) by the server. 
 
-    def inspect(self) -> str: #TODO rewrite this
-        """Collect info on the last api call that was responded to by the server. 
-        
+        Use ``sep`` to set a custom separator between elements, 
+        and ``max_content`` to limit the response content size. 
+
         Intended for debug: add a ``print(self.inspect())`` right after the 
         call to inspect. Works even if the server returned a "bad" status 
-        code (aka HTTPError). Does not work if the call itself was not 
-        successful (eg., timed out). 
+        code. If server did not respond, only request data will be recorded. 
         """
-        hdcopy = dict(self.req_headers)
-        prot, key = hdcopy['Authorization'].split()
+        cfg = '->Pygrister config.: '
+        cfg += f'{self.configurator.config2output(self.configurator.config)}'
+        req = self.request
+        res = self.response
+        if req is None:
+            return f'->Req.: no request data{sep}{cfg}'
+        txt = f'->Req. url: {req.url}{sep}'
+        txt += f'->Req. method: {req.method}{sep}'
+        headers = dict(req.headers)
+        prot, key = headers['Authorization'].split()
         key = apikey2output(key)
-        hdcopy['Authorization'] = f'{prot} {key}'
-        txt = f'->Url: {self.req_url}\n'
-        txt += f'->Method: {self.req_method}\n'
-        txt += f'->Headers: {hdcopy}\n'
-        txt += f'->Body: {self.req_body}\n'
-        txt += f'->Response: {self.resp_code}, {self.resp_reason}\n'
-        txt += f'->Resp. headers: {self.resp_headers}\n'
-        txt += f'->Resp. content: {self.resp_content}\n'
-        cf = self.configurator
-        txt += f'->Config: {cf.config2output(cf.config)}'
+        headers['Authorization'] = f'{prot} {key}'
+        txt += f'->Req. headers: {headers}{sep}'
+        txt += f'->Req. body: {req.body}{sep}'
+        if res is None:
+            txt += f'->Resp.: no response data{sep}{cfg}'
+            return txt
+        txt += f'->Resp. url: {res.url}{sep}'
+        txt += f'->Resp. result: {res.status_code} {res.reason}{sep}'
+        txt += f'->Resp. headers: {res.headers}{sep}'
+        txt += f'->Resp. content: {self.response_as_json()[:max_content]}{sep}'
+        txt += cfg
         return txt

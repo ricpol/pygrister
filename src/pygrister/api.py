@@ -108,14 +108,6 @@ class GristApi:
             self.caller = ApiCaller(self.configurator)
         else:
             self.caller = custom_apicaller
-        self.req_url: str = ''            #: last request url
-        self.req_body: str = ''           #: last request body
-        self.req_headers: dict = dict()   #: last request headers
-        self.req_method: str = ''         #: last request method
-        self.resp_content: str|bytes = '' #: last response content
-        self.resp_code: str = ''          #: last response status code
-        self.resp_reason: str = ''        #: last response status reason
-        self.resp_headers: dict = dict()  #: last reponse headers
         self.in_converter = {}            #: converters for input data
         self.out_converter = {}           #: converters for output data
         if in_converter:
@@ -163,11 +155,15 @@ class GristApi:
         A shortcut for ``self.caller.ok``."""
         return self.caller.ok
 
-    def inspect(self) -> str:
-        """Collect info on the last api call that was responded to by the server. 
+    def inspect(self, sep: str = '\n', max_content: int = 1000) -> str:
+        """Collect info on the last api call that was requested (and possibly 
+        responded to) by the server. 
+
+        Use ``sep`` to set a custom separator between elements, 
+        and ``max_content`` to limit the response content size. 
 
         A shortcut for ``self.caller.inspect()``."""
-        return self.caller.inspect()
+        return self.caller.inspect(sep, max_content)
 
     # USERS (/scim/v2 and /user endpoints)
     # ------------------------------------------------------------------
