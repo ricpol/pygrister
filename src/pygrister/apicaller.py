@@ -1,8 +1,7 @@
 from pathlib import Path
 from typing import Any
-#TODO remove unused imports from Requests
-from requests import (request, Request, PreparedRequest, 
-                      Response, Session, JSONDecodeError)
+from requests import (Request, PreparedRequest, Response, 
+                      Session, JSONDecodeError)
 
 from pygrister.config import Configurator, apikey2output
 
@@ -58,51 +57,6 @@ class ApiCaller:
             except RuntimeError as e: # from Requests, if we just downloaded a file
                 return f'"RuntimeError: {e}"' #TODO maybe just return 'null' ?
         return 'null' # hopefully still valid json!
-        
-    def _xxx_apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
-                params: dict|None = None, json: dict|None = None, 
-                filename: Path|None = None, 
-                upload_files: list|None = None) -> Apiresp:
-        #TODO this is the old apicall, to be removed soon
-        self.apicalls += 1
-        call = self.session.request if self.session else request
-        if headers is None:
-            headers = {'Content-Type': 'application/json',
-                       'Accept': 'application/json'}
-        headers.update(
-            {'Authorization': f'Bearer {self.configurator.config["GRIST_API_KEY"]}'})
-
-        if filename is not None: # download mode, method *must* be GET!
-            with call('GET', url, headers=headers, params=params, 
-                      stream=True, **self.request_options) as resp:
-                self.ok = resp.ok
-                self._save_request_data(resp)
-                if self.configurator.raise_option:
-                    resp.raise_for_status()
-                if resp.ok:
-                    with open(filename, 'wb') as f:
-                        for chunk in resp.iter_content(chunk_size=1024*100):
-                            f.write(chunk)
-            return resp.status_code, None
-        elif upload_files: # upload mode, method *must* be POST!
-            # TODO: "uploaded_files" must be ready for the call, 
-            # i.e. opening/closing files is handled by the calling function
-            # not sure if it's the best option, but for now...
-            resp = call('POST', url, headers=headers, 
-                        files=upload_files, **self.request_options)
-            self.ok = resp.ok
-            self._save_request_data(resp)
-            if self.configurator.raise_option:
-                resp.raise_for_status()
-            return resp.status_code, resp.json() if resp.content else None
-        else: # ordinary request
-            resp = call(method, url, headers=headers, params=params, 
-                        json=json, **self.request_options) 
-            self.ok = resp.ok
-            self._save_request_data(resp)
-            if self.configurator.raise_option:
-                resp.raise_for_status()
-            return resp.status_code, resp.json() if resp.content else None
 
     def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
                 params: dict|None = None, json: dict|None = None, 
