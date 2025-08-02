@@ -149,14 +149,56 @@ class TestVarious(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
         cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
+        cls.ws_id, name = _make_ws(cls.team_id)
+        cls.doc_id = _make_doc(cls.ws_id)
 
-    def test_raise_error(self):
+    def test_raise_error_before_call(self):
+        # an example where Pygrister will fail even before posting the call
+        with self.assertRaises(OSError):
+            self.g.upload_attachments(['bogus_upload_file'], 
+                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsNone(self.g.apicaller.request)
+        self.assertTrue(self.g.ok) # this is by design, see note in Apicall.ok
+
+    def test_raise_error_no_response(self):
+        # an example where Grist won't return the call
+        # (this is the same scenario as test_request_options)
+        self.g.update_config({'GRIST_SERVER_PROTOCOL': 'http://', 
+                              'GRIST_TEAM_SITE': '10', 
+                              'GRIST_API_SERVER': '255.255.1', 
+                              # if we are self-managed instead
+                              'GRIST_SELF_MANAGED_HOME': 'http://10.255.255.1'})
+        self.g.apicaller.request_options = {'timeout': 1}
+        with self.assertRaises(ConnectTimeout):
+            self.g.see_team()
+        self.assertIsNone(self.g.apicaller.response)
+        self.assertTrue(self.g.apicaller.ok) # this is by design, see note in Apicall.ok
+
+    def test_raise_error_http401(self):
+        # an example where Grist won't return regular json: see that we don't crash 
+        self.g.update_config({'GRIST_API_KEY': 'bogus_api_key'})
         with self.assertRaises(HTTPError):
-            self.g.list_workspaces('_bogus_team_id_')
+            self.g.see_team()
+        self.assertEqual(self.g.apicaller.response.status_code, 401)
         self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
-        st, res = self.g.list_workspaces('_bogus_team_id_')
-        self.assertGreaterEqual(st, 300)
-
+        st, res = self.g.see_team()
+        self.assertEqual(st, 401)
+    
+    def test_raise_error_http404(self):
+        # an example where Grist will return a more polite json object
+        with self.assertRaises(HTTPError):
+            self.g.see_team('bogus_team_id')
+        self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
+        st, res = self.g.see_team('bogus_team_id')
+        self.assertEqual(st, 404)
+    
+    def test_dry_run(self):
+        self.g.apicaller.dry_run = True
+        st, res = self.g.see_team()
+        self.assertEqual(st, 200)
+        self.assertTrue(self.g.ok)
+        self.assertIsNone(self.g.apicaller.response)
+        
     def test_ok(self):
         try:
             st, res = self.g.see_workspace(1) # hopefully, not a valid ws id!
@@ -216,7 +258,7 @@ class TestVarious(BaseTestPyGrister):
         # POST
         st, ws_id = self.g.add_workspace(name, self.team_id)
         self.assertEqual(st, 200)
-        self.assertIn('Cookie', self.g.apicaller.req_headers) # the session thing is working
+        self.assertIn('Cookie', self.g.apicaller.request.headers) # the session thing is working
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=ws_id)
         self.assertEqual(st, 200)
