@@ -20,10 +20,23 @@ class ApiCaller:
         if request_options:
             self.request_options = request_options
         self.apicalls: int = 0        #: total number of API calls
-        self.ok: bool = True          #: if an HTTPError occurred
         self.dry_run: bool = False    #: prepare, do not post request
         self.request: PreparedRequest|None = None #: last request posted
         self.response: Response|None = None       #: last response retrieved
+    
+    @property
+    def ok(self) -> bool:
+        """``False`` if a HTTP error occurred in the response.
+        
+        If no response was retrieved, ``ok`` will be ``True`` by default.
+        """
+        try:
+            return self.response.ok # type: ignore
+        except AttributeError:
+            # why? mostly because we want a "dry run" to always be considered 
+            # successful; also because Requests' "ok" is only about the 
+            # status code, and we don't want to overload its meaning 
+            return True
 
     def open_session(self) -> None:
         """Open a Requests sessions for all subsequent Api calls."""
@@ -118,12 +131,10 @@ class ApiCaller:
         session = self.session or Session()
         self.request = session.prepare_request(r)
         if self.dry_run: # we want to fake an ok call as far as possibile
-            self.ok = True
             return 200, {'No Content': 'Pygrister is running dry!'}
         # then, we post the prepared request
         self.response = session.send(self.request, **req_opts)
         self.apicalls += 1
-        self.ok = self.response.ok
         if self.configurator.raise_option:
             self.response.raise_for_status()
         if filename and self.ok:
@@ -132,9 +143,11 @@ class ApiCaller:
                     f.write(chunk)
             self.response.close()
             return self.response.status_code, None
-        return (self.response.status_code, 
-                self.response.json() if self.response.content else None)
-
+        try:
+            return self.response.status_code, self.response.json() 
+        except JSONDecodeError:
+            return self.response.status_code, self.response.text
+        
     def inspect(self, sep: str = '\n', max_content: int = 1000) -> str:
         """Collect info on the last api call that was requested (and possibly 
         responded to) by the server. 

@@ -139,20 +139,21 @@ class GristApi:
     def open_session(self) -> None:
         """Open a Requests sessions for all subsequent Api calls.
         
-        A shortcut for ``self.caller.open_session()``."""
+        A shortcut for ``self.apicaller.open_session()``."""
         return self.apicaller.open_session()
     
     def close_session(self) -> None:
         """Close an open session, if any.
         
-        A shortcut for ``self.caller.close_session()``."""
+        A shortcut for ``self.apicaller.close_session()``."""
         return self.apicaller.close_session()
     
     @property
     def ok(self) -> bool:
-        """Check if an HTTPError occurred. 
-
-        A shortcut for ``self.caller.ok``."""
+        """``False`` if a HTTP error occurred in the response.
+        
+        If no response was retrieved, ``ok`` will be ``True`` by default.
+        A shortcut for ``self.apicaller.ok``."""
         return self.apicaller.ok
 
     def inspect(self, sep: str = '\n', max_content: int = 1000) -> str:
