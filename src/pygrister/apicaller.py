@@ -140,7 +140,7 @@ class ApiCaller:
         responded to) by the server. 
 
         Use ``sep`` to set a custom separator between elements, 
-        and ``max_content`` to limit the response content size. 
+        and ``max_content`` to limit request/response body's content size. 
 
         Intended for debug: add a ``print(self.inspect())`` right after the 
         call to inspect. Works even if the server returned a "bad" status 
@@ -159,7 +159,7 @@ class ApiCaller:
         key = apikey2output(key)
         headers['Authorization'] = f'{prot} {key}'
         txt += f'->Req. headers: {headers}{sep}'
-        txt += f'->Req. body: {req.body}{sep}'
+        txt += f'->Req. body: {str(req.body)[:max_content]}{sep}'
         if res is None:
             txt += f'->Resp.: no response data{sep}{cfg}'
             return txt
