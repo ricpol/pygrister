@@ -1106,6 +1106,8 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments'
         headers = dict()
+        self.apicaller.request = None  # we must reset here, in case opening 
+        self.apicaller.response = None # files throws an exception now:
         fileobjs = [('upload', (str(f), open(f, 'rb'))) for f in filenames]
         try:
             st, res = self.apicaller.apicall(url, 'POST', headers=headers, 
@@ -1128,6 +1130,8 @@ class GristApi:
         headers = {'Accept': 'application/json'
                    #'Content-Type': 'multipart/form-data', # do not use,
                   }   # or Requests won't add boundaries and Grist will complain
+        self.apicaller.request = None  # we must reset here, in case opening 
+        self.apicaller.response = None # files throws an exception now:
         with open(filename, 'rb') as f:
             fileobj = [('file', (str(filename), f, 'application/x-tar'))]
             st, res = self.apicaller.apicall(url, method='POST', headers=headers, 

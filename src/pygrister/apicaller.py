@@ -98,7 +98,7 @@ class ApiCaller:
         """The engine responsible for actually calling the Apis."""
         # TODO: in upload mode, "upload_files" must be ready for the call, 
         # i.e. opening/closing files is handled by the calling function
-        # not sure if it's the best option, but for now...
+        # this is ugly but I can't see an obvious way to move that code here
         self.request: PreparedRequest|None = None
         self.response: Response|None = None
         if headers is None:
