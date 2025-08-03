@@ -158,7 +158,7 @@ class TestVarious(BaseTestPyGrister):
             self.g.upload_attachments(['bogus_upload_file'], 
                                       doc_id=self.doc_id, team_id=self.team_id)
         self.assertIsNone(self.g.apicaller.request)
-        self.assertTrue(self.g.ok) # this is by design, see note in Apicall.ok
+        self.assertFalse(self.g.ok) # this is by design, see note in Apicall.ok
 
     def test_raise_error_no_response(self):
         # an example where Grist won't return the call
@@ -172,7 +172,7 @@ class TestVarious(BaseTestPyGrister):
         with self.assertRaises(ConnectTimeout):
             self.g.see_team()
         self.assertIsNone(self.g.apicaller.response)
-        self.assertTrue(self.g.apicaller.ok) # this is by design, see note in Apicall.ok
+        self.assertFalse(self.g.apicaller.ok) # this is by design, see note in Apicall.ok
 
     def test_raise_error_http401(self):
         # an example where Grist won't return regular json: see that we don't crash 
@@ -195,10 +195,10 @@ class TestVarious(BaseTestPyGrister):
     def test_dry_run(self):
         self.g.apicaller.dry_run = True
         st, res = self.g.see_team()
-        self.assertEqual(st, 200)
-        self.assertTrue(self.g.ok)
+        self.assertEqual(st, 418)
+        self.assertFalse(self.g.ok)
         self.assertIsNone(self.g.apicaller.response)
-        
+
     def test_ok(self):
         try:
             st, res = self.g.see_workspace(1) # hopefully, not a valid ws id!
@@ -357,8 +357,6 @@ class TestUsersScim(BaseTestPyGrister):
         # now delete the user
         st, res = self.g.delete_user(user_id)
         self.assertEqual(st, 204)
-        # if the following fails, it means Grist fixed the api,  
-        # which now returns no response body at all
         self.assertIsNone(res)
         # now double-check that the user is gone
         self.g.update_config({'GRIST_RAISE_ERROR': 'N'})

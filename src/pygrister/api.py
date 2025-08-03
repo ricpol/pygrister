@@ -152,7 +152,7 @@ class GristApi:
     def ok(self) -> bool:
         """``False`` if a HTTP error occurred in the response.
         
-        If no response was retrieved, ``ok`` will be ``True`` by default.
+        If no response was retrieved, ``ok`` will be ``False`` by default.
         A shortcut for ``self.apicaller.ok``."""
         return self.apicaller.ok
 
@@ -321,8 +321,11 @@ class GristApi:
         If scim is not enabled, will return Http 501.
         """
         url = f'{self.configurator.server}/scim/v2/Users/{user_id}'
-        return self.apicaller.apicall(url, 'DELETE', 
+        st, res = self.apicaller.apicall(url, 'DELETE', 
                     headers={'Content-Type': 'application/scim+json'})
+        if self.ok:
+            res = None
+        return st, res
 
     @check_safemode
     def delete_myself(self, user: str, doc_id: str = '', 

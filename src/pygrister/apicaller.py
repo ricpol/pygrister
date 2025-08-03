@@ -27,15 +27,15 @@ class ApiCaller:
     def ok(self) -> bool:
         """``False`` if a HTTP error occurred in the response.
         
-        If no response was retrieved, ``ok`` will be ``True`` by default.
+        Also, if no response was retrieved, will be ``False`` by default.
         """
         try:
             return self.response.ok # type: ignore
         except AttributeError:
-            # why? mostly because we want a "dry run" to always be considered 
-            # successful; also because Requests' "ok" is only about the 
-            # status code, and we don't want to overload its meaning 
-            return True
+            # this is debatable - Requests' "ok" only means "HTTPError"; 
+            # we are extending its semantics also to every RequestException
+            # where the response was not even retrieved
+            return False
 
     def open_session(self) -> None:
         """Open a Requests sessions for all subsequent Api calls."""
@@ -53,7 +53,8 @@ class ApiCaller:
         """Return the response content as (unicode) parsable json."""
         if self.response is not None: 
             try:
-                return self.response.text
+                # "or 'null'" because at least one Grist api returns '' instead
+                return self.response.text or 'null' 
             except RuntimeError as e: # from Requests, if we just downloaded a file
                 return f'"RuntimeError: {e}"' #TODO maybe just return 'null' ?
         return 'null' # hopefully still valid json!
@@ -62,7 +63,21 @@ class ApiCaller:
                 params: dict|None = None, json: dict|None = None, 
                 filename: Path|None = None, 
                 upload_files: list|None = None) -> Apiresp:
-        """The engine responsible for actually calling the Apis."""
+        """The engine responsible for actually calling the Apis. 
+        
+        Return a ``Apiresp``-type tuple (status_code, resp_content) 
+        where "resp_content" is a Json-decoded Python object 
+        (usually a ``dict``, but that depends on the the specific Grist Api 
+        return value and status code). 
+
+        May throw any ``requests.RequestException`` that is not HTTP- or 
+        Json- related, if a server problem occurred.
+        Will throw ``requests.HTTPError`` if the status code is >=300 
+        *and* the config key ``GRIST_RAISE_ERROR`` is set (default).
+        Should never throw ``requests.JsonDecodeError``. 
+
+        The ``ok`` property will be ``False`` if errors occurred. 
+        """
         # TODO: in upload mode, "upload_files" must be ready for the call, 
         # i.e. opening/closing files is handled by the calling function
         # this is ugly but I can't see an obvious way to move that code here
@@ -84,8 +99,8 @@ class ApiCaller:
                     json=json, files=upload_files)
         session = self.session or Session()
         self.request = session.prepare_request(r)
-        if self.dry_run: # we want to fake an ok call as far as possibile
-            return 200, {'No Content': 'Pygrister is running dry!'}
+        if self.dry_run: # let's assume a dry run equals to HTTPError...
+            return 418, {'No Content': 'Pygrister teapot is running dry!'}
         # then, we post the prepared request
         self.response = session.send(self.request, **req_opts)
         self.apicalls += 1
