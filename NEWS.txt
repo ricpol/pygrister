@@ -7,7 +7,46 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 - The new Gry cli tool is here! Basically, you can try "gry --help" in 
 your shell and figure it out. But there is also an online doc page, of course. 
 
-Changed APIs:
+- The whole API call engine has been moved to a separate module, and rewritten. 
+  This, in turn, has generated a few API changes in Pygrister (sorry!) but 
+  everything should be a little more reliable now. 
+  Basically, Pygrister high-level, regular usage (ie for Grist API calls) 
+  won't change, but low-level interfaces may be different.
+
+New and changed APIs:
+  - GristApi.apicall (ie, the engine that never get called directly in 
+    everyday use) has been replaced by the new apicaller.ApiCaller class, 
+    which also allows extension/customisation of the API engine. 
+  - New "custom_apicaller" optional argument in GristApi.__init__ to plug in 
+    custom API engines. The API engine instance is accessible as 
+    GristApi.apicaller. 
+  - As a consequence, GristApi.apicall is now GristApi.apicaller.apicall.
+  - Also, GristApi.request_options is now GristApi.apicaller.request_options. 
+  - The "request_options" argument in GristApi.__init__ is gone. To specify 
+    additional options, just set GristApi.apicaller.request_options at runtime. 
+  - All "inspect attributes" GristApi.req_* and GristApi.resp_* are gone. 
+    Instead, we expose the underlying Requests low-level objects directly, as 
+    GristApi.request and GristApi.response for you to inspect. If a response 
+    could not be retrieved, the request object will be available anyway. 
+    This should also fix issues #4 and #7.
+  - GristApi.inspect is still there, and will collect and print the most relevant 
+    info from the Requests objects. 
+  - MAXSAVEDRESP and SAVEBINARYRESP globals are gone. Instead, GristApi.inspect 
+    grows a "max_content" argument to limit the request/response body size. 
+  - GristApi.inspect has a new "sep" argument to set a custom separator 
+    between the elements (eg to allow one-liner dumps for logs etc.)
+  - The GristApi.ok attribute has changed a little its meaning: now it will be 
+    set to "False" also when no response could be retrieved at all. 
+  - A new ApiCaller.response_as_json utility has been added, which puts some 
+    effort into returning a json-compliant string from *all* API calls, 
+    overcoming the occasional Grist quirk, and even if the call went wrong. 
+    This is never actually used by Pygrister (which returns complex Python 
+    objects anyway), but it can be useful for client code: in the Gry tool, 
+    this is how the "-vv" option works now, thus fixing issue #10. 
+  - A new ApiCaller.dry_run mode has been introduced, where you go as far as 
+    to prepare the request, but never actually post it. 
+
+Other, smaller API changes:
   - we are now consistently using pathlib.Path objects instead of os.path 
     strings to express files and paths. This may help client programs down 
     the line, but it's really just a cosmetic change for Pygrister itself. 
