@@ -235,14 +235,19 @@ Output type control.
       >>> print(result)
 
   - pass the option twice (``-vv``, level 2) to output the original Grist API 
-    response: note that this is a *json object*. In other words, ::
+    response: note that this is a *json string*. In other words, ::
 
       % gry doc see -vv
 
-    is the same as ::
+    is *almost* the same as inspecting the content of the original Requests 
+    response::
 
       >>> st, res = grist.see_doc()
-      >>> print(grist.resp_content)
+      >>> print(grist.apicaller.response.text)
+
+    (Except, it is really ``print(grist.apicaller.response_as_json()``, as 
+    Gry has a dedicated function for this purpose, which puts a little extra 
+    effort into returning valid json in some corner cases.)
 
     Retrieving the original json response may be useful for later parsing and 
     analysis:: 
@@ -255,7 +260,6 @@ Output type control.
 
     % gry doc see -d bogus_doc
     % gry doc see -d bogus_doc -v
-    % gry doc see -d bogus_doc -vv
 
   will produce the same output.
 
