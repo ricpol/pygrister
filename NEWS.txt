@@ -45,6 +45,8 @@ New and changed APIs:
     this is how the "-vv" option works now, thus fixing issue #10. 
   - A new ApiCaller.dry_run mode has been introduced, where you go as far as 
     to prepare the request, but never actually post it. 
+  - The old "safe mode" works as before, but now runs in dry mode: it will 
+    still raise an exception, but also leave a request to inspect afterwards. 
 
 Other, smaller API changes:
   - we are now consistently using pathlib.Path objects instead of os.path 

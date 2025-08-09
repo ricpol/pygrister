@@ -94,7 +94,7 @@ import time
 from datetime import datetime
 import json
 import unittest
-from requests import HTTPError, ConnectTimeout
+from requests import HTTPError, ConnectTimeout, PreparedRequest
 
 from pygrister import api
 from pygrister import config
@@ -198,6 +198,15 @@ class TestVarious(BaseTestPyGrister):
         self.assertEqual(st, 418)
         self.assertFalse(self.g.ok)
         self.assertIsNone(self.g.apicaller.response)
+    
+    def test_safemode(self):
+        self.g.update_config({'GRIST_SAFEMODE': 'Y'})
+        with self.assertRaises(GristApiInSafeMode):
+            self.g.add_workspace('bogus')
+        # safe mode leverages on dry run but should clean up after
+        self.assertFalse(self.g.apicaller.dry_run)
+        self.assertIsNone(self.g.apicaller.response)
+        self.assertIsInstance(self.g.apicaller.request, PreparedRequest)
 
     def test_ok(self):
         try:

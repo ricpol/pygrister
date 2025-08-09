@@ -2,16 +2,6 @@ Various and sundry.
 ===================
 
 
-Safe mode.
-----------
-
-If you set the ``GRIST_SAFEMODE`` configuration key to ``Y``, all API call 
-functions attempting a write operation will be blocked: Pygrister will throw 
-a ``GristApiInSafeMode`` exception instead. 
-
-Please note that the two ``run_sql*`` functions are still allowed in safe mode, 
-because the underlying API only accepts ``SELECT`` statements anyway. 
-
 The API call engine.
 --------------------
 
@@ -172,6 +162,31 @@ so that you will know that this is not serious business after all ::
     >>> grist.apicaller.dry_run = True
     >>> grist.see_team()
     (418, {'No Content': 'Pygrister teapot is running dry!'})
+
+Safe mode.
+----------
+
+If you set the ``GRIST_SAFEMODE`` configuration key to ``Y``, all API call 
+functions attempting a write operation will be blocked: Pygrister will throw 
+a ``GristApiInSafeMode`` exception instead. 
+
+This is meant as a higher-level block than the "dry run" mentioned above. 
+However, safe mode actually works by temporary switching to dry run mode, 
+so that, if you catch the exception, you can still inspect the prepared 
+request afterwards::
+
+    >>> from pygrister.exceptions import GristApiInSafeMode
+    >>> grist = GristApi({'GRIST_SAFEMODE': 'Y'})
+    >>> try: 
+    ...     grist.add_workspace('bogus')
+    ... except GristApiInSafeMode:
+    ...     pass
+    ...
+    >>> grist.apicaller.request
+    <PreparedRequest [POST]>
+
+Please note that the two ``run_sql*`` functions are still allowed in safe mode, 
+because the underlying API only accepts ``SELECT`` statements anyway. 
 
 Additional arguments for the request.
 -------------------------------------

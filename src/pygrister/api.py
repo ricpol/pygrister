@@ -56,10 +56,14 @@ def check_safemode(funct):
     """If Pygrister is in safemode, no writing API call will pass through."""
     @functools.wraps(funct)
     def wrapper(self, *a, **k):
-        cf = self.configurator
-        if cf.safemode:
-            msg = 'GristApi is in safe mode: you cannot write to db. '
-            msg += f'Configuration:\n{cf.config2output(cf.config, True)}'
+        if self.configurator.safemode:
+            dry_run_status = self.apicaller.dry_run
+            self.apicaller.dry_run = True
+            try:
+                _ = funct(self, *a, **k)
+            finally:
+                self.apicaller.dry_run = dry_run_status
+            msg = 'Pygrister is in safe mode: you cannot write to db.'
             raise GristApiInSafeMode(msg)
         return funct(self, *a, **k)
     return wrapper
