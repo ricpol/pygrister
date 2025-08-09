@@ -93,6 +93,8 @@ class _CliConfigurator(Configurator):
     @staticmethod
     def get_config() -> dict[str, str]:
         config = dict(PYGRISTER_CONFIG)
+        # default value for an additional config key
+        config.update({'GRIST_GRY_TIMEOUT': '60'})
         pth = Path('~/.gristapi/config.json').expanduser()
         if pth.is_file():
             with open(pth, 'r', encoding='utf8') as f:
@@ -122,7 +124,8 @@ _c = _CliConfigurator()
 grist_api = GristApi(custom_configurator = _c)
 grist_api.in_converter = cli_in_converters
 grist_api.out_converter = cli_out_converters
-grist_api.apicaller.request_options = {'timeout': 10}
+timeout = int(_c.config['GRIST_GRY_TIMEOUT'])
+grist_api.apicaller.request_options = {'timeout': timeout}
 # the global Rich console where everything should be printed
 cli_console = Console()
 

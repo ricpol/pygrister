@@ -183,6 +183,16 @@ In everyday use, however, you probably won't like typing in the document/team ID
 all the times: just set up the configuration file, and/or an env variable in your 
 shell.
 
+Differences with regular Pygrister configuration.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Gry will accept an additional ``GRIST_GRY_TIMEOUT`` configuration key to set 
+a timeout limit for the api call. This key is *optional*: if you don't provide 
+a value, default will be 60 seconds. 
+
+Finally, you cannot set ``GRIST_RAISE_ERROR`` and ``GRIST_SAFEMODE`` 
+in Gry: both values will default to ``N``.
+
 Common options.
 ---------------
 
