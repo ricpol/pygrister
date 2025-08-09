@@ -558,7 +558,11 @@ def list_orgs(quiet: Annotated[bool, _quiet_opt] = False,
     _exit_if_error(st, res, quiet, verbose, inspect)
     content = Table('id', 'name', 'owner')
     for org in res:
-        content.add_row(str(org['id']), org['name'], org['owner']['name'])
+        try:
+            owner = org['owner']['name']
+        except TypeError:
+            owner = 'Null'
+        content.add_row(str(org['id']), org['name'], owner)
     _print_output(content, res, quiet, verbose, inspect)
 
 @org_app.command('see')
@@ -573,7 +577,11 @@ def see_org(team_id: Annotated[str, _team_id_opt] = '',
     content.add_row('id', str(res['id']))
     content.add_row('name', res['name'])
     content.add_row('domain', res['domain'])
-    content.add_row('owner', f"{res['owner']['id']} - {res['owner']['name']}")
+    try:
+        row = f"{res['owner']['id']} - {res['owner']['name']}"
+    except TypeError:
+        row = 'None'
+    content.add_row('owner', row)
     _print_output(content, res, quiet, verbose, inspect)
 
 @org_app.command('update')
@@ -645,9 +653,16 @@ def list_ws(team_id: Annotated[str, _team_id_opt] = '',
     _exit_if_error(st, res, quiet, verbose, inspect)
     content = Table('id', 'name', 'owner', 'email', 'docs')
     for ws in res:
+        try:
+            owner = str(ws['owner']['id'])
+        except TypeError:
+            owner = 'Null'
+        try:
+            email = ws['owner']['email']
+        except TypeError:
+            email = ''
         numdocs = len(ws.get('docs', []))
-        content.add_row(str(ws['id']), ws['name'], str(ws['owner']['id']), 
-                        ws['owner']['email'], str(numdocs))
+        content.add_row(str(ws['id']), ws['name'], owner, email, str(numdocs))
     _print_output(content, res, quiet, verbose, inspect)
 
 @ws_app.command('see')
@@ -661,7 +676,11 @@ def see_ws(ws_id: Annotated[int, _ws_id_opt] = 0,
     content = Table('key', 'value')
     content.add_row('id', str(res['id']))
     content.add_row('name', res['name'])
-    content.add_row('team', f"{res['org']['id']} - {res['org']['name']}")
+    try:
+        row = f"{res['org']['id']} - {res['org']['name']}"
+    except TypeError:
+        row = 'Null'
+    content.add_row('team', row)
     content.add_section()
     for doc in res.get('docs', []):
         content.add_row('doc', f"{doc['id']} - {doc['name']}")
