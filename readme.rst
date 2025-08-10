@@ -70,8 +70,6 @@ Basic usage goes as follows::
     >>> gry.list_cols(table_id='People')  # "gry" is now a python object
     >>> exit()  # and we are back to the shell
 
-*Note*: Gry is not yet distributed on PyPI - to try it out, you must install 
-Pygrister from this GitHub repo (see below). 
 
 Python version required.
 ------------------------
