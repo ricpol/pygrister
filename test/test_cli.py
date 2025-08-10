@@ -46,20 +46,20 @@ default_config = {
 HERE = Path(__file__).absolute().parent
 with open(HERE / 'config_test.json') as f:
     test_config = json.loads(f.read())
-test_config.update(default_config)
+default_config.update(test_config)
 # let's create a ws and a doc with pygrister first
-g = GristApi(test_config)
+g = GristApi(default_config)
 now = str(time.time_ns())
 st, ws_id = g.add_workspace('ws'+now)
 assert st == 200, "Can't create test workspace"
 st, doc_id = g.add_doc('doc'+now, ws_id=ws_id)
 assert st == 200, "Can't create test document"
 # and update config accordingly
-test_config["GRIST_WORKSPACE_ID"] = str(ws_id)
-test_config["GRIST_DOC_ID"] = doc_id
+default_config["GRIST_WORKSPACE_ID"] = str(ws_id)
+default_config["GRIST_DOC_ID"] = doc_id
 # since we can't directly instantiate the custom GristApi used by Gry, 
 # we set configuration as env variables, which Gry will pick up at startup...
-for k, v in test_config.items():
+for k, v in default_config.items():
     os.environ[k] = v 
 # ...and only now we can safely import the cli module
 from pygrister.cli import app
@@ -201,9 +201,10 @@ class TestWorkspaces(BaseTestCli):
                                        '5', # should be the "me" user
                                        '-a', 'bogus_access'])
         self.assertEqual(res.exit_code, 2) # Typer should fail
-        res = self.runner.invoke(app, ['ws', 'user-access', '5', 
-                                       '-a', 'editors', '-w', '0'])
-        self.assertEqual(res.exit_code, 3) # Grist should fail
+        #TODO this won't work in SaaS Grist bc there's no user #5...
+        #res = self.runner.invoke(app, ['ws', 'user-access', '5', 
+        #                               '-a', 'editors', '-w', '0'])
+        #self.assertEqual(res.exit_code, 3) # Grist should fail
 
 class TestDoc(BaseTestCli):
     def test_doc_see(self):
@@ -217,7 +218,7 @@ class TestDoc(BaseTestCli):
     
     def test_update_doc(self):
         res = self.runner.invoke(app, ['doc', 'update', 'newname', 
-                                       '-t', 'bogus_team'])
+                                       '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)
     
     def test_move_doc(self):
