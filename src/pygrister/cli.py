@@ -165,7 +165,7 @@ def _print_done_or_exit(st: int, res: Any, quiet: bool,
         cli_console.print(ERRMSG, 'Status:', st, res)
         raise typer.Exit(BADCALL)
 
-def _print_output(content: Any, res: int, quiet: bool, 
+def _print_output(content: Any, res: Any, quiet: bool, 
                   verbose: int, inspect: bool) -> None:
     if inspect and not quiet:
         cli_console.print(grist_api.inspect())
@@ -180,7 +180,7 @@ def _print_output(content: Any, res: int, quiet: bool,
         else: # the original Grist api response (json)
             cli_console.print(grist_api.apicaller.response_as_json())
 
-def _print_done_and_id(content: Any, res: int, quiet: bool, 
+def _print_done_and_id(content: Any, res: Any, quiet: bool, 
                        verbose: int, inspect: bool) -> None:
     if not quiet:
         if inspect:
