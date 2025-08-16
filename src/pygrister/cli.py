@@ -70,6 +70,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from pygrister import __version__
 from pygrister.api import GristApi
 from pygrister.config import Configurator, apikey2output, PYGRISTER_CONFIG
 try:
@@ -331,6 +332,13 @@ app.add_typer(rec_app, name='rec', no_args_is_help=True)
 app.add_typer(att_app, name='att', no_args_is_help=True)
 app.add_typer(hook_app, name='hook', no_args_is_help=True)
 app.add_typer(scim_app, name='scim', no_args_is_help=True)
+
+# gry version
+# ----------------------------------------------------------------------
+@app.command('version')
+def gryversion() -> None:
+    """Prints Pygrister/Gry version"""
+    cli_console.print(__version__)
 
 # gry test -> a quick configuration check
 # ----------------------------------------------------------------------

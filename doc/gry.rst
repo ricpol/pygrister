@@ -76,7 +76,8 @@ The only commands without sub-commands are
 - ``gry test`` performs a few sanity checks on your Grist setup, 
 - ``gry conf`` prints your current Gry configuration,
 - ``gry python`` opens a Grist-aware Python shell, 
-- ``gry sql`` allows you to enter an Sql query directly.
+- ``gry sql`` allows you to enter an Sql query directly, 
+- ``gry version`` outputs Pygrister/Gry version.
 
 Interactive prompt.
 ^^^^^^^^^^^^^^^^^^^
