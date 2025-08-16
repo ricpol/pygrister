@@ -1,3 +1,4 @@
+import json as modjson
 from pathlib import Path
 from typing import Any
 from requests import (Request, PreparedRequest, Response, 
@@ -54,9 +55,16 @@ class ApiCaller:
         if self.response is not None: 
             try:
                 # "or 'null'" because at least one Grist api returns '' instead
-                return self.response.text or 'null' 
+                resp = self.response.text or 'null' 
             except RuntimeError as e: # from Requests, if we just downloaded a file
-                return f'"RuntimeError: {e}"' #TODO maybe just return 'null' ?
+                return modjson.dumps(f'RuntimeError: {e}') #TODO just return 'null'?
+            # unfortunately Grist may return a non-json string!
+            # eg., the case of Http 401 "invalid API key" - maybe others too
+            try:
+                _ = modjson.loads(resp)
+            except modjson.JSONDecodeError:
+                resp = modjson.dumps(resp)
+            return resp
         return 'null' # hopefully still valid json!
 
     def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
