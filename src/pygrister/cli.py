@@ -69,6 +69,7 @@ from typing_extensions import Annotated
 import typer
 from rich.console import Console
 from rich.table import Table
+from requests import RequestException
 
 from pygrister import __version__
 from pygrister.api import GristApi
@@ -345,8 +346,43 @@ def gryversion() -> None:
 @app.command('test')
 def grytest() -> None:
     """Run a quick configuration test for your Gry console"""
-    #TODO need a fix for issue #7 first... 
-    cli_console.print('Sorry! Not implemented yet.')
+    tests = {
+        'connection': 'skipped', 
+        'scim enabled': 'skipped',
+        'default ws': 'skipped',
+        'default team': 'skipped', 
+        'default doc': 'skipped', 
+        'store type': 'skipped',
+        }
+    abort = False
+    content = Table('test', 'result')
+    try:
+        st, res = grist_api.see_team()
+    except RequestException as e:
+        tests['connection'] = str(e)
+        abort = True
+    if not abort and st == 401: # invalid api key
+        tests['connection'] = str(res)
+        abort = True # no sense in going on
+    if not abort:
+        tests['connection'] = 'ok'
+        if st == 200:
+            tests['default team'] = 'ok'
+        else:
+            tests['default team'] = str(res)
+        st, res = grist_api.see_myself()
+        tests['scim enabled'] = 'yes' if st == 200 else str(res)
+        st, res = grist_api.see_workspace()
+        tests['default ws'] = 'ok' if st == 200 else str(res)
+        if tests['default team'] == 'ok':
+            st, res = grist_api.see_doc()
+            tests['default doc'] = 'ok' if st == 200 else str(res)
+        if tests['default doc'] == 'ok':
+            st, res = grist_api.see_attachment_store()
+            tests['store type'] = str(res)
+    for key, value in tests.items():
+        content.add_row(key, value)
+    _print_output(content, '', False, 0, False)
 
 # gry conf -> print the current Grist configuration
 # ----------------------------------------------------------------------

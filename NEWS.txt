@@ -5,6 +5,7 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 --------------------------------------------------------------
 
 - new "gry version" command outputs Pygrister/Gry version.
+- new "gry test" command performs some quick config/connnection tests.
 
 v0.8.0, 2025.08.10
 ------------------
