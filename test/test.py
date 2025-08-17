@@ -94,7 +94,7 @@ import time
 from datetime import datetime
 import json
 import unittest
-from requests import HTTPError, ConnectTimeout, PreparedRequest
+from requests import RequestException, HTTPError, ConnectTimeout, PreparedRequest
 
 from pygrister import api
 from pygrister import config
@@ -152,46 +152,6 @@ class TestVarious(BaseTestPyGrister):
         cls.ws_id, name = _make_ws(cls.team_id)
         cls.doc_id = _make_doc(cls.ws_id)
 
-    def test_raise_error_before_call(self):
-        # an example where Pygrister will fail even before posting the call
-        with self.assertRaises(OSError):
-            self.g.upload_attachments(['bogus_upload_file'], 
-                                      doc_id=self.doc_id, team_id=self.team_id)
-        self.assertIsNone(self.g.apicaller.request)
-        self.assertFalse(self.g.ok) # this is by design, see note in Apicall.ok
-
-    def test_raise_error_no_response(self):
-        # an example where Grist won't return the call
-        # (this is the same scenario as test_request_options)
-        self.g.update_config({'GRIST_SERVER_PROTOCOL': 'http://', 
-                              'GRIST_TEAM_SITE': '10', 
-                              'GRIST_API_SERVER': '255.255.1', 
-                              # if we are self-managed instead
-                              'GRIST_SELF_MANAGED_HOME': 'http://10.255.255.1'})
-        self.g.apicaller.request_options = {'timeout': 1}
-        with self.assertRaises(ConnectTimeout):
-            self.g.see_team()
-        self.assertIsNone(self.g.apicaller.response)
-        self.assertFalse(self.g.apicaller.ok) # this is by design, see note in Apicall.ok
-
-    def test_raise_error_http401(self):
-        # an example where Grist won't return regular json: see that we don't crash 
-        self.g.update_config({'GRIST_API_KEY': 'bogus_api_key'})
-        with self.assertRaises(HTTPError):
-            self.g.see_team()
-        self.assertEqual(self.g.apicaller.response.status_code, 401)
-        self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
-        st, res = self.g.see_team()
-        self.assertEqual(st, 401)
-    
-    def test_raise_error_http404(self):
-        # an example where Grist will return a more polite json object
-        with self.assertRaises(HTTPError):
-            self.g.see_team('bogus_team_id')
-        self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
-        st, res = self.g.see_team('bogus_team_id')
-        self.assertEqual(st, 404)
-    
     def test_dry_run(self):
         self.g.apicaller.dry_run = True
         st, res = self.g.see_team()
@@ -287,6 +247,107 @@ class TestVarious(BaseTestPyGrister):
         st, res = self.g.delete_doc(doc_id)
         self.assertEqual(st, 200)
         self.g.close_session()
+
+class TestErrorContitions(BaseTestPyGrister):
+    @classmethod
+    def setUpClass(cls):
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
+        cls.ws_id, name = _make_ws(cls.team_id)
+        cls.doc_id = _make_doc(cls.ws_id)
+        
+    def test_raise_error_before_call(self):
+        # an example where Pygrister will fail even before posting the call
+        with self.assertRaises(OSError):
+            self.g.upload_attachments(['bogus_upload_file'], 
+                                      doc_id=self.doc_id, team_id=self.team_id)
+        self.assertIsNone(self.g.apicaller.request)
+        self.assertFalse(self.g.ok) # this is by design, see note in Apicall.ok
+
+    def test_raise_error_bogus_url(self):
+        # unresolvable url 
+        self.g.update_config({'GRIST_SELF_MANAGED':'N', 
+                              'GRIST_API_SERVER': 'bogus_server.com'})
+        # note: GRIST_RAISE_ERROR setting won't make any difference here
+        with self.assertRaises(RequestException):
+            self.g.see_team()
+        self.assertIsNone(self.g.apicaller.response)
+        self.assertFalse(self.g.ok) # this is by design, see note in Apicall.ok
+    
+    def test_raise_error_no_server(self):
+        # no Grist server there: this should be a simple 404...
+        self.g.update_config({'GRIST_SELF_MANAGED':'N', 
+                              'GRIST_TEAM_SITE':'www', 
+                              'GRIST_API_SERVER':'example.com'})
+        with self.assertRaises(HTTPError):
+            self.g.see_team()
+        self.g.update_config({'GRIST_RAISE_ERROR':'N'})
+        st, res = self.g.see_team()
+        self.assertEqual(st, 404)
+    
+    def test_raise_error_no_response(self):
+        # an example where Grist won't return the call
+        # (this is the same scenario as test_request_options)
+        self.g.update_config({'GRIST_SERVER_PROTOCOL': 'http://', 
+                              'GRIST_TEAM_SITE': '10', 
+                              'GRIST_API_SERVER': '255.255.1', 
+                              # if we are self-managed instead
+                              'GRIST_SELF_MANAGED_HOME': 'http://10.255.255.1'})
+        self.g.apicaller.request_options = {'timeout': 1}
+        with self.assertRaises(ConnectTimeout):
+            self.g.see_team()
+        self.assertIsNone(self.g.apicaller.response)
+        self.assertFalse(self.g.apicaller.ok) # this is by design, see note in Apicall.ok
+
+    def test_raise_error_http401(self):
+        # invalid api key will return http 401
+        self.g.update_config({'GRIST_API_KEY': 'bogus_api_key'})
+        with self.assertRaises(HTTPError):
+            self.g.see_team()
+        self.assertEqual(self.g.apicaller.response.status_code, 401)
+        self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
+        st, res = self.g.see_team()
+        self.assertEqual(st, 401)
+        # here Grist won't return regular json: we can convert though
+        try:
+            json.loads(self.g.apicaller.response_as_json())
+        except json.JSONDecodeError:
+            self.fail('Failed to convert a Http401 response to json.')
+
+    def test_raise_error_http404(self):
+        # bogus teams and docs result in http 404
+        with self.assertRaises(HTTPError):
+            self.g.see_team('bogus_team_id')
+        with self.assertRaises(HTTPError):
+            self.g.see_doc('bogus_doc_id')
+        self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
+        st, res = self.g.see_team('bogus_team_id')
+        self.assertEqual(st, 404)
+        st, res = self.g.see_doc('bogus_doc_id')
+        self.assertEqual(st, 404)
+    
+    def test_no_raise_http_error(self):
+        self.g.update_config({'GRIST_RAISE_ERROR': 'N'})
+        # many functions in Pygrister will patch the response body before 
+        # returning it: when GRIST_RAISE_ERROR=N, this will happen also in 
+        # case of Http error, so we must make sure that a failed post-processing 
+        # will not result in spurious exceptions being raised. 
+        # This is just a sample, not a full list of all problematic functions.
+        _ = self.g.update_workspace('foo', 0)
+        self.assertFalse(self.g.ok)
+        _ = self.g.list_workspace_users(0)
+        self.assertFalse(self.g.ok)
+        _ = self.g.update_doc('foo', doc_id='bogus')
+        self.assertFalse(self.g.ok)
+        _ = self.g.list_doc_users(doc_id='bogus')
+        self.assertFalse(self.g.ok)
+        _ = self.g.list_tables('bogus_doc')
+        self.assertFalse(self.g.ok)
+        _ = self.g.list_cols('Table1', doc_id='bogus')
+        self.assertFalse(self.g.ok)
+        _ = self.g.list_attachments(doc_id='bogus')
+        self.assertFalse(self.g.ok)
+        _ = self.g.list_webhooks('bogus')
+        self.assertFalse(self.g.ok)
 
 class TestUsersNoScim(BaseTestPyGrister):
     @classmethod
