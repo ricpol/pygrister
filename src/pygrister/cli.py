@@ -813,10 +813,16 @@ def see_doc(doc_id: Annotated[str, _doc_id_opt] = '',
     content.add_row('id', res['id'])
     content.add_row('name', res['name'])
     content.add_row('pinned', str(res['isPinned']))
-    content.add_row('workspace', 
-        f"{res['workspace']['id']} - {res['workspace']['name']}")
-    content.add_row('team', 
-        f"{res['workspace']['org']['id']} - {res['workspace']['org']['name']}")
+    try:
+        row = f"{res['workspace']['id']} - {res['workspace']['name']}"
+    except TypeError:
+        row = 'Null'
+    content.add_row('workspace', row)
+    try:
+        row = f"{res['workspace']['org']['id']} - {res['workspace']['org']['name']}"
+    except TypeError:
+        row = 'Null'
+    content.add_row('team', row)
     _print_output(content, res, quiet, verbose, inspect)
 
 @doc_app.command('new')
