@@ -1402,6 +1402,7 @@ def list_hooks(doc_id: Annotated[str, _doc_id_opt] = '',
             data += f'table: {wh["fields"]["tableId"]}\n'
             data += f'events: {", ".join(wh["fields"]["eventTypes"])}'
             content.add_row(data)
+            content.add_section()
     _print_output(content, res, quiet, verbose, inspect)
 
 @hook_app.command('new')
