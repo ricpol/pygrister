@@ -1280,10 +1280,7 @@ class TestWebhooks(BaseTestPyGrister):
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
 
-    @unittest.skipIf(TEST_CONFIGURATION['GRIST_SELF_MANAGED'] == 'Y', '')
     def test_add_update_delete_webhooks(self):
-        # with my basic self-managed setup, this will fail with an Http 403
-        # it's problably just a matter of proper configuration of the container...
         name = 'wh'+str(time.time_ns())
         wh = {'fields': {'name': name, 'memo': 'memo!', 
               'url': 'https://www.example.com',
@@ -1291,6 +1288,11 @@ class TestWebhooks(BaseTestPyGrister):
               'tableId': 'Table1'}}
         st, res = self.g.add_webhooks(webhooks=[wh], doc_id=self.doc_id, 
                                       team_id=self.team_id)
+        if st == 403 and TEST_CONFIGURATION['GRIST_SELF_MANAGED'] == 'Y':
+            # a special-case failure: if you are self-hosting, you should 
+            # have an ALLOWED_WEBHOOK_DOMAINS server-side env variable here; 
+            # you may even set it to "*", see Grist docs for details
+            self.fail('You must add "example.com" to your ALLOWED_WEBHOOK_DOMAINS.')
         self.assertIsInstance(res, list)
         self.assertEqual(st, 200)
         wh_id = res[0]
