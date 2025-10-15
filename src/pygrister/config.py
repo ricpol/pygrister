@@ -20,6 +20,7 @@ PYGRISTER_CONFIG = {
     'GRIST_DOC_ID': '<your_doc_id_here>',
     'GRIST_RAISE_ERROR': 'Y',
     'GRIST_SAFEMODE': 'N',
+    'GRIST_SSL_VERIFY': 'Y'
 }
 
 def apikey2output(apikey: str) -> str:

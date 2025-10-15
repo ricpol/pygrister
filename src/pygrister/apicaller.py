@@ -98,6 +98,11 @@ class ApiCaller:
                         f'Bearer {self.configurator.config["GRIST_API_KEY"]}'})
         # first, we prepare the request
         req_opts = self.request_options
+
+        # ignore ssl verification
+        verify = False if self.configurator.config.get("GRIST_SSL_VERIFY", 'Y') == 'N' else True
+        req_opts["verify"] = verify
+        
         if filename: # download mode, method *must* be GET!
             method = 'GET'
             req_opts = {'stream': True, **self.request_options}
