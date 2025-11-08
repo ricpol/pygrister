@@ -126,8 +126,12 @@ _c = _CliConfigurator()
 grist_api = GristApi(custom_configurator = _c)
 grist_api.in_converter = cli_in_converters
 grist_api.out_converter = cli_out_converters
-timeout = int(_c.config['GRIST_GRY_TIMEOUT'])
-grist_api.apicaller.request_options = {'timeout': timeout}
+req_options = {'timeout': int(_c.config['GRIST_GRY_TIMEOUT'])}
+pth = Path('gryrequest.json') # optional, to pass even more options to Requests
+if pth.is_file(): 
+    with open(pth, 'r', encoding='utf8') as f:
+        req_options.update(modjson.loads(f.read()))
+grist_api.apicaller.request_options = req_options
 # the global Rich console where everything should be printed
 cli_console = Console()
 
@@ -393,12 +397,15 @@ def gryconf(
                        help='Show in full or obfuscate apikey')] = False,
     quiet: Annotated[bool, _quiet_opt] = False,
     verbose: Annotated[int, _verbose_opt] = 0) -> None:
-    """Print the current Gry configuration"""
+    """Print current Gry configuration and additional Requests options"""
     res = grist_api.configurator.config
     if not showkey:
         res['GRIST_API_KEY'] = apikey2output(res['GRIST_API_KEY'])
     table = Table('key', 'value')
     for k, v in res.items():
+        table.add_row(k, str(v))
+    table.add_section()
+    for k, v in grist_api.apicaller.request_options.items():
         table.add_row(k, str(v))
     # _print_output is not quite made for this use case!
     if not quiet:

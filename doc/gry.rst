@@ -194,6 +194,40 @@ a value, default will be 60 seconds.
 Finally, you cannot set ``GRIST_RAISE_ERROR`` and ``GRIST_SAFEMODE`` 
 in Gry: both values will default to ``N``.
 
+Passing additional arguments to Requests.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+(This is advanced usage and you probably won't need it.)
+
+In Pygrister, you may set ``GristApi.apicaller.request_options`` to a 
+dictionary in order to pass optional arguments, not otherwise used by 
+Pygrister, to the underlying Requests call. You can't do this in Gry, 
+as you don't have direct access to the GristApi class. 
+
+If you need to pass arguments to Requests, just drop a ``gryrequest.json`` 
+file *in your current directory*. This file will be parsed at runtime, 
+and its content will be feeded to ``GristApi.apicaller.request_options`` 
+as it is. For instance, ::
+
+  {
+      "timeout": 15,
+      "verify": false,
+      "allow_redirects": true
+  }
+
+See the Requests documentation for the available options. 
+
+Please note that the above ``GRIST_GRY_TIMEOUT`` configuration may also be 
+used to set a timeout for the Requests call. This is meant as a shortcut, 
+as a timeout is almost always wanted. If a timeout is all you need, just 
+set the config key. For anything more than this, you'll need a separate 
+``gryrequest.json`` file. If a timeout setting is found in both places, 
+``gryrequest.json`` will take precedence (if in neither place, Gry will 
+default to 60 seconds anyway).
+
+The ``gry conf`` command will output both the current Gry settings, and 
+any Requests additional arguments you may have set. 
+
 Common options.
 ---------------
 
