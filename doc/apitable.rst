@@ -28,7 +28,7 @@ Users and SCIM
    * Gry: ``gry user list``
 
 
-* Grist: ``POST   /scim/v2/Users``  
+* Grist: ``POST /scim/v2/Users``  
 
   * Pygrister: ``GristApi.add_user``  
   
@@ -103,10 +103,6 @@ Users and SCIM
   * Pygrister: ``GristApi.see_scim_resources`` 
   
   * Gry: ``gry scim resources``
-  
-  * Pygrister: ``GristApi.see_scim_resources`` 
-  
-  * Gry: ``gry scim resources``
 
 
 Teams (organisations)
@@ -166,10 +162,6 @@ Teams (organisations)
   * Pygrister: ``GristApi.add_workspace``
   
   * Gry: ``gry ws new``
-  
-  * Pygrister: ``GristApi.add_workspace``
-  
-  * Gry: ``gry ws new``
 
 
 Workspaces
@@ -212,10 +204,6 @@ Workspaces
 
 * Grist: ``POST /workspaces/{workspaceId}/docs``
 
-  * Pygrister: ``GristApi.add_doc``
-  
-  * Gry: ``gry doc new``
-  
   * Pygrister: ``GristApi.add_doc``
   
   * Gry: ``gry doc new``
@@ -285,10 +273,6 @@ Documents
   * Pygrister: ``GristApi.reload_doc``
   
   * Gry: ``gry doc reload``
-  
-  * Pygrister: ``GristApi.reload_doc``
-  
-  * Gry: ``gry doc reload``
 
 
 Tables
@@ -334,10 +318,6 @@ Tables
   * Pygrister: ``GristApi.download_schema``
   
   * Gry: ``gry table download -o schema``
-  
-  * Pygrister: ``GristApi.download_schema``
-  
-  * Gry: ``gry table download -o schema``
 
 
 Columns
@@ -376,10 +356,6 @@ Columns
   * Pygrister: ``GristApi.delete_column``
   
   * Gry: ``gry col delete``
-  
-  * Pygrister: ``GristApi.delete_column``
-  
-  * Gry: ``gry col delete``
 
 
 Records
@@ -415,10 +391,6 @@ Records
 
 * Grist: ``POST /docs/{docId}/tables/{tableId}/data/delete``
 
-  * Pygrister: ``GristApi.delete_rows``
-  
-  * Gry: ``gry rec delete``
-  
   * Pygrister: ``GristApi.delete_rows``
   
   * Gry: ``gry rec delete``
@@ -502,10 +474,6 @@ Attachments
   * Pygrister: ``GristApi.see_transfer_status``
   
   * Gry: ``gry att transfer-status``
-  
-  * Pygrister: ``GristApi.see_transfer_status``
-  
-  * Gry: ``gry att transfer-status``
 
 
 Webhooks
@@ -544,10 +512,6 @@ Webhooks
   * Pygrister: ``GristApi.empty_payloads_queue``
   
   * Gry: ``gry hook empty-queue``
-  
-  * Pygrister: ``GristApi.empty_payloads_queue``
-  
-  * Gry: ``gry hook empty-queue``
 
 
 Sql
@@ -562,10 +526,6 @@ Sql
 
 * Grist: ``POST /docs/{docId}/sql``
 
-  * Pygrister: ``GristApi.run_sql_with_args``
-  
-  * Gry: ``gry sql --param``
-  
   * Pygrister: ``GristApi.run_sql_with_args``
   
   * Gry: ``gry sql --param``
