@@ -566,6 +566,18 @@ def delete_user(user: Annotated[int, _user_id_arg],
     st, res = grist_api.delete_user(user)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
+@user_app.command('enable')
+def enable_user(
+    user: Annotated[int, _user_id_arg],
+    enable: Annotated[bool, typer.Option('--enable/--disable', '-e/-d', 
+                      help='Enable or disable')] = True,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Enable or disable a user"""
+    st, res = grist_api.enable_user(user, enable)
+    _print_done_or_exit(st, res, quiet, verbose, inspect)
+
 # TODO we don't implement "search" for now because we don't have a good way 
 # to express filters in the shell. 
 

@@ -358,6 +358,21 @@ class TestUsersNoScim(BaseTestPyGrister):
         # this is not yet implemented
         with self.assertRaises(api.GristApiNotImplemented):
             self.g.delete_myself('bogus')
+    
+    def test_enable_user(self):
+        with self.assertRaises(HTTPError):
+            self.g.enable_user(6666666666666)
+        # let's hope low-ids like "4" are present by default
+        # as we would need SCIM to create (or even list!) users
+        self.g.update_config({'GRIST_RAISE_ERROR':'N'})
+        st, res = self.g.enable_user(4, False)
+        self.assertIn(st, (200, 400)) # http400 is for "user not found"
+        if st == 200:
+            self.assertIsNone(res)
+        st, res = self.g.enable_user(4)
+        self.assertIn(st, (200, 400)) # http400 is for "user not found"
+        if st == 200:
+            self.assertIsNone(res)
 
 # note: to test scim ops, you need both GRIST_SELF_MANAGED here (because the 
 # regular Grist SaaS does not support scim) and GRIST_ENABLE_SCIM on the server!

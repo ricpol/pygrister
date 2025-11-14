@@ -314,7 +314,18 @@ class GristApi:
             return st, None
         else:
             return st, res
+    
+    @check_safemode
+    def enable_user(self, user_id: int, enable: bool = True):
+        """Implement POST ``/users/{userId}/enable`` and 
+        POST ``/users/{userId}/disable`` (accessible to admins only). 
         
+        If successful, response will be ``None``.
+        """
+        operation = 'enable' if enable else 'disable'
+        url = f'{self.configurator.server}/users/{user_id}/{operation}'
+        return self.apicaller.apicall(url, 'POST')
+
     @check_safemode
     def delete_user(self, user_id: int):
         """Implement DELETE ``/scim/v2/Users/{userId}``. 

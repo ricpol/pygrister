@@ -136,6 +136,10 @@ class TestUser(BaseTestCli):
         res = self.runner.invoke(app, ['user', 'delete', '10000000000'])
         self.assertEqual(res.exit_code, 3)
 
+    def test_enable(self):
+        res = self.runner.invoke(app, ['user', 'enable', '666666666666666'])
+        self.assertEqual(res.exit_code, 3)
+
 class TestTeams(BaseTestCli):
     def test_list_team(self):
         res = self.runner.invoke(app, ['team', 'list'])

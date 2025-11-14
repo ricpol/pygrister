@@ -63,6 +63,13 @@ Users and SCIM
   * Gry: *not implemented*
 
 
+* Grist: ``POST /users/{userId}/enable|disable``
+  
+  * Pygrister: ``GristApi.enable_user``
+
+  * Gry: ``gry user enable``
+
+
 * Grist: ``POST   /scim/v2/Users/.search``  
 
   * Pygrister: ``GristApi.search_users``, ``GristApi.search_users_raw``  
