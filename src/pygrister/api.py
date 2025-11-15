@@ -1106,7 +1106,7 @@ class GristApi:
         
         If successful, response will be ``None``.
         """
-        # unclear if deprecated... seems the only way to delete a row though
+        #TODO this is deprecated in Grist 1.7.5, for records/delete
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/data/delete'
         # this is the *only* api endpoint where "json" is a list, not a dict
