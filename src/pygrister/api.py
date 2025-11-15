@@ -699,6 +699,19 @@ class GristApi:
         return st, res
 
     @check_safemode
+    def copy_doc(self, target_ws: int, target_name: str, template: bool = False, 
+                 doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/copy``.
+        
+        If successful, response will be the ``str`` id of the copied doc.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/copy'
+        json = {'workspaceId': target_ws, 'documentName': target_name, 
+                'asTemplate': template}
+        return self.apicaller.apicall(url, method='POST', json=json)
+
+    @check_safemode
     def reload_doc(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/force-reload``.
         

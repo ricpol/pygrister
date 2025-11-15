@@ -240,6 +240,13 @@ Documents
   * Gry: ``gry doc move``
 
 
+* Grist: ``PATCH /docs/{docId}/copy``
+
+  * Pygrister: ``GristApi.copy_doc``
+  
+  * Gry: ``gry doc copy``
+
+
 * Grist: ``GET /docs/{docId}/access``
 
   * Pygrister: ``GristApi.list_doc_users``

@@ -879,6 +879,22 @@ def move_doc(dest: Annotated[int, typer.Argument(help='Destination workspace ID'
     st, res = grist_api.move_doc(dest, doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
+@ doc_app.command('copy')
+def copy_doc(
+    dest: Annotated[int, typer.Argument(help='Destination workspace ID')],
+    name: Annotated[str, typer.Argument(help='Target doc name')],
+    template: Annotated[bool,typer.Option('--template', 
+                        help='Copy as template')] = False,             
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Copy document to another workspace"""
+    st, res = grist_api.copy_doc(dest, name, template, doc_id, team_id)
+    _exit_if_error(st, res, quiet, verbose, inspect)
+    _print_done_and_id(res, res, quiet, verbose, inspect)
+
 @doc_app.command('delete')
 def delete_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
                team_id: Annotated[str, _team_id_opt] = '',

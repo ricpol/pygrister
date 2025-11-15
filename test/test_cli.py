@@ -228,7 +228,11 @@ class TestDoc(BaseTestCli):
     def test_move_doc(self):
         res = self.runner.invoke(app, ['doc', 'move', '10000000'])
         self.assertEqual(res.exit_code, 3)
-    
+
+    def test_copy_doc(self):
+        res = self.runner.invoke(app, ['doc', 'copy', '10000000', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+
     def test_delete_doc(self):
         res = self.runner.invoke(app, ['doc', 'delete', '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)
