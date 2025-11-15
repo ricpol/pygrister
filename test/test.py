@@ -1255,6 +1255,25 @@ class TestAttachments(BaseTestPyGrister):
         self.assertIsInstance(res, dict)
         self.assertEqual(st, 200)
 
+    def test_purge_attachments(self):
+        # upload a new attachment, which is not referenced in any table - unused!
+        f = HERE / 'imgtest.jpg'
+        st, res = self.g.upload_attachments([f], doc_id=self.doc_id, 
+                                            team_id=self.team_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.list_attachments(doc_id=self.doc_id, 
+                                          team_id=self.team_id)
+        self.assertEqual(st, 200)
+        att_num = len(res)
+        assert att_num >= 1 # there should be at least one attachment now
+        st, res = self.g.delete_unused_attachments(doc_id=self.doc_id, 
+                                                   team_id=self.team_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.list_attachments(doc_id=self.doc_id, 
+                                          team_id=self.team_id)
+        self.assertEqual(st, 200)
+        assert len(res) < att_num # at least one attachment should be gone
+        
 # to test external attachments, you must run a self-hosted instance of Grist 
 # with "GRIST_EXTERNAL_ATTACHMENTS_MODE=snapshots", and a S3-compatible bucket 
 @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_EXT_ATTACH_TESTS'] == 'N', '')

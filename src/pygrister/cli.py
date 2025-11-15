@@ -1370,6 +1370,19 @@ def upload_restore_atts(
     _exit_if_error(st, res, quiet, verbose, inspect)
     _print_output(res, res, quiet, verbose, inspect)
 
+@att_app.command('purge')
+def purge_atts(
+    old: Annotated[bool, typer.Option('--only-old', 
+                   help='Only if unused for a long time')] = False,  
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Delete unused attachments from the document"""
+    st, res = grist_api.delete_unused_attachments(old, doc_id, team_id)
+    _print_done_or_exit(st, res, quiet, verbose, inspect)
+
 @att_app.command('store')
 def see_att_store(doc_id: Annotated[str, _doc_id_opt] = '', 
                   team_id: Annotated[str, _team_id_opt] = '',

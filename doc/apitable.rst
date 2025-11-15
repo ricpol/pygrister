@@ -455,6 +455,13 @@ Attachments
   * Gry: ``gry att restore``
 
 
+* Grist: ``POST /docs/{docId}/attachments/removeUnused``
+
+  * Pygrister: ``GristApi.delete_unused_attachments``
+  
+  * Gry: ``gry att purge``
+
+
 * Grist: ``GET /docs/{docId}/attachments/store``
 
   * Pygrister: ``GristApi.see_attachment_store``

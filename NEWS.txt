@@ -8,6 +8,8 @@ Bleeding edge: committed to the repo, not yet released on PyPI
   POST /users/{userId}/enable|disable -> GristApi.enable_user / gry user enable 
   POST /docs/{docId}/recover -> GristApi.set_recovery_mode / gry doc recovery
   POST /docs/{docId}/copy -> GristApi.copy_doc / gry doc copy
+  POST /docs/{docId}/attachments/removeUnused -> 
+       GristApi.delete_unused_attachments / gry att purge
 - Changed API:
   Grist 1.7.4 removed the DELETE /orgs/{orgId} endpoint, replacing it with 
   DELETE /orgs/{orgId}/{name}. Be aware that Pygrister's GristApi.delete_team 

@@ -1236,6 +1236,18 @@ class GristApi:
         return self.apicaller.apicall(url, headers=headers, params=params, 
                                    filename=filename)
 
+    @check_safemode
+    def delete_unused_attachments(self, expired_only: bool = False, 
+                                  doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/attachments/removeUnused``.
+
+        If successful, response will be ``None``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/attachments/removeUnused'
+        params = {'expiredOnly': expired_only}
+        return self.apicaller.apicall(url, method='POST', params=params)
+
     def see_attachment_store(self, 
                              doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/attachments/store``.
