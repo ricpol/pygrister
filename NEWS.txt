@@ -6,6 +6,7 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 
 - New API:
   POST /users/{userId}/enable|disable -> GristApi.enable_user / gry user enable 
+  POST /docs/{docId}/recover -> GristApi.set_recovery_mode / gry doc recovery
 - new optional "gryrequest.json" file to pass additional arguments to 
   Requests from Gry: if present, the file will be parsed and its content 
   feeded to GristApi.apicaller.request_options. However, the old 

@@ -912,6 +912,19 @@ def reload_doc(doc_id: Annotated[str, _doc_id_opt] = '',
     st, res = grist_api.reload_doc(doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
+@doc_app.command('recovery')
+def doc_recovery(
+    mode: Annotated[bool, typer.Option('--set/--unset', '-R/-r', 
+                    help='Set/unset recovery mode')] = True,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Controls the recovery mode of a document"""
+    st, res = grist_api.set_recovery_mode(mode, doc_id, team_id)
+    _print_done_or_exit(st, res, quiet, verbose, inspect)
+
 @doc_app.command('download')
 def download_db(
     filename: Annotated[Path, typer.Argument(help='Output file path',

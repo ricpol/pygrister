@@ -275,6 +275,13 @@ Documents
   * Gry: ``gry doc reload``
 
 
+* Grist: ``POST /docs/{docId}/recover``
+
+  * Pygrister: ``GristApi.set_recovery_mode``
+  
+  * Gry: ``gry doc recovery``
+
+
 Tables
 ------
 
