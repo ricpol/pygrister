@@ -122,9 +122,9 @@ Teams (organisations)
   * Gry: ``gry team see``
 
 
-* Grist: ``DELETE /orgs/{orgId}``
+* Grist: ``DELETE /orgs/{orgId}/{name}`` (old: ``DELETE /orgs/{orgId}``)
 
-  * Pygrister: ``GristApi.delete_team``
+  * Pygrister: ``GristApi.delete_team`` (old: ``GristApi.delete_team_old``)
   
   * Gry: ``gry team delete``
 

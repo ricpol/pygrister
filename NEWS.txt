@@ -8,6 +8,17 @@ Bleeding edge: committed to the repo, not yet released on PyPI
   POST /users/{userId}/enable|disable -> GristApi.enable_user / gry user enable 
   POST /docs/{docId}/recover -> GristApi.set_recovery_mode / gry doc recovery
   POST /docs/{docId}/copy -> GristApi.copy_doc / gry doc copy
+- Changed API:
+  Grist 1.7.4 removed the DELETE /orgs/{orgId} endpoint, replacing it with 
+  DELETE /orgs/{orgId}/{name}. Be aware that Pygrister's GristApi.delete_team 
+  is now using the *new* endpoint under the hood (with the same signature), 
+  so it may not work against older Grist instances. The old endpoint is still 
+  available as GristApi.delete_team_old, for the time being. 
+  Gry's "gry team delete" is also updated to the new endpoint. However, 
+  there is no Gry command mirroring the old behaviour anymore. If you really 
+  need the old api in Gry, switch to "gry python", then invoke 
+  "gry.delete_team_old('team-to-delete')" in the Python shell. Or, just 
+  update your Grist!
 - new optional "gryrequest.json" file to pass additional arguments to 
   Requests from Gry: if present, the file will be parsed and its content 
   feeded to GristApi.apicaller.request_options. However, the old 

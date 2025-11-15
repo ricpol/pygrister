@@ -495,13 +495,28 @@ class GristApi:
         return self.apicaller.apicall(url, method='PATCH', json=json)
 
     @check_safemode
-    def delete_team(self, team_id: str = '') -> Apiresp:
+    def delete_team_old(self, team_id: str = '') -> Apiresp:
         """Implement DELETE ``/orgs/{orgId}``.
         
         If successful, response will be ``None``.
+        Note: disabled in Grist 1.7.4, will return Http 410 instead.
         """
         team_id = team_id or 'current'
         url = f'{self.configurator.server}/orgs/{team_id}'
+        st, res = self.apicaller.apicall(url, 'DELETE')
+        if self.ok:
+            res = None
+        return st, res
+
+    @check_safemode
+    def delete_team(self, team_id: str = '') -> Apiresp:
+        """Implement DELETE ``/orgs/{orgId}/{name}``.
+        
+        If successful, response will be ``None``.
+        """
+        team_id = team_id or self.configurator.config['GRIST_TEAM_SITE']
+        # the {name} part can be the team name again, or just "force-delete"
+        url = f'{self.configurator.server}/orgs/{team_id}/force-delete'
         st, res = self.apicaller.apicall(url, 'DELETE')
         if self.ok:
             res = None
