@@ -268,6 +268,13 @@ Documents
   * Gry: ``gry doc download``
 
 
+* Grist: ``POST /workspaces/{workspaceId}/import``
+
+  * Pygrister: ``GristApi.upload_sqlite``
+  
+  * Gry: ``gry doc upload``
+
+
 * Grist: ``POST /docs/{docId}/states/remove``
 
   * Pygrister: ``GristApi.delete_doc_history``

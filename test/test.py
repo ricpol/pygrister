@@ -749,15 +749,21 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
 
-    def test_download_sqlite(self):
+    def test_download_upload_sqlite(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
         self.assertIsInstance(doc_id, str)
         self.assertEqual(st, 200)
-        st, res = self.g.download_sqlite(Path(f'{name}.sqlite'), 
+        st, res = self.g.download_sqlite(Path(f'{name}.grist'), 
             nohistory=True, template=True, doc_id=doc_id, team_id=self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
+        # now we re-import the same file in the same ws with a different name
+        # note: extension has to be ".grist"!
+        st, res = self.g.upload_sqlite(Path(f'{name}.grist'),
+                            f'imported_{name}', ws_id=self.workspace_id)
+        self.assertEqual(st, 200)
+        self.assertIsInstance(res, str)
 
     def test_download_excel(self):
         name = str(time.time_ns())

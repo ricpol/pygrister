@@ -791,6 +791,30 @@ class GristApi:
         return self.apicaller.apicall(url, headers=headers, params=params, 
                                    filename=filename)
 
+    @check_safemode
+    def upload_sqlite(self, filename: Path, target_docname: str, 
+                      ws_id: int = 0) -> Apiresp:
+        """Implement POST ``/workspaces/{workspaceId}/import``.
+        
+        If successful, response will be the imported doc Id as ``str``.
+        """
+        ws_id = ws_id or int(self.configurator.config['GRIST_WORKSPACE_ID'])
+        url = f'{self.configurator.server}/workspaces/{ws_id}/import'
+        headers = dict()
+        self.apicaller.request = None  # we must reset here, in case opening 
+        self.apicaller.response = None # files throws an exception now:
+        f = open(filename, 'rb')
+        fileobj = {'upload': f,
+                   'documentName': (None, target_docname)}
+        try:
+            st, res = self.apicaller.apicall(url, 'POST', headers=headers, 
+                                             upload_files=fileobj)
+        finally:
+            f.close()
+        if self.ok:
+            res = res['id']
+        return st, res
+
     def download_excel(self, filename: Path, table_id: str, 
                        header: str = 'label', doc_id: str = '', 
                        team_id: str = '') -> Apiresp:

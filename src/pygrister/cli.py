@@ -959,6 +959,20 @@ def download_db(
                                         doc_id, team_id)
     _print_done_or_exit(st, res, quiet, 0, inspect) # force verbose=0 in download mode
 
+@doc_app.command('upload')
+def upload_doc(
+    filename: Annotated[Path, typer.Argument(help='Sqlite file to upload', 
+                        callback=_upload_path_validate)],
+    docname: Annotated[str, typer.Argument(help='Name of the target document')],
+    ws_id: Annotated[int, _ws_id_opt] = 0,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Import a document from an sqlite file"""
+    st, res = grist_api.upload_sqlite(filename, docname, ws_id)
+    _exit_if_error(st, res, quiet, verbose, inspect)
+    _print_done_and_id(res, res, quiet, verbose, inspect)
+
 @doc_app.command('users')
 def list_doc_users(doc_id: Annotated[str, _doc_id_opt] = '', 
                    team_id: Annotated[str, _team_id_opt] = '',

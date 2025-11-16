@@ -254,6 +254,10 @@ class TestDoc(BaseTestCli):
                                        '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)
     
+    def test_upload_doc(self):
+        # we skip this for now as it involves creating at least a stub file.
+        pass
+    
     def test_users_doc(self):
         res = self.runner.invoke(app, ['doc', 'users'])
         self.assertEqual(res.exit_code, 0)

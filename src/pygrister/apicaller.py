@@ -70,7 +70,7 @@ class ApiCaller:
     def apicall(self, url: str, method: str = 'GET', headers: dict|None = None, 
                 params: dict|None = None, json: dict|None = None, 
                 filename: Path|None = None, 
-                upload_files: list|None = None) -> Apiresp:
+                upload_files: list|dict|None = None) -> Apiresp:
         """The engine responsible for actually calling the Apis. 
         
         Return a ``Apiresp``-type tuple (status_code, resp_content) 
