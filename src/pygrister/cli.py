@@ -115,11 +115,6 @@ class _CliConfigurator(Configurator):
         config['GRIST_SAFEMODE'] = 'N'
         return config
 
-    def update_config(self, config: dict[str, str]):
-        # since this is a one-off configurator for cli calls only, 
-        # updating config at runtime is not supported
-        raise NotImplementedError
-
 # the global GristApi (re-creadted at every cli call): inside a cli function, 
 # all api calls (usually just one but may be more) will use this instance
 _c = _CliConfigurator()

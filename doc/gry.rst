@@ -364,6 +364,12 @@ you have Idle installed on your system.
 from your system shell. If it doesn't work for you, perhaps because you don't have 
 Python in your path or whatever, the ``gry`` command will fail too.)
 
+Be aware that you *can* change your configuration in the Gry Python shell 
+between api calls, as ``gry``, here, is just a regular ``GristApi`` instance:  
+nothing stops you from invoking ``gry.reconfig({...})`` or 
+``gry.update_config({...})``. However, you will return to the previous, 
+"regular" Gry configuration as soon as you leave the Gry Python shell. 
+
 Caveat and limitations.
 -----------------------
 
