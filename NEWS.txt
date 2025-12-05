@@ -30,6 +30,8 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 - "gry conf" will now print also any additional options passed to Requests.
 - new "gry version" command outputs Pygrister/Gry version.
 - new "gry test" command performs some quick config/connnection tests.
+- Gry will now try to catch connection errors and shouldn't spill the 
+  stacktrace on the user's shell anymore.
 
 v0.8.0, 2025.08.10
 ------------------

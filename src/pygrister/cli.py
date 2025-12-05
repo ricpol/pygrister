@@ -69,10 +69,11 @@ from typing_extensions import Annotated
 import typer
 from rich.console import Console
 from rich.table import Table
-from requests import RequestException
+from requests import RequestException, ConnectionError, Timeout
 
 from pygrister import __version__
 from pygrister.api import GristApi
+from pygrister.apicaller import ApiCaller
 from pygrister.config import Configurator, apikey2output, PYGRISTER_CONFIG
 try:
     from cliconverters import cli_out_converters # type: ignore
@@ -82,6 +83,30 @@ try:
     from cliconverters import cli_in_converters # type: ignore
 except (ModuleNotFoundError, ImportError):
     cli_in_converters = dict()
+
+# we borrow from Cloudflare non-standard 5xx codes 
+# to express connection errors (other than HttpError) in Gry
+CONN_ERROR = 523 # Requests ConnectionError -> Cf "Origin Is Unreachable"
+CONN_TIMEOUT = 522 # Requests Timeout -> Cf "Connection Timed Out"
+CONN_MISC_ERROR = 520 # other Requests Exceptions -> Cf "Web Server Returned an Unknown Error"
+
+class _CliApiCaller(ApiCaller):
+    """A custom api caller intended for the Pygrister cli."""
+    def apicall(self, *args, **kwargs):
+        # we try to catch possible connection errors, 
+        # so that Gry won't die in flames in front of the user
+        try:
+            st, res = super().apicall(*args, **kwargs)
+        except Timeout as e:
+            st = CONN_TIMEOUT
+            res = str(e)
+        except ConnectionError as e:
+            st = CONN_ERROR
+            res = str(e)
+        except RequestException as e:
+            st = CONN_MISC_ERROR
+            res = str(e)
+        return st, res
 
 class _CliConfigurator(Configurator):
     """A custom configurator intended for the Pygrister cli. 
@@ -118,15 +143,16 @@ class _CliConfigurator(Configurator):
 # the global GristApi (re-creadted at every cli call): inside a cli function, 
 # all api calls (usually just one but may be more) will use this instance
 _c = _CliConfigurator()
-grist_api = GristApi(custom_configurator = _c)
-grist_api.in_converter = cli_in_converters
-grist_api.out_converter = cli_out_converters
 req_options = {'timeout': int(_c.config['GRIST_GRY_TIMEOUT'])}
 pth = Path('gryrequest.json') # optional, to pass even more options to Requests
 if pth.is_file(): 
     with open(pth, 'r', encoding='utf8') as f:
         req_options.update(modjson.loads(f.read()))
-grist_api.apicaller.request_options = req_options
+_a = _CliApiCaller(configurator=_c, request_options=req_options)
+grist_api = GristApi(custom_configurator=_c, custom_apicaller=_a)
+grist_api.in_converter = cli_in_converters
+grist_api.out_converter = cli_out_converters
+
 # the global Rich console where everything should be printed
 cli_console = Console()
 

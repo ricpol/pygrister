@@ -116,7 +116,8 @@ outcome with different exit codes:
 - exit code ``2`` means that the execution was aborted because you did not enter 
   the command correctly (forgot an argument, etc.);
 - exit code ``3`` means that the command was executed, but the Grist server 
-  returned a "bad" Http code (like 404, 500 and so on). This is almost never 
+  returned a "bad" Http code (like 404, 500 and so on). Also, code ``3`` is 
+  returned when the server was unreachable. This is almost never 
   Gry/Pygrister's fault, but likely a problem with your configuration: retry 
   the same command with the ``-i`` option to find out more. 
 
@@ -124,6 +125,26 @@ Of course, exit codes are seldom needed in normal interactive use, since the
 shell will let you know anyway; they could be more useful in batch scripts. 
 To inspect the exit code, type ``echo $?`` or ``echo %errorlevel%`` depending 
 on your shell.
+
+Non-standard Http codes for connection errors.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+When a connection error occurs, Pygrister will throw the appropriate exception 
+(eg. ``ConnectionError``, ``Timeout``, ``InvalidURL``...) and crash out. 
+In Gry that would be rude, as we don't want to dump the stacktrace in the user's 
+shell. Gry will make an effort to catch the connection error instead, and return 
+a "normal" error message. For instance, if you try ``gry team see`` after 
+shutting down your wifi, you'll get something like::
+
+  % gry team see
+  Error! Status: 523 HTTPConnectionPool(...): Max retries exceeded with url ...
+
+Note that we fake a "bad" Http status code (523 in the case above) even if, 
+of course, this is not an Http error. We borrow from Cloudflare some of their 
+non-standard 5xx codes here, namely 523 "Origin Is Unreachable", 
+522 "Connection Timed Out", and 520 "Web Server Returned an Unknown Error". 
+
+Gry will then exit with status code ``3``, see above.
 
 Configuration.
 --------------
