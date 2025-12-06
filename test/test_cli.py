@@ -245,6 +245,12 @@ class TestDoc(BaseTestCli):
         res = self.runner.invoke(app, ['doc', 'reload'])
         self.assertEqual(res.exit_code, 0)
     
+    def test_enable_doc(self):
+        res = self.runner.invoke(app, ['doc', 'enable', '--disable'])
+        self.assertEqual(res.exit_code, 0)
+        res = self.runner.invoke(app, ['doc', 'enable'])
+        self.assertEqual(res.exit_code, 0)
+    
     def test_recovery_doc(self):
         res = self.runner.invoke(app, ['doc', 'recovery', '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)

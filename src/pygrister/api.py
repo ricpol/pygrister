@@ -737,6 +737,19 @@ class GristApi:
         return self.apicaller.apicall(url, method='POST')
 
     @check_safemode
+    def enable_doc(self, enable: bool = True, 
+                   doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/enable`` and 
+        POST ``/docs/{docId}/disable`` (accessible to admins only). 
+        
+        If successful, response will be ``None``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        operation = 'enable' if enable else 'disable'
+        url = f'{server}/docs/{doc_id}/{operation}'
+        return self.apicaller.apicall(url, 'POST')
+
+    @check_safemode
     def set_recovery_mode(self, mode: bool = True, 
                           doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/recover``.

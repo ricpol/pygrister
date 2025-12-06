@@ -6,6 +6,7 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 
 - New API:
   POST /users/{userId}/enable|disable -> GristApi.enable_user / gry user enable 
+  POST /docs/{docId}/enable|disable -> GristApi.enable_doc / gry doc enable
   POST /docs/{docId}/recover -> GristApi.set_recovery_mode / gry doc recovery
   POST /docs/{docId}/copy -> GristApi.copy_doc / gry doc copy
   POST /workspaces/{workspaceId}/import -> GristApi.upload_sqlite / gry doc upload

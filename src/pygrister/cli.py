@@ -332,6 +332,7 @@ _sort_opt = typer.Option('--sort', '-s',
 _noparse_opt = typer.Option('--noparse', 
                             help='True prohibits parsing according to col type')
 _outmode_opt = typer.Option('--output-mode', '-m', help='Output type')
+_enable_opt = typer.Option('--enable/--disable', help='Enable/disable')
 
 # Typer sub-commands
 # ----------------------------------------------------------------------
@@ -588,13 +589,11 @@ def delete_user(user: Annotated[int, _user_id_arg],
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
 @user_app.command('enable')
-def enable_user(
-    user: Annotated[int, _user_id_arg],
-    enable: Annotated[bool, typer.Option('--enable/--disable', '-e/-d', 
-                      help='Enable or disable')] = True,
-    quiet: Annotated[bool, _quiet_opt] = False,
-    verbose: Annotated[int, _verbose_opt] = 0,
-    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+def enable_user(user: Annotated[int, _user_id_arg],
+                enable: Annotated[bool, _enable_opt] = True,
+                quiet: Annotated[bool, _quiet_opt] = False,
+                verbose: Annotated[int, _verbose_opt] = 0,
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Enable or disable a user"""
     st, res = grist_api.enable_user(user, enable)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
@@ -947,6 +946,17 @@ def reload_doc(doc_id: Annotated[str, _doc_id_opt] = '',
                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Reload a document"""
     st, res = grist_api.reload_doc(doc_id, team_id)
+    _print_done_or_exit(st, res, quiet, verbose, inspect)
+
+@doc_app.command('enable')
+def enable_doc(enable: Annotated[bool, _enable_opt] = True,
+               doc_id: Annotated[str, _doc_id_opt] = '', 
+               team_id: Annotated[str, _team_id_opt] = '',
+               quiet: Annotated[bool, _quiet_opt] = False,
+               verbose: Annotated[int, _verbose_opt] = 0,
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Ebable or disable a document"""
+    st, res = grist_api.enable_doc(enable, doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
 @doc_app.command('recovery')

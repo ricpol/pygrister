@@ -247,6 +247,13 @@ Documents
   * Gry: ``gry doc copy``
 
 
+* Grist: ``POST /docs/{docId}/enable|disable``
+  
+  * Pygrister: ``GristApi.enable_doc``
+
+  * Gry: ``gry doc enable``
+
+
 * Grist: ``GET /docs/{docId}/access``
 
   * Pygrister: ``GristApi.list_doc_users``
