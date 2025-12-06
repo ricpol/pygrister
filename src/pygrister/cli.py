@@ -149,7 +149,7 @@ if pth.is_file():
     with open(pth, 'r', encoding='utf8') as f:
         req_options.update(modjson.loads(f.read()))
 _a = _CliApiCaller(configurator=_c, request_options=req_options)
-grist_api = GristApi(custom_configurator=_c, custom_apicaller=_a)
+grist_api = GristApi(custom_apicaller=_a)
 grist_api.in_converter = cli_in_converters
 grist_api.out_converter = cli_out_converters
 

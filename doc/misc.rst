@@ -16,6 +16,50 @@ Once the ``GristApi`` instance is ready, its internal API caller will be
 available via the ``GristApi.apicaller`` attribute. Accessing the 
 API caller directly may help you with debugging. 
 
+Using custom configurators and API callers in ``GristApi``.
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+An ``ApiCaller`` class will need its own configurator: you may write a 
+custom class, or simply use the default one::
+
+  >>> from pygrister.config import Configurator
+  >>> from pygrister.apicaller import ApiCaller
+  >>> from pygrister.api import GristApi
+  >>> class MyApiCaller(ApiCaller):
+  ...    pass  # insert here your custom logic for api calling
+    
+  >>> c = Configurator()
+  >>> a = MyApiCaller(c)  # a custom api caller using the default configurator
+  >>> grist = GristApi(custom_apicaller=a)
+
+Then, the ``GristApi`` class will also use the configurator provided with the 
+api caller::
+
+  >>> grist.configurator is grist.apicaller.configurator
+  True
+
+To ensure that both ``GristApi`` and its api caller will use the same configurator, 
+you are prevented to pass both a ``custom_configurator`` and a ``custom_apicaller``  
+to the ``GristApi`` constructor::
+
+  >>> GristApi(custom_configurator=c, custom_apicaller=a) # throws an exception
+
+Once ``GristApi`` is instantiated, it is possible to change the configurator 
+(and/or the api caller) at runtime, in theory, but this is not really supported. 
+You must always remember to ensure that ``GristApi`` and its own internal api 
+caller will use the same configurator object, at any time. For instance, ::
+
+  >>> class MyConfigurator(Configurator): pass  # a custom configurator
+
+  >>> conf = MyConfigurator()
+  >>> grist.configurator = conf # change the configurator at runtime
+  >>> grist.apicaller.configurator = conf # change the apicaller's one too!
+
+This is possible, if convoluted. If you really must swap configurator 
+and/or api caller at runtime, it's easier to create two separate instances 
+of ``GristApi``, with their own different internals, then swap between them  
+instead. 
+
 Inspecting and troubleshooting the API call.
 --------------------------------------------
 

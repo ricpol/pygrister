@@ -101,17 +101,29 @@ class GristApi:
                  out_converter: dict|None = None, 
                  custom_configurator: Configurator|None = None, 
                  custom_apicaller: ApiCaller|None = None):
-        if config is not None and custom_configurator is not None:
-            msg = 'Do not pass both config and custom_configurator arguments.'
+        """The main Pygrister interface to post Grist API calls.
+        
+        You may pass any custom data converter ``in_converter`` and 
+        ``out_converter`` here. 
+        Pass a ``config`` dict to apply runtime changes on top of any "static" 
+        configuration (files and env variables) you may have set.
+        You may also pass a ``custom_configurator`` or a ``custom_apicaller``, 
+        but not both, for advance customisation.
+        """
+        if custom_apicaller is not None and custom_configurator is not None:
+            msg = 'Do not pass both custom apicaller and configurator arguments.'
             raise GristApiNotConfigured(msg)
         if custom_configurator is None:
-            self.configurator = Configurator(config)
+            self.configurator = Configurator()
         else:
             self.configurator = custom_configurator
         if custom_apicaller is None:
             self.apicaller = ApiCaller(self.configurator)
         else:
             self.apicaller = custom_apicaller
+            self.configurator = self.apicaller.configurator
+        if config is not None:
+            self.configurator.update_config(config)
         self.in_converter = {}            #: converters for input data
         self.out_converter = {}           #: converters for output data
         if in_converter:

@@ -98,6 +98,7 @@ from requests import RequestException, HTTPError, ConnectTimeout, PreparedReques
 
 from pygrister import api
 from pygrister import config
+from pygrister.apicaller import ApiCaller
 from pygrister.exceptions import *
 
 # standard config values used by tests
@@ -177,18 +178,31 @@ class TestVarious(BaseTestPyGrister):
         st, res = self.g.see_team()
         self.assertTrue(self.g.ok)
 
-    def test_custom_configurator(self):
-        self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'Y')
-        c = config.Configurator(config={'GRIST_RAISE_ERROR': 'N'})
-        old_c = self.g.configurator
-        self.g.configurator = c
-        self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'N')
-        self.g.configurator = old_c
-        self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'Y')
-        g = api.GristApi(custom_configurator=c)
-        self.assertEqual(g.configurator.config['GRIST_RAISE_ERROR'], 'N')
+    def test_custom_configurator_apicaller(self):
+        # this has to be true, always
+        self.assertIs(self.g.configurator, self.g.apicaller.configurator)
+        # now let's try a custom configurator
+        c = config.Configurator(config={'foo': 'bar'})
+        g = api.GristApi(config={'baz':'42'}, custom_configurator=c)
+        self.assertIs(self.g.configurator, self.g.apicaller.configurator)
+        self.assertEqual(g.configurator.config['foo'], 'bar')
+        self.assertEqual(g.configurator.config['baz'], '42')
+        g.update_config({'foo':'foobar'})
+        self.assertEqual(g.configurator.config['foo'], 'foobar')
+        g.reconfig()
+        self.assertNotIn('foo', g.configurator.config)
+        # now let's try a custom api caller
+        a = ApiCaller(configurator=c)
+        g = api.GristApi(config={'baz':'42'}, custom_apicaller=a)
+        self.assertIs(self.g.configurator, self.g.apicaller.configurator)
+        # passing both should be impossible
         with self.assertRaises(GristApiNotConfigured):
-            g = api.GristApi(config={'foo':'bar'}, custom_configurator=c)
+            api.GristApi(custom_apicaller=a, custom_configurator=c)
+        # changing configurator at runtime is possible but not supported
+        new_c = config.Configurator()
+        g.configurator = new_c
+        g.apicaller.configurator = new_c # we need to sync manually
+        self.assertNotIn('baz', g.configurator.config) # new clean configuration!
 
     def test_reconfig(self):
         self.assertEqual(self.g.configurator.config['GRIST_RAISE_ERROR'], 'Y')

@@ -140,24 +140,15 @@ constructor as the ``custom_configurator`` argument::
     my_configurator = MyConfigurator(config={...})
     grist = GristApi(custom_configurator=my_configurator)
 
-**Important**: you cannot pass both the ``config`` and ``custom_configurator`` 
-arguments to the ``GristApi`` class constructor: a ``GristApiNotConfigured`` 
-exception will be raised. If you choose to pass a custom configurator, you should  
-load its own configuration in advance, as shown in the example above. 
+You may pass both the ``config`` and ``custom_configurator`` 
+arguments to the ``GristApi`` class constructor: the custom configurator 
+will be instantiated first, then ``config`` will be applied on top of it. 
 
 The internal configurator object is exposed as the ``GristApi.configurator`` 
-attribute. Thus, you may also change configurator at runtime::
-
-    grist = GristApi() # load the default configurator
-    old_configurator = grist.configurator
-    new_configurator = MyConfigurator(config={...})
-    grist.configurator = new_configurator # change configurator
-    grist.configurator = old_configurator # swap back
-
-If you keep the instance of the default configurator, you can then alternate 
-between the two, as above. Of course, if the new configurator holds a different 
-set of config keys, this turns out to be yet another way of changing 
-configuration at runtime. 
+attribute. Changing configurator at runtime is possible... but not 
+straighforward: in fact, you will have to consider the "Api caller" object 
+too. We are going to clarify this point further when we discuss custom api 
+callers. 
 
 Now that you know about ``config.Configurator``, you should also know that 
 ``GristApi.reconfig`` is just an alias for ``GristApi.configurator.reconfig``, 

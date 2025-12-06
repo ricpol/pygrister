@@ -13,7 +13,7 @@ Bleeding edge: committed to the repo, not yet released on PyPI
   POST /docs/{docId}/attachments/removeUnused -> 
        GristApi.delete_unused_attachments / gry att purge
 - Changed API:
-  Grist 1.7.4 removed the DELETE /orgs/{orgId} endpoint, replacing it with 
+  - Grist 1.7.4 removed the DELETE /orgs/{orgId} endpoint, replacing it with 
   DELETE /orgs/{orgId}/{name}. Be aware that Pygrister's GristApi.delete_team 
   is now using the *new* endpoint under the hood (with the same signature), 
   so it may not work against older Grist instances. The old endpoint is still 
@@ -23,6 +23,8 @@ Bleeding edge: committed to the repo, not yet released on PyPI
   need the old api in Gry, switch to "gry python", then invoke 
   "gry.delete_team_old('team-to-delete')" in the Python shell. Or, just 
   update your Grist!
+  - A small change in how custom configurators and api callers have to be 
+  passed to GristApi, to keep them in sync. It's negligible in everyday use.
 - new optional "gryrequest.json" file to pass additional arguments to 
   Requests from Gry: if present, the file will be parsed and its content 
   feeded to GristApi.apicaller.request_options. However, the old 
