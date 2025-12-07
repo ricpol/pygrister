@@ -4,6 +4,12 @@ NEWS
 Bleeding edge: committed to the repo, not yet released on PyPI
 --------------------------------------------------------------
 
+Nothing right now.
+
+
+v0.9.0, 2025.12.07
+------------------
+
 - New API:
   POST /users/{userId}/enable|disable -> GristApi.enable_user / gry user enable 
   POST /docs/{docId}/enable|disable -> GristApi.enable_doc / gry doc enable
