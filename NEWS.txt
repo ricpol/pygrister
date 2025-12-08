@@ -7,6 +7,11 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 Nothing right now.
 
 
+v0.9.1, 2025.12.08
+------------------
+A quick fix for a regression in "gry python". Also, PyPI was 
+complaining about license specification in metadata. 
+
 v0.9.0, 2025.12.07
 ------------------
 
