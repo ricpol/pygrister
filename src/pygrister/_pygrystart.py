@@ -15,7 +15,7 @@ if pth.is_file():
     with open(pth, 'r', encoding='utf8') as f:
         req_options.update(loads(f.read()))
 a = _CliApiCaller(configurator=c, request_options=req_options)
-gry = GristApi(custom_configurator=c, custom_apicaller=a)
+gry = GristApi(custom_apicaller=a)
 gry.in_converter = cli_in_converters
 gry.out_converter = cli_out_converters
 print(f'This is Python {get_python_version()} on {get_platform()}, and Pygrister {__version__}.')
