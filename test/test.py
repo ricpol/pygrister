@@ -262,7 +262,7 @@ class TestVarious(BaseTestPyGrister):
         self.assertEqual(st, 200)
         self.g.close_session()
 
-class TestErrorContitions(BaseTestPyGrister):
+class TestErrorConditions(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
         cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
