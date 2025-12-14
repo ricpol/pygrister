@@ -241,6 +241,16 @@ def _make_scim_user_data(user: dict, table: Table) -> Table:
     table.add_section()
     return table
 
+def _make_sacc_data(sacc: dict, table: Table) -> Table:
+    table.add_row('id', str(sacc['id']))
+    table.add_row('login', sacc['login'])
+    table.add_row('label', sacc['label'])
+    table.add_row('description', sacc['description'])
+    table.add_row('expires', sacc['expiresAt'])
+    table.add_row('valid key', str(sacc['hasValidKey']))
+    table.add_section()
+    return table
+
 def _user_access_validate(value: str|None):
     legal = 'owners editors viewers members none'
     if value not in legal.split():
@@ -307,6 +317,7 @@ _quiet_opt = typer.Option('--quiet', '-q', help='All output will be suppressed')
 _inspect_opt = typer.Option('--inspect', '-i', 
                             help = 'Print inspect output after api call')
 _user_id_arg = typer.Argument(help='The user ID')
+_sacc_id_arg = typer.Argument(help='The service account ID')
 _team_id_opt = typer.Option('--team', '-t', 
                             help='The team ID [default: current]')
 _ws_id_opt = typer.Option('--workspace', '-w', 
@@ -346,9 +357,11 @@ rec_app = typer.Typer(help='Manage records inside a table')
 att_app = typer.Typer(help='Manage attachments and attachment storage')
 hook_app = typer.Typer(help='Manage document webhooks')
 scim_app = typer.Typer(help='Metadata about SCIM services, if enabled')
+sacc_app = typer.Typer(help='Manage service accounts, if enabled')
 _help = 'Gry, a command line tool for the Grist API - powered by Pygrister'
 _epilog = 'Learn more: https://pygrister.readthedocs.io - https://github.com/ricpol/pygrister '
 app = typer.Typer(no_args_is_help=True, help=_help, epilog=_epilog)
+app.add_typer(sacc_app, name='sacc', no_args_is_help=True)
 app.add_typer(user_app, name='user', no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
@@ -489,6 +502,91 @@ def open_python(idle: Annotated[bool, typer.Option('--idle',
         if oldstartup:
             os.environ['PYTHONSTARTUP'] = oldstartup
         print('Done. Welcome back to Gry.')
+
+# gry sacc -> service accounts, set GRIST_ENABLE_SERVICE_ACCOUNTS on server
+# ----------------------------------------------------------------------
+
+@sacc_app.command('list')
+def list_saccs(quiet: Annotated[bool, _quiet_opt] = False,
+               verbose: Annotated[int, _verbose_opt] = 0,
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List all service accounts"""
+    st, res = grist_api.list_service_accounts()
+    _exit_if_error(st, res, quiet, verbose, inspect)
+    if res:
+        content = Table('key', 'value')
+        for account in res:
+            content = _make_sacc_data(account, content)
+    else:
+        content = 'No service accounts available.'
+    _print_output(content, res, quiet, verbose, inspect)
+
+@sacc_app.command('see')
+def see_sacc(sacc: Annotated[int, _sacc_id_arg],
+             quiet: Annotated[bool, _quiet_opt] = False,
+             verbose: Annotated[int, _verbose_opt] = 0,
+             inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve service account by ID"""
+    st, res = grist_api.see_service_account(sacc)
+    _exit_if_error(st, res, quiet, verbose, inspect)
+    content = Table('key', 'value')
+    content = _make_sacc_data(res, content)
+    _print_output(content, res, quiet, verbose, inspect)
+
+@sacc_app.command('new')
+def new_sacc(
+    expire: Annotated[str, typer.Argument(help="Expire date YYYY-MM-DD")],
+    label: Annotated[str, typer.Option('--label', help='Label')] = '',
+    description: Annotated[str, typer.Option('--description', help='Description')] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Add a service account (WARNING: key will be displayed)"""
+    st, res = grist_api.add_service_account(expire, label, description)
+    _exit_if_error(st, res, quiet, verbose, inspect)
+    output = f'{res[0]} (key: {res[1]})'
+    _print_done_and_id(output, res, quiet, verbose, inspect)
+
+@sacc_app.command('update')
+def update_sacc(
+    sacc: Annotated[int, _sacc_id_arg],
+    expire: Annotated[str, typer.Option('--expire', help="Expire date YYYY-MM-DD")] = '',
+    label: Annotated[str, typer.Option('--label', help='Label')] = '',
+    description: Annotated[str, typer.Option('--description', help='Description')] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Update a service account"""
+    st, res = grist_api.update_service_account(sacc, expire, label, description)
+    _print_done_or_exit(st, res, quiet, verbose, inspect)
+
+@sacc_app.command('delete')
+def delete_sacc(sacc: Annotated[int, _sacc_id_arg],
+                quiet: Annotated[bool, _quiet_opt] = False,
+                verbose: Annotated[int, _verbose_opt] = 0,
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Remove a service account"""
+    st, res = grist_api.delete_service_account(sacc)
+    _print_done_or_exit(st, res, quiet, verbose, inspect)
+
+@sacc_app.command('new-key')
+def update_sacc_key(sacc: Annotated[int, _sacc_id_arg],
+                    quiet: Annotated[bool, _quiet_opt] = False,
+                    verbose: Annotated[int, _verbose_opt] = 0,
+                    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Regenerate a service account's key (WARNING: key will be displayed)"""
+    st, res = grist_api.update_service_account_key(sacc)
+    _exit_if_error(st, res, quiet, verbose, inspect)
+    _print_done_and_id(res, res, quiet, verbose, inspect)
+
+@sacc_app.command('delete-key')
+def delete_sacc_key(sacc: Annotated[int, _sacc_id_arg],
+                    quiet: Annotated[bool, _quiet_opt] = False,
+                    verbose: Annotated[int, _verbose_opt] = 0,
+                    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Delete a service account's key"""
+    st, res = grist_api.delete_service_account_key(sacc)
+    _print_done_or_exit(st, res, quiet, verbose, inspect)
 
 # gry user -> for managing users with SCIM apis
 # ----------------------------------------------------------------------

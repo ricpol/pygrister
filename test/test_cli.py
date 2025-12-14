@@ -104,6 +104,38 @@ class TestBasicOptions(BaseTestCli):
         self.assertEqual(res.exit_code, 0)
         self.assertIn('GRIST_API_KEY', res.output)
 
+@unittest.skipIf(os.environ['GRIST_TEST_RUN_SERV_ACCOUNT_TESTS'] == 'N', '')
+class TestServiceAccount(BaseTestCli):
+    def test_list(self):
+        res = self.runner.invoke(app, ['sacc', 'list'])
+        self.assertEqual(res.exit_code, 0)
+
+    def test_see(self):
+        res = self.runner.invoke(app, ['sacc', 'see', '1000000000'])
+        self.assertEqual(res.exit_code, 3)
+    
+    def test_new(self):
+        res = self.runner.invoke(app, ['sacc', 'new', '2050-01-01'])
+        self.assertEqual(res.exit_code, 0)
+        res = self.runner.invoke(app, ['sacc', 'new', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+    
+    def test_update(self):
+        res = self.runner.invoke(app, ['sacc', 'update', '10000000000'])
+        self.assertEqual(res.exit_code, 3)
+    
+    def test_delete(self):
+        res = self.runner.invoke(app, ['sacc', 'delete', '10000000000'])
+        self.assertEqual(res.exit_code, 3)
+    
+    def test_new_key(self):
+        res = self.runner.invoke(app, ['sacc', 'new-key', '10000000000'])
+        self.assertEqual(res.exit_code, 3)
+    
+    def test_delete_key(self):
+        res = self.runner.invoke(app, ['sacc', 'delete-key', '10000000000'])
+        self.assertEqual(res.exit_code, 3)
+
 @unittest.skipIf(os.environ['GRIST_SELF_MANAGED'] == 'N', '')
 @unittest.skipIf(os.environ['GRIST_TEST_RUN_SCIM_TESTS'] == 'N', '')
 class TestUser(BaseTestCli):

@@ -182,6 +182,99 @@ class GristApi:
         A shortcut for ``self.caller.inspect()``."""
         return self.apicaller.inspect(sep, max_content)
 
+    # SERVICE ACCOUNTS
+    # ------------------------------------------------------------------
+
+    def list_service_accounts(self) -> Apiresp:
+        """Implement GET ``/service-accounts``.
+        
+        If successful, response will be a ``list[dict]`` of account details.
+        """
+        url = f'{self.configurator.server}/service-accounts'
+        return self.apicaller.apicall(url)
+    
+    @check_safemode
+    def add_service_account(self, expire: str, label: str = '', 
+                            description: str = '') -> Apiresp:
+        """Implement POST ``/service-accounts``.
+        
+        If successful, response will be a tuple of service id and key.
+        """
+        url = f'{self.configurator.server}/service-accounts'
+        json = {'expiresAt': expire}
+        if label: 
+            json['label'] = label
+        if description:
+            json['description'] = description
+        st, res = self.apicaller.apicall(url, method='POST', json=json)
+        if self.ok:
+            res = (res['id'], res['key'])
+        return st, res
+    
+    def see_service_account(self, service_id: int) -> Apiresp: 
+        """Implement GET ``/service-accounts/{saId}``.
+        
+        If successful, response will be a ``dict`` of service details.
+        """
+        url = f'{self.configurator.server}/service-accounts/{service_id}'
+        return self.apicaller.apicall(url)
+    
+    @check_safemode
+    def update_service_account(self, service_id: int, expire: str = '', 
+                               label: str = '', description: str = '') -> Apiresp:
+        """Implement PATCH ``/service-accounts/{saId}``.
+       
+        If successful, response will be ``None``.
+        """
+        url = f'{self.configurator.server}/service-accounts/{service_id}'
+        json = dict()
+        if expire:
+            json['expiresAt'] = expire
+        if label: 
+            json['label'] = label
+        if description:
+            json['description'] = description
+        st, res = self.apicaller.apicall(url, method='PATCH', json=json)
+        if self.ok:
+            res = None
+        return st, res
+    
+    @check_safemode
+    def delete_service_account(self, service_id: int) -> Apiresp:
+        """Implement DELETE ``/service-accounts/{saId}``.
+        
+        If successful, response will be ``None``.
+        """
+        url = f'{self.configurator.server}/service-accounts/{service_id}'
+        st, res = self.apicaller.apicall(url, 'DELETE')
+        if self.ok:
+            res = None
+        return st, res
+    
+    @check_safemode
+    def update_service_account_key(self, service_id: int) -> Apiresp:
+        """Implement POST ``/service-accounts/{saId}/apikey``.
+        
+        If successful, response will be the new key as ``str``.
+        """
+        url = f'{self.configurator.server}/service-accounts/{service_id}/apikey'
+        st, res = self.apicaller.apicall(url, 'POST')
+        if self.ok:
+            return st, res['key']
+        return st, res
+
+    @check_safemode
+    def delete_service_account_key(self, service_id: int) -> Apiresp:
+        """Implement DELETE ``/service-accounts/{saId}/apikey``.
+        
+        If successful, response will be ``None``.
+        """
+        url = f'{self.configurator.server}/service-accounts/{service_id}/apikey'
+        st, res = self.apicaller.apicall(url, 'DELETE')
+        if self.ok:
+            res = None
+        return st, res
+
     # USERS (/scim/v2 and /user endpoints)
     # ------------------------------------------------------------------
 

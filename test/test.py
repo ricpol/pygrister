@@ -62,6 +62,11 @@ don't want to enable SCIM in your environment, set our special configuration key
 "GRIST_TEST_RUN_SCIM_TESTS" to "N" (in config_test.json file) to skip all SCIM 
 tests altogether, so you don't get any spurious errors. 
 
+Ditto for service accounts' tests: you must enable service accounts in your 
+Grist first (by setting a GRIST_ENABLE_SERVICE_ACCOUNTS env variable). 
+In any case, you may just skip service accounts' test entirely, by setting 
+"GRIST_TEST_RUN_SERV_ACCOUNT_TESTS" to "N" in config_test.json.
+
 Another separate problem is how to test the Apis that require an external storage 
 for attachments. If your testing environment already supports external storage 
 (that is, you have a bucket in place and a "GRIST_EXTERNAL_ATTACHMENTS_MODE" 
@@ -362,6 +367,48 @@ class TestErrorConditions(BaseTestPyGrister):
         self.assertFalse(self.g.ok)
         _ = self.g.list_webhooks('bogus')
         self.assertFalse(self.g.ok)
+
+@unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_SERV_ACCOUNT_TESTS'] == 'N', '')
+class TestServiceAccounts(BaseTestPyGrister):
+    def test_add_delete_service_account(self):
+        label = str(time.time_ns())
+        st, res = self.g.add_service_account('2030-01-01', label)
+        self.assertEqual(st, 200)
+        sa_id = res[0]
+        st, res = self.g.delete_service_account(sa_id)
+        self.assertEqual(st, 200)
+        self.assertIsNone(res)
+        with self.assertRaises(HTTPError):
+            self.g.delete_service_account(100000000)
+    
+    def test_see_update_list_service_accounts(self):
+        label = str(time.time_ns())
+        st, res = self.g.add_service_account('2030-01-01', label)
+        self.assertEqual(st, 200)
+        sa_id = res[0]
+        st, res = self.g.list_service_accounts()
+        self.assertEqual(st, 200)
+        self.assertIn(sa_id, [i['id'] for i in res])
+        st, res = self.g.see_service_account(sa_id)
+        self.assertEqual(st, 200)
+        with self.assertRaises(HTTPError):
+            self.g.see_service_account(10000000)
+        st, res = self.g.update_service_account(sa_id, description='new')
+        self.assertEqual(st, 200)
+
+    def test_update_delete_service_account_key(self):
+        label = str(time.time_ns())
+        st, res = self.g.add_service_account('2030-01-01', label)
+        self.assertEqual(st, 200)
+        sa_id, key = res
+        st, new_key = self.g.update_service_account_key(sa_id)
+        self.assertEqual(st, 200)
+        self.assertNotEqual(key, new_key)
+        st, res = self.g.delete_service_account_key(sa_id)
+        self.assertEqual(st, 200)
+        self.assertIsNone(res)
+        st, res = self.g.see_service_account(sa_id)
+        self.assertFalse(res['hasValidKey'])
 
 class TestUsersNoScim(BaseTestPyGrister):
     @classmethod

@@ -9,6 +9,7 @@
     "GRIST_TEST_RUN_USER_TESTS": "N",
     "GRIST_TEST_RUN_SCIM_TESTS": "N",
     "GRIST_TEST_RUN_EXT_ATTACH_TESTS": "N",
+    "GRIST_TEST_RUN_SERV_ACCOUNT_TESTS": "N",
 
 
     "note0": "---------------------------------------------------------------",

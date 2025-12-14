@@ -4,6 +4,58 @@ Grist/Pygrister/Gry API list.
 This is a list of all the documented Grist APIs, as they are mapped in 
 the Pygrister library and Gry command line tool. 
 
+Service Accounts
+----------------
+
+* Grist: ``GET /service-accounts``  
+
+  * Pygrister: ``GristApi.list_service_accounts``  
+  
+  * Gry: ``gry sacc list``
+
+
+* Grist: ``POST /service-accounts``  
+
+  * Pygrister: ``GristApi.add_service_account``  
+  
+  * Gry: ``gry sacc add``
+
+
+* Grist: ``GET /service-accounts/{saId}``  
+
+  * Pygrister: ``GristApi.see_service_account``  
+  
+  * Gry: ``gry sacc see``
+
+
+* Grist: ``PATCH /service-accounts/{saId}``  
+
+  * Pygrister: ``GristApi.update_service_account``  
+  
+  * Gry: ``gry sacc update``
+
+
+* Grist: ``DELETE /service-accounts/{saId}``  
+
+  * Pygrister: ``GristApi.delete_service_account``  
+  
+  * Gry: ``gry sacc delete``
+
+
+* Grist: ``POST /service-accounts/{saId}/apikey``  
+
+  * Pygrister: ``GristApi.update_service_account_key``  
+  
+  * Gry: ``gry sacc new-key``
+
+
+* Grist: ``DELETE /service-accounts/{saId}/apikey``  
+
+  * Pygrister: ``GristApi.delete_service_account_key``  
+  
+  * Gry: ``gry sacc delete-key``
+
+
 Users and SCIM
 --------------
 
