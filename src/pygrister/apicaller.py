@@ -11,10 +11,10 @@ Apiresp = tuple[int, Any] #: the return type of all api call functions
 class ApiCaller:
     """The engine for posting a call to the Grist Apis."""
     def __init__(self, 
-                 configurator: Configurator,
+                 configurator: Configurator|None = None,
                  request_options: dict|None = None,
                  ) -> None:
-        self.configurator = configurator
+        self.configurator = configurator or Configurator()
         self.session = None           #: Requests session object, or None
         self.request_options = dict() #: other options to pass to Requests
         if request_options:

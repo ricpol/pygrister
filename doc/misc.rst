@@ -27,9 +27,8 @@ custom class, or simply use the default one::
   >>> from pygrister.api import GristApi
   >>> class MyApiCaller(ApiCaller):
   ...    pass  # insert here your custom logic for api calling
-    
-  >>> c = Configurator()
-  >>> a = MyApiCaller(c)  # a custom api caller using the default configurator
+  
+  >>> a = MyApiCaller()  # a custom api caller using the default configurator
   >>> grist = GristApi(custom_apicaller=a)
 
 Then, the ``GristApi`` class will also use the configurator provided with the 
