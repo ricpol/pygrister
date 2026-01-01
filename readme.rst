@@ -105,4 +105,4 @@ License.
 --------
 
 Pygrister/Gry is released under the MIT license (see ``LICENSE.rst``). 
-Copyright 2024-2025 Riccardo Polignieri
+Copyright 2024-2026 Riccardo Polignieri
