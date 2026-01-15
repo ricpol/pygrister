@@ -25,6 +25,9 @@ classifiers = [
   "Programming Language :: Python :: 3.13",
 ]
 
+[project.optional-dependencies]
+devel = ["pyinstaller>=6.17.0", "tox>=4.24.0"]
+
 [project.scripts]
 gry = "pygrister.cli:app"
 

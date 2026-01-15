@@ -17,3 +17,4 @@ doc/_templates/
 .notes/
 gryconf.json
 gryrequest.json
+!gry_bundle_files/*

@@ -1,0 +1,10 @@
+{
+    "GRIST_API_KEY": "<your_api_key_here>",
+    "GRIST_TEAM_SITE": "docs",
+    "GRIST_WORKSPACE_ID": "0",
+    "GRIST_DOC_ID": "<your_doc_id_here>",
+
+    "GRIST_SELF_MANAGED": "N",
+    "GRIST_SELF_MANAGED_HOME": "http://localhost:8484",
+    "GRIST_SELF_MANAGED_SINGLE_ORG": "N"
+}

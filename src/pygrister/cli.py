@@ -58,9 +58,9 @@ Example usage::
 """
 
 import os
+import sys
 import subprocess
 import json as modjson
-from sys import executable
 from pathlib import Path
 from enum import Enum
 from typing import Any, List, Optional
@@ -75,6 +75,13 @@ from pygrister import __version__
 from pygrister.api import GristApi
 from pygrister.apicaller import ApiCaller
 from pygrister.config import Configurator, apikey2output, PYGRISTER_CONFIG
+
+# are we running from a Pyinstaller bundle?
+standalone = getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS')
+
+if standalone: # add convenient locations for converters module
+    sys.path.append(str(Path(__file__).parent.parent.absolute()))
+    sys.path.insert(0, '.')
 try:
     from cliconverters import cli_out_converters # type: ignore
 except (ModuleNotFoundError, ImportError):
@@ -122,19 +129,25 @@ class _CliConfigurator(Configurator):
         config = dict(PYGRISTER_CONFIG)
         # default value for an additional config key
         config.update({'GRIST_GRY_TIMEOUT': '60'})
-        pth = Path('~/.gristapi/config.json').expanduser()
-        if pth.is_file():
-            with open(pth, 'r', encoding='utf8') as f:
-                config.update(modjson.loads(f.read()))
-        pth = Path('gryconf.json')
-        if pth.is_file(): 
-            with open(pth, 'r', encoding='utf8') as f:
-                config.update(modjson.loads(f.read()))
-        for k in config.keys():
-            try:
-                config[k] = os.environ[k]
-            except KeyError:
-                pass
+        if not standalone:
+            pth = Path('~/.gristapi/config.json').expanduser()
+            if pth.is_file():
+                with open(pth, 'r', encoding='utf8') as f:
+                    config.update(modjson.loads(f.read()))
+            pth = Path('gryconf.json')
+            if pth.is_file(): 
+                with open(pth, 'r', encoding='utf8') as f:
+                    config.update(modjson.loads(f.read()))
+            for k in config.keys():
+                try:
+                    config[k] = os.environ[k]
+                except KeyError:
+                    pass
+        else: # Pyinstaller bundle: config is stored along "gry.exe" file
+            pth = Path(__file__).parent.parent.absolute() / 'gryconf.json'
+            if pth.is_file():
+                with open(pth, 'r', encoding='utf8') as f:
+                    config.update(modjson.loads(f.read()))
         # overrides
         config['GRIST_RAISE_ERROR'] = 'N'
         config['GRIST_SAFEMODE'] = 'N'
@@ -144,7 +157,11 @@ class _CliConfigurator(Configurator):
 # all api calls (usually just one but may be more) will use this instance
 _c = _CliConfigurator()
 req_options = {'timeout': int(_c.config['GRIST_GRY_TIMEOUT'])}
-pth = Path('gryrequest.json') # optional, to pass even more options to Requests
+# optional, to pass even more options to Requests
+if not standalone:
+    pth = Path('gryrequest.json')
+else: # Pyinstaller bundle: config is stored along "gry.exe" file
+    pth = Path(__file__).parent.parent.absolute() / 'gryrequest.json'
 if pth.is_file(): 
     with open(pth, 'r', encoding='utf8') as f:
         req_options.update(modjson.loads(f.read()))
@@ -489,13 +506,16 @@ def run_sql(
 def open_python(idle: Annotated[bool, typer.Option('--idle', 
                                 help='Open the Idle shell')] = False):
     """Open a Python shell with Pygrister pre-loaded"""
+    if standalone:
+        cli_console.print("'gry python' is not currently available in standalone Gry")
+        return
     start = Path(__file__).absolute().parent / '_pygrystart.py'
     oldstartup = os.environ.get('PYTHONSTARTUP', None)
     os.environ['PYTHONSTARTUP'] = str(start)
     if idle:
-        to_run = [executable, '-m', 'idlelib', '-s']
+        to_run = [sys.executable, '-m', 'idlelib', '-s']
     else:
-        to_run = [executable, '-q']
+        to_run = [sys.executable, '-q']
     try:
         subprocess.run(to_run)
     finally:

@@ -48,6 +48,25 @@ Basic usage goes as follows (where ``%`` is your shell prompt)::
     >>> gry.list_cols(table_id='People')  # "gry" is now a python object
     >>> exit()  # and we are back to the shell
 
+Gry standalone distribution.
+----------------------------
+
+Gry comes in two flavours: you may get it as a byproduct of installing 
+the Pygrister library in your Python environment -- this is the option of 
+choice for developers. 
+
+Other users may prefer to grab the standalone distribution instead: this is 
+a more convenient bundle including a Python runtime, the Pygrister library 
+and Gry, in one single zip file. You won't need Python pre-installed on your 
+computer. 
+
+The standalone bundle is available for 
+`download on GitHub <https://github.com/ricpol/pygrister/releases>`_. 
+Get the "gry.zip" file and unpack it on your computer. Open your system shell, 
+navigate to the directory where you unpacked the zip file, and type ``gry`` 
+to start. 
+
+
 Architecture and help online.
 -----------------------------
 
@@ -162,6 +181,11 @@ if you are using ``gry`` for some specific task and you don't want to change you
 Pygrister configuration, or maybe you are only interested in ``gry``, and you 
 don't care about Pygrister. 
 
+**Standalone version**: In the Gry standalone bundle, the ``gryconf.json`` file 
+must be located in the top-level folder of the bundle. You will already find 
+a stub there: open it and fill in the required information. This is the 
+recommended way of configuring Gry in the standalone version. 
+
 The ``gryconf.json`` config file is specific to ``gry``, and Pygrister will 
 ignore it. To sum up,
 
@@ -237,6 +261,10 @@ as it is. For instance, ::
   }
 
 See the Requests documentation for the available options. 
+
+**Standalone version**: In the standalone bundle, ``gryrequest.json`` must 
+be located in the top-level folder of the bundle. You will find a stub there, 
+for you to open and edit.
 
 Please note that the above ``GRIST_GRY_TIMEOUT`` configuration may also be 
 used to set a timeout for the Requests call. This is meant as a shortcut, 
@@ -349,6 +377,10 @@ because it's difficult to express anything other than strings in the command lin
 If you want to include converters in your ``gry`` workflow, you must add a Python 
 module named ``cliconverters.py`` *in your current directory* (in fact, you can put 
 the file anywhere in your Python path, since ``gry`` will attempt to *import* it). 
+
+**Standalone version**: In the standalone bundle, you may also drop your 
+``cliconverters.py`` in the top-level directory of the bundle, ie next to the 
+"gry.exe" and readme files. 
 
 Inside the file, write your converter functions as you need. You must, however, name 
 the final converter dictionaries ``cli_out_converters`` and ``cli_in_converters``. 
