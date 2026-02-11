@@ -4,10 +4,10 @@ GRY - The Grist Cli Tool
 Gry is a command line tool to interact with the Grist Apis. 
 
 Gry is written in Python, and leverages on the Pygrister library to wrap 
-the Grist Apis. This hardly matters to you, though: this bundle of Gry 
-is completely standalone, meaning that you don't need Python and 
+the Grist Apis. This hardly matters to you, though: this is a standalone 
+bundle of Gry, meaning that you don't need to pre-install Python and 
 Pygrister on your computer.
-At the moment, the Gry bundle is available only for Windows. 
+At the moment, the Gry bundle is available for  only. 
 Mac/Linux users will have to install Pygrister (ie., "pip install pygrister"): 
 Gry is already included with the Pygrister library.
 
@@ -21,7 +21,8 @@ bundle, and type "gry" to the command prompt.
 
 (Please note: Gry is a *command line* tool, so no grapich interface is 
 available. On Windows, if you double click on the "gry.exe" icon, the 
-command prompt will flash briefly on screen, then immediately close itself.)
+command prompt window will flash briefly on screen, then immediately 
+close itself.)
 
 Gry needs to know your API key and a few other things, in order to work. 
 You will find a stub "gryconfig.json" file in the same top directory as 

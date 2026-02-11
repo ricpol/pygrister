@@ -1,3 +1,5 @@
+.. _scim_apis_support:
+
 Support for the Grist SCIM apis.
 ================================
 
@@ -7,12 +9,13 @@ Even if the Grist SCIM apis are still at an early stage of developement,
 we decided to mirror them in Pygrister. A fair warning: both the Grist apis 
 and Pygrister's rendition are experimental and likely to change. 
 
-This is also a *provisional* doc page for our Pygrister SCIM support, that 
+This is a *provisional* doc page for our Pygrister SCIM support, that 
 leaves quite a few points unresolved: we will update this page as the Grist 
 apis (and our own understanding) will evolve. 
 
 You may learn about the Grist SCIM apis browsing their official 
 `documentation <https://support.getgrist.com/install/scim/>`_. 
+
 
 SCIM is not for everyone.
 -------------------------
@@ -22,13 +25,14 @@ is, www.getgrist.com). If you want to try out SCIM, you must set up a local
 installation and enable SCIM (set ``GRIST_ENABLE_SCIM`` in your environment). 
 
 (Note: you will find a new SCIM section in your Api console, but you can't 
-actually place a call if you are on SaaS Grist.)
+actually post a call if you are on SaaS Grist.)
 
 Be careful! If you already run your own Grist service, please *do not* run 
 the Pygrister test suite against the same instance that you use for everyday's 
 work: always set up a separate, disposable container for testing. 
 This is because our test suite will create many users, that you can't easily 
 delete afterwards. 
+
 
 Sometimes, SCIM is different.
 -----------------------------
@@ -69,6 +73,7 @@ a problem is with the Grist apis or Pygrister's code. You should always
 double-check you call with the Grist Api console, before filing a bug report 
 to the wrong place!
 
+
 What about the old user-related apis?
 -------------------------------------
 
@@ -86,6 +91,7 @@ point they will stop working for user creation altogether.
 You may experiment with the difference between SCIM and non-SCIM user creation 
 by directly inspecting the ``home.sqlite3`` database in your 
 local installation's data folder (the home db is not accessible in SaaS Grist).
+
 
 Wait, did you say pagination?!
 ------------------------------
@@ -123,7 +129,7 @@ always has *two* corrisponding functions in the ``GristApi`` class:
   for instance a ``list_fooapi_raw`` function will return a single dictionary, 
   not a list. 
 
-- a ``GristApi.fooapi`` function, that deals with the api the "fancy" way, with 
+- a ``GristApi.fooapi`` function, dealing with the api the "fancy" way, with 
   auto-pagination. These functions will *not* return the usual ``status_code, 
   result`` tuple, but instead a Python *iterable object*, that you 
   can transverse like a normal Python iterable. Each time you call ``next()`` on 
@@ -131,7 +137,7 @@ always has *two* corrisponding functions in the ``GristApi`` class:
   ``status_code, result`` tuple; the internal indexes will be automatically 
   updated. 
 
-An example will help clarify. ``GristApi.list_users`` is a "paginated" api 
+An example will clarify. ``GristApi.list_users`` is a "paginated" api 
 (and ``list_users_raw`` is the corresponding traditional function). 
 Let's see it at work:: 
 
@@ -147,7 +153,7 @@ Let's see it at work::
 
 
 In ``(1)``, we call the ``GristApi`` "paginated" function. Note that at, 
-this point, no actual api call has been placed yet: ``userlist`` is just 
+this point, no actual api call has been posted yet: ``userlist`` is just 
 an "empty" iterable. Then, in ``(2)``, we start iterating. Now the 
 first api call is posted, and the result is retrieved. Hopefully, the 
 status code will be 200 and ``result`` will have the first batch of 5 
@@ -161,7 +167,7 @@ Python iterable, you want to use a ``for`` loop::
 
     >>> userlist = grist.list_users(start=1, chunk=5)
     >>> for status_code, result in userlist:
-    ...     print(status_code) # or whatever
+    ...     print(result) # or whatever
 
 Pretty neat, right? At every step of the loop, the api call will be posted 
 and the result retrieved. But wait, there's more!

@@ -52,6 +52,9 @@ This is why Pygrister declines to check and/or convert types for you.
 Instead, Pygrister will offer a hook to execute custom converter functions, 
 that you can tailor to your needs. 
 
+
+.. _converter_functions:
+
 Converter functions.
 --------------------
 
@@ -85,12 +88,15 @@ in Grist, you can't have your converter simply return a ``decimal.Decimal``
 instance (no more that you could pass it directly to the API!). You may want 
 to return ``Decimal.to_eng_string`` instead, and store the value as a string.
 
-Also note that input converters are applied *before* calling the API, 
-of course: Pygrister has no say in any further mangling of your data, once 
-the converted values are passed to the Grist API. For instance, as discussed above, 
-you can store a *string* into a Date column, but not a *numerical string* 
+Caveats about converters.
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Input converters will be applied to your data right *before* calling the API, 
+of course. Then, Grist may further mangle your input, and Pygrister 
+has no way of preventing it. For instance, as discussed above, 
+you may well store a *string* into a Date column, but not a *numerical string* 
 (at least, not with the API). Hence, if you have an input converter for a 
-Date column which may return numerical strings, keep in mind that your values 
+Date column which returns a numerical string, keep in mind that your values 
 will still be converted to *integers* by Sqlite, then interpreted as *dates* by 
 Grist, which may not be the way you intended. (A solution would be returning 
 a *hex blob* instead, replicating the marshalling algorithm used internally 
@@ -99,8 +105,9 @@ by Grist for such cases... which is undocumented, as far as we know.)
 Output converters are easier: they receive the value retrieved by the API, and 
 convert it to whatever you want - since it is your own code that consumes 
 the value from now on, Grist is no longer involved and you can choose freely. 
-You only have to be prepared to accept input values of different types, since a 
-GUI user will have more freedom in entering data anyway. 
+However, you have to be prepared to accept input values of different types, 
+since a GUI user will have more freedom in entering data anyway. 
+
 
 Register a converter.
 ---------------------
@@ -108,7 +115,7 @@ Register a converter.
 Once you have written your converter functions, they have to be registered so 
 that Pygrister learns about them and can use them.
 
-An instance of the ``pygrister.api.GristApi`` class keeps an internal register 
+An instance of the ``GristApi`` class keeps two internal registers 
 of the converters to be applied. The register is just a dictionary - there is 
 one ``in_converter`` for input converters, and one ``out_converter`` for output 
 converters. 
@@ -132,7 +139,7 @@ or for every column in your table. If Pygrister doesn't find a converter for
 a specific column, it will simply pass the values as they are. Of course, 
 you may register the same converter for more that one column.
 
-Converters may also be passed at creation time::
+Converters may also be passed at instantiation time::
 
     in_conv = {...}
     out_conv = {...}
@@ -149,6 +156,7 @@ To delete all converters, set the register to an empty dictionary::
     grist.in_converter = dict() # reset input converters
 
 See the test suite for more example of converter usage. 
+
 
 Where converters are applied.
 -----------------------------
@@ -180,6 +188,7 @@ Finally, we remind you that currently the ``run_sql*`` Grist APIs are limited
 to ``SELECT`` statements only: there is no point in registering *input* 
 converters for them. 
 
+
 Handling conversion errors.
 ---------------------------
 
@@ -187,11 +196,11 @@ A converter, just like any Python function, may throw an exception. Pygrister
 handles this in a different way for input and output converters. 
 
 At the moment, Pygrister does not intervene when an *input* converter fails, 
-and simply let the resulting exception propagate (this may change in the 
-future). The reasoning for this is that the data about to be written to 
+and simply let the resulting exception propagate. 
+The reasoning for this is that the data about to be written to 
 the database should be entirely your responsibility, and Pygrister will 
 simply refuse to guess. Therefore, you have to catch your own exceptions. 
-The only guarantee is that the converters are applied immediately *before* 
+We only guarantee that the converters are applied immediately *before* 
 passing the data to the API: if even one record triggers a failure in the 
 converter, no data will be written to the database. 
 
@@ -239,21 +248,21 @@ time offset when converting to database timestamps. See
 `the Grist documentation <https://support.getgrist.com/dates/#time-zones>`_ 
 for details about this. 
 
-The problem is, contrary to the GUI in the browser, the APIs have no way to know 
-your local timezone: hence, if you insert a "naive" timestamp, without compensating 
+While the browser's GUI is capable to learn about your local timezone, the APIs 
+have no way to know: hence, if you insert a "naive" timestamp, without compensating 
 for the timezone difference, chances are that you will end up with a different 
 time value than you intended. A Pygrister converter can be the right place to 
 address this, but you have to do it right. 
 
 For instance, this won't work as expected::
 
-    from datetime import datetime
-    conv = {'mytable':
-                {'datecol': lambda i: int(datetime.timestamp(i))}
-            }
-    grist = GristApi(in_converter=conv)
-    the_date = datetime(2024, 8, 15)
-    grist.add_records('mytable', [{'datecol': the_date}])
+    >>> from datetime import datetime
+    >>> conv = {'mytable':
+    ...             {'datecol': lambda i: int(datetime.timestamp(i))}
+    ...         }
+    >>> grist = GristApi(in_converter=conv)
+    >>> the_date = datetime(2024, 8, 15)
+    >>> grist.add_records('mytable', [{'datecol': the_date}])
 
 The problem here is that ``the_date`` is a "naive" date object, without 
 timezone info. Grist will assume UTC+0, and further mangle the timestamp 
@@ -268,4 +277,3 @@ this)... however, you may also decide to set a different timezone for the
 Grist document, and/or columns, and/or use only UTC+0 dates... Timezone problems 
 are `notoriously tricky <https://xkcd.com/1883/>`_ and there's no easy fix 
 for that. Make sure to test extensively your converters!
-

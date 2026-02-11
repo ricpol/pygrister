@@ -5,10 +5,13 @@ Pygrister docs.
 .. toctree::
 
     intro
+    overview
     conf
+    conf_advanced
     types
     misc
     scim
-    gry
-    api_doc
     apitable
+    api_doc
+    gry
+    gry_advanced

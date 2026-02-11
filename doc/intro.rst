@@ -14,8 +14,8 @@ is rather low-level: usually, it will call the api and retrieve the response
 "as is". 
 If the api call is malformed, you will simply receive a bad HTTP status code. 
 
-In addition, Pygrister will not attempt to convert types in sent and received 
-data: however, it will execute custom converter functions, if provided.
+While Pygrister will not attempt to guess and convert types, it will execute 
+your custom :ref:`converter functions<converter_functions>`, if provided.
 
 This document covers the basic Pygrister concepts, patterns and configurations. 
 However, the api call functions themselves are *not* documented in Pygrister: 
@@ -25,53 +25,43 @@ for details about each api signature, and browse the Pygrister test suite
 for more usage examples.
 
 
+.. _grist_ids:
+
 The many Grist IDs, explained. 
 ------------------------------
 
 Before discussing Pygrister, we need to learn how Grist identifies the various 
-object of its own data model: 
+objects in its own data model: 
 
 - First of all, there is the **API key**: this is needed to access the APIs, 
   and must be kept secret. You can find it in your 
   `Account Settings page <https://apitestteam.getgrist.com/account>`_.
 - Your **Team Site** is where your *workspaces* live; you may have more than one, 
-  and you own at least your "personal site" ("@my-name"). You may create 
-  a new site by clicking on the top left dropdown list and selecting 
-  "Create new team site". The site ID is actually the *subdomain* of your 
-  Grist url: if your site is available at ``https://myteam.getgrist.com``, 
-  then your site ID is ``myteam``. Please note that you can choose a different 
-  *name* for your team: the team ID will be the subdomain, anyway. 
+  and you own at least your "personal site" ("@my-name"). The site ID is actually 
+  the *subdomain* of your Grist url: if your site is available at 
+  ``https://myteam.getgrist.com``, then your site ID is ``myteam``. 
+  Please note that you can choose a different *name* for your team: the 
+  team ID will be the subdomain, anyway. 
   Your "personal site" ID is always ``docs``.
 - **Workspaces** are where the *documents* live: you may have more than one 
-  workspace for each of your team sites. When you create a new site, you will 
-  start with a first workspace named "Home": most of the times, you won't need 
-  more. The available workspaces are listed in the left column of the Grist 
-  site; to create a new workspace, clic on the "Add new" green button. The 
-  workspace ID is *an integer number*, and it is shown in the Grist url. 
-  If you clic on one of the workspaces listed on the left column, you will be 
-  directed to a page like ``https://myteam.getgrist.com/ws/12345/``: hence, 
-  your workspace ID is ``12345``. Again, workspaces do have *names*, but all 
-  that matters is their numerical ID. 
-- The **Document** is, basically, your database: a collection of *tables*, 
+  workspace for each of your team sites. The workspace ID is *an integer number*, 
+  and it is shown in the Grist url, eg. ``https://myteam.getgrist.com/ws/12345/``. 
+  Again, workspaces do have *names*, but all that matters is their numerical ID. 
+- A **Document** is, basically, your database: a collection of *tables*, 
   widgets, specific user permissions and configuration. You may have multiple 
-  documents in your workspace. To create a document, clic on the "Add new" 
-  green button. You can find your document ID by clicking on "Settings" in the 
-  (lower) left column. The ID is a long alphanumeric string like 
+  documents iside a workspace. The ID is a long alphanumeric string like 
   ``1asxv4ZYLGPtJ6UDgN1z8Q``.
 - A **Table** is... well, a table: where the actual data is stored. Of course, 
   you may have multiple tables in a document. The table ID is usually its name 
-  but again, you can also customize the table's name. The best way to find out 
-  all your table IDs, is to clic on "Raw data" in the lower left column: for each 
-  table, a "TABLE ID" will also be shown. Please note: table IDs will always 
-  start with a *capital* letter. If you give a table a name starting with a 
-  number, Grist will leave the name as you prefer, then silently add a "T" 
+  but again, you can also customize the table's name. Please note: table IDs 
+  will always start with a *capital* letter. If you start a table name with a 
+  number, Grist will leave the apparent name, then silently add a "T" 
   in front of the ID. If the table's name starts with a lowercase letter, 
   Grist will capitalize it in the corresponding ID. 
 - Tables are made up of **Columns**, of course. Each column will have a *label* 
-  and a "real name", the ID. You can find both in the right column of the Grist 
-  screen, under "COLUMN LABEL AND ID". Usually, the label and ID will be the 
+  and a "real name", the ID. Usually, the label and ID will be the 
   same, but you may choose otherwise. Again, a Column ID must start with a 
-  letter (here, lowercase is ok): if the name starts with a number, Grist will 
+  letter (lowercase is ok): if the name starts with a number, Grist will 
   prepend a "c" to the corresponding ID. 
 - The **Rows** are instances of your data. You may assign your rows a "custom" 
   id, but it will have no meaning to the Grist API. The only "real ID" that 
@@ -80,8 +70,8 @@ object of its own data model:
   idea to have one of your columns also called "id": if you try, Grist will 
   leave "id" as the *label* of the column, but silently change the name itself 
   to "id2", which may be confusing. You cannot change the Grist ``id`` column, 
-  and it's not easy to show it either: you can create a formula column and set it 
-  to ``=$id``, or you can just download the underlying Sqlite database and 
+  and it's not easy to show it either: you can create a formula column and set 
+  it to ``=$id``, or just download the underlying Sqlite database and 
   take a look under the hood. Retrieving rows via the APIs will also give you 
   their IDs. 
 - Finally, **Attachments** are a bit of an oddball. The file itself, once 
@@ -90,122 +80,10 @@ object of its own data model:
   Figuring out the attachment ID of a file is not straightforward: if you 
   have an attachment column named "A", you may create a formula column and 
   set it to ``=$A`` - or, download the Sqlite database. 
-- Users have their own IDs too, which is an integer number. The new SCIM apis 
-  make use of users IDs: however, SCIM is not enabled (so far) in the regular 
-  SaaS Grist, and you can't retrieve the "home" database where those IDs 
-  are stored. See the SCIM section of this documentation for more info. 
-  The few, non-SCIM apis dealing with user manipulation identify users by their 
-  own unique email. 
-
-The ``GristApi`` class.
-=======================
-
-At the heart of Pygrister is the ``GristApi`` class, exposing all the Grist 
-API functions. Basic usage is very straightforward::
-
-    from pygrister.api import GristApi
-
-    grist = GristApi()
-    # list users/permissions for the current document
-    status_code, response = grist.list_doc_users()
-    # fetch all rows in a table
-    status_code, response = grist.see_records('Table1') 
-    # add a column to a table
-    cols = [{'id': 'age', 'fields': {'label':'age', 'type': 'Int'}}]
-    status_code, response = grist.add_cols('Table1', cols) 
-
-There are many API call functions: it may help knowing that almost all of 
-their names follow this pattern:
-
-- ``list_*`` functions implement ``GET`` calls to retrieve object lists;
-- ``see_*`` functions implement ``GET`` calls to retrieve one particular 
-  object;
-- ``update_*`` functions implement ``PATCH`` calls to modify an object attributes; 
-- ``add_*`` functions implement ``POST`` calls to add an object;
-- ``add_update_*`` functions implement ``PUT`` calls to modify an object 
-  if existing, adding otherwise;
-- ``delete_*`` functions implement ``DELETE`` calls to delete an object;
-- ``download_*`` functions are for downloading.
-
-The docstring of each function reports the underlying Grist API: consult the 
-`Grist API reference documentation <https://support.getgrist.com/api/>`_ 
-for details about each API signature, and browse the Pygrister test suite 
-for more usage examples.
-
-API call return values.
------------------------
-
-API call functions always return a 2-items tuple: the *Http status code* of the 
-response (an integer number), and the *response body*. Sometimes Pygrister will 
-put a little effort in simplifying and uniforming the json object returned by 
-the underlying Grist Api. Responses returned by Pygrister follows this pattern: 
-
-- all ``see_*`` functions return a dictionary, describing a single object 
-  (one table, one column...);
-- all ``list_*`` functions return a list of dictionaries;
-- "singular form" ``add_*`` functions (``add_workspace``, ``add_doc``) 
-  return the ID of the added object;
-- "plural form" ``add_*`` functions (``add_tables``...) return a list of 
-  IDs of the added objects (possibly just one);
-- ``delete_*``, ``update_*``, ``add_update_*`` functions return ``None``; 
-  ``download_*`` functions return ``None`` and download something as a 
-  side effect. 
-
-Docstrings in each function report the return type, but you'll still need the 
-Grist API documentation for the details. 
-
-Pygrister will also save the original response body of the last API call anyway: 
-if you need it, inspect the ``resp_content`` attribute *before* making another 
-call::
-
-    >>> grist = GristApi()
-    >>> grist.add_cols('Table1', [{'id': 'colA'}, {'id': 'colB'}])
-    (200, ['colA', 'colB'])
-    >>> grist.resp_content # the original reponse, a little more nested!
-    "{'columns': [{'id': 'colA'}, {'id': 'colB'}]}"
-
-In addition, API call functions may throw an exception if something went wrong. 
-This, however, is a matter of configuration: you may choose to inspect 
-the status code instead. For this and other configuration options, read on. 
-
-Record format in Pygrister.
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Pygrister puts extra effort in uniforming the APIs for record manipulation. 
-The original Grist API has a few ways to describe a list of records, depending 
-on the case. In Pygrister, a record is *always* a ``{col: value}`` dictionary, 
-and a list of records is a ``list[dict]``. This is true for both input parameters 
-and return values.  
-
-A "Pygrister record" may or may not include record IDs (that is, the special 
-hidden ``id`` column operated by Grist, see above). For example, you'll need to 
-include IDs when you are updating existent records::
-
-    >>> grist = GristApi()
-    >>> records = [{'A': 'foo', 'B': 'bar'}, {'A': 'baz'}] # no IDs
-    >>> grist.add_records('Table1', records)
-    (200, [1, 2])
-    >>> to_update = [{'id': 2, 'B': 'foobar'}] # records with IDs
-    >>> grist.update_records('Table1', to_update)
-    (200, None)
-    >>> grist.list_records('Table1')
-    (200, [{'id': 1, 'A': 'foo', 'B': 'bar'}, {'id': 2, 'A': 'baz', 'B': 'foobar'}])
-    >>> grist.resp_content # the underlying Grist API format
-    "{'records': [{'id': 1, 'fields': {'A': 'foo', 'B': 'bar'}}, 
-                  {'id': 2, 'fields': {'A': 'baz', 'B': 'foobar'}}]}"
-
-Note that you don't have to fill in all the values in a record, as demonstrated  
-in the first example above.
-
-Grist IDs in Pygrister functions.
----------------------------------
-
-Browsing the Pygrister API call functions, you will find many optional 
-``*_id`` parameters, mapping to the Grist IDs detailed above. Parameter 
-names follow this pattern:
-
-- ``team_id`` refers to the Grist team ID (subdomain);
-- ``ws_id`` is the numerical Workspace ID;
-- ``doc_id`` is the Document ID;
-- ``table_id`` is the Table ID;
-- ``attachment_id`` is the Attachment ID.
+- Users have their own IDs too, which is an integer number. 
+  The new :ref:`SCIM apis<scim_apis_support>` will make use of users IDs: 
+  however, SCIM is not enabled (so far) in the regular SaaS Grist, and 
+  you can't retrieve the "home" database where those IDs are stored. 
+  See the SCIM section of this documentation for more info. 
+  The few, non-SCIM apis dealing with user manipulation identify users 
+  by their own unique email. 

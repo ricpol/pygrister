@@ -1,3 +1,23 @@
+"""
+Pygrister Api call engine.
+--------------------------
+
+The ``ApiCaller`` class here is responsible for actually posting a Grist 
+Api call. The main ``GristApi`` class will create and load its own default 
+instance of ``ApiCaller`` at instantiation time. 
+
+However, you may subclass ``ApiCaller`` and provide your own custom 
+mechanism::
+
+    >>> from pygrister.api import GristApi
+    >>> from pygrister.apicaller import ApiCaller
+    >>> class MyCaller(ApiCaller):
+    ...     pass   # do your thing here
+    ...
+    >>> apicall = MyCaller()
+    >>> grist = GristApi(custom_apicaller=apicall)
+"""
+
 import json as modjson
 from pathlib import Path
 from typing import Any

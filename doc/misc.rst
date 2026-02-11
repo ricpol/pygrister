@@ -1,63 +1,7 @@
 Various and sundry.
 ===================
 
-
-The API call engine.
---------------------
-
-The code responsible for posting the API call to the Grist server lives in 
-a separate ``apicaller.ApiCaller`` class. The main ``GristApi`` class will 
-load a default instance of ``ApiCaller`` at instantiation time. You may write 
-your custom API call engine and pass it to ``GristApi.__init__``, as the 
-optional argument ``custom_apicaller``: of course, this is not needed in 
-normal usage. 
-
-Once the ``GristApi`` instance is ready, its internal API caller will be 
-available via the ``GristApi.apicaller`` attribute. Accessing the 
-API caller directly may help you with debugging. 
-
-Using custom configurators and API callers in ``GristApi``.
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-An ``ApiCaller`` class will need its own configurator: you may write a 
-custom class, or simply use the default one::
-
-  >>> from pygrister.config import Configurator
-  >>> from pygrister.apicaller import ApiCaller
-  >>> from pygrister.api import GristApi
-  >>> class MyApiCaller(ApiCaller):
-  ...    pass  # insert here your custom logic for api calling
-  
-  >>> a = MyApiCaller()  # a custom api caller using the default configurator
-  >>> grist = GristApi(custom_apicaller=a)
-
-Then, the ``GristApi`` class will also use the configurator provided with the 
-api caller::
-
-  >>> grist.configurator is grist.apicaller.configurator
-  True
-
-To ensure that both ``GristApi`` and its api caller will use the same configurator, 
-you are prevented to pass both a ``custom_configurator`` and a ``custom_apicaller``  
-to the ``GristApi`` constructor::
-
-  >>> GristApi(custom_configurator=c, custom_apicaller=a) # throws an exception
-
-Once ``GristApi`` is instantiated, it is possible to change the configurator 
-(and/or the api caller) at runtime, in theory, but this is not really supported. 
-You must always remember to ensure that ``GristApi`` and its own internal api 
-caller will use the same configurator object, at any time. For instance, ::
-
-  >>> class MyConfigurator(Configurator): pass  # a custom configurator
-
-  >>> conf = MyConfigurator()
-  >>> grist.configurator = conf # change the configurator at runtime
-  >>> grist.apicaller.configurator = conf # change the apicaller's one too!
-
-This is possible, if convoluted. If you really must swap configurator 
-and/or api caller at runtime, it's easier to create two separate instances 
-of ``GristApi``, with their own different internals, then swap between them  
-instead. 
+.. _inspecting_api_call:
 
 Inspecting and troubleshooting the API call.
 --------------------------------------------
@@ -73,6 +17,8 @@ object (which is your API call, ready to be posted) will be accessible as
 ``GristApi.apicaller.request``. Once the response is retrieved, the 
 `Response <https://requests.readthedocs.io/en/latest/api/#requests.Response>`_ 
 object will be available as ``GristApi.apicaller.response``. 
+(If you are wondering about the ``apicaller`` bit above, read the section 
+devoted to :ref:`custom Api callers<apicall_engine>`.)
 
 The convenience function ``GristApi.inspect`` will collect and output the 
 relevant data of both PreparedRequest and Response for you. 
@@ -82,14 +28,17 @@ instead of the default ``\n`` to produce a one-liner dump suitable for logging).
 You may also pass a ``max_content`` argument to limit the size of both 
 request's and response's body. 
 
-The inspect data always refers to the *last* API call that was posted, either 
+The inspect data always refer to the *last* API call that was posted, either 
 successfully or not. You should call ``inspect`` and/or access the Requests' 
 objects *before* making the next API call. 
 
 If the API call returned a "bad" status code (eg, Http 404, Http 500 etc.), 
-the response object will still be available. If, however, the call was not 
+the response object will still be available. If, however, the call was not even 
 responded to by the server (eg, timed out), then ``GristApi.apicaller.response`` 
 will be ``None``.
+
+
+.. _errors_statuscodes:
 
 Errors vs Status codes.
 -----------------------
@@ -111,24 +60,25 @@ Since the response is delivered in any case, it is really just a matter of taste
 If you prefer "to ask for forgiveness", set the config key to ``Y`` (the default) 
 and prepare for the possible exception::
 
-    from requests import HTTPError
+    >>> from requests import HTTPError
+    >>> from pygrister.api import GristApi
 
-    grist = GristApi()
-    try: 
-        st_code, res = grist.list_records('mytable')
-    except HTTPError:
-        # standard return values are missing but data have been retrieved anyway
-        st_code = grist.apicaller.response.status_code 
-        res = grist.apicaller.response.text  # or .json()
+    >>> grist = GristApi()
+    >>> try: 
+    ...     st_code, res = grist.list_records('mytable')
+    ... except HTTPError:
+    ...     # there's no "st_code" and "res" but data have been retrieved anyway
+    ...     st_code = grist.apicaller.response.status_code 
+    ...     res = grist.apicaller.response.text  # or .json()
 
 If you prefer to "look before you leap" instead, set the config key to ``N`` 
 and check the resulting status code::
 
-    grist.reconfig({'GRIST_RAISE_ERROR': 'N'})
-    st_code, res = grist.list_records('mytable')
-    if st_code >= 300:
-        # now the function is allowed to return even if an error occurred
-        print(st_code, res)
+    >>> grist.reconfig({'GRIST_RAISE_ERROR': 'N'})
+    >>> st_code, res = grist.list_records('mytable')
+    >>> if st_code >= 300:
+    ...     # now the function is allowed to return even if an error occurred
+    ...     print(st_code, res)
 
 Finally note that, if an HTTPError occurred, the body of the retrieved response 
 will of course not conform to the "regular" Pygrister format for a successful 
@@ -143,6 +93,7 @@ request::
 
 In such cases, Pygrister will always return the original Grist API response 
 without modification. 
+
 
 The ``ok`` attribute.
 ---------------------
@@ -168,13 +119,14 @@ but it can be helpful in log parsing and post-mortem inspection.
 
 To sum up, ``GristApi.ok`` 
 
-- is ``False`` when a response was not retrieved at all (but first you have 
-  to catch the subsequent Requests exception);
-- is ``False`` when a response was received, with a "bad" status code (you  
-  have to catch a ``requests.HTTPError`` *if* you set your ``GRIST_RAISE_ERROR`` 
-  config key to ``Y``);
+- is ``False`` when a response was not retrieved at all (but you have 
+  to catch the subsequent Requests exception first);
+- is ``False`` when a response was received, with a "bad" status code 
+  (*if* you set your ``GRIST_RAISE_ERROR`` config key to ``Y``, then you  
+  still have to catch a ``requests.HTTPError`` though);
 - is ``False`` when Pygrister is in "dry run mode", see below;
 - is ``True`` when a response was received and the status code is "good". 
+
 
 Dry run.
 --------
@@ -186,7 +138,7 @@ Set it back to ``False`` to return to normal functioning.
 While in dry run mode: 
 
 - a ``GristApi.apicaller.request`` object will always be prepared;
-- ``GristApi.apicaller.response``, instead, will always be ``None`` because 
+- ``GristApi.apicaller.response`` will always be ``None`` because 
   the request will not be posted;
 - ``GristApi.ok`` will be ``False``;
 - any api call will return a fake response, with Http 418 status code and  
@@ -205,6 +157,9 @@ so that you will know that this is not serious business after all ::
     >>> grist.apicaller.dry_run = True
     >>> grist.see_team()
     (418, {'No Content': 'Pygrister teapot is running dry!'})
+
+
+.. _safe_mode:
 
 Safe mode.
 ----------
@@ -231,6 +186,9 @@ request afterwards::
 Please note that the two ``run_sql*`` functions are still allowed in safe mode, 
 because the underlying API only accepts ``SELECT`` statements anyway. 
 
+
+.. _additional_args_request:
+
 Additional arguments for the request.
 -------------------------------------
 
@@ -243,6 +201,7 @@ Simply set ``GristApi.apicaller.request_options`` to a dictionary::
 
 The ``request_options`` will then be injected into all subsequent Pygrister API 
 calls. The code above, for example, will set a timeout limit from now on. 
+
 
 Using Requests sessions in Pygrister.
 -------------------------------------
@@ -272,7 +231,7 @@ In Pygrister, session have no other use than for boosting performance, and they
 are transparent to the rest of the api. Inside a session, you will use the 
 ``GristApi`` class just the same: start a session, and then forget about it. 
 
-You may use sessions for performance, when you need to make several api calls 
-in a row. However, keep in mind that Requests (and Pygrister) sessions are 
-supplied "as it is" - your server may be configured to expire a session after 
-a while, for instance. 
+You may use sessions for performance, when you need to post several api calls 
+in a row (like, in a script). However, keep in mind that Requests 
+(and Pygrister) sessions are supplied "as it is" - your server may be 
+configured to expire a session after a while, for instance. 

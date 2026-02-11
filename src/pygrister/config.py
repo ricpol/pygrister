@@ -1,3 +1,23 @@
+"""
+Pygrister configuration engine.
+-------------------------------
+
+The ``Configurator`` class here is responsible for parsing, applying and 
+changing configuration at runtime. The main ``GristApi`` class will create 
+and load its own default instance of ``Configurator`` at instantiation time. 
+
+However, you may subclass ``Configurator`` and provide your own custom 
+mechanism::
+
+    >>> from pygrister.api import GristApi
+    >>> from pygrister.config import Configurator
+    >>> class MyConfig(Configurator):
+    ...     pass   # do your thing here
+    ...
+    >>> cfg = MyConfig()
+    >>> grist = GristApi(custom_configurator=cfg)
+"""
+
 import os, os.path
 import json as modjson
 from pprint import pformat
@@ -30,6 +50,11 @@ def apikey2output(apikey: str) -> str:
 
 class Configurator:
     def __init__(self, config: dict[str, str]|None = None):
+        """Implement Pygrister's configuration mechanism.
+        
+        Pass ``config`` to override any "static" configuration that you 
+        may have specified in json files and/or env variables.
+        """
         self.config = dict()     # the actual, current configuration
         self.server = ''         # the current api server url
         self.raise_option = True # if we should raise Http errors
@@ -42,9 +67,11 @@ class Configurator:
         
         This is the "static" configuration setup, not counting anything 
         you may alter at runtime.
-        Config keys are first searched in ``config.py``, then in 
-        ``~/.gristapi/config.json``, and finally in matching env variables. 
-        See ``config.py`` for a list of the config keys currently in use.
+        Config keys are first loaded from ``config.PYGRISTER_CONFIG``, 
+        then searched in ``~/.gristapi/config.json``, and finally 
+        in matching env variables. 
+        
+        See ``PYGRISTER_CONFIG`` for a list of config keys currently in use.
         """
         config = dict(PYGRISTER_CONFIG)
         pth = os.path.join(os.path.expanduser('~'), '.gristapi/config.json')
@@ -69,14 +96,17 @@ class Configurator:
 
     def reconfig(self, config: dict[str, str]|None = None) -> None:
         """Reload the configuration options. 
+
+        This will parse and calculate any "static" configuration first, 
+        then override it with the optional ``config`` parameter. 
         
         Call this function if you have just updated config files/env. vars 
-        at runtime, and/or pass a dictionary to the ``config`` parameter 
-        to override existing config keys for the time being, eg.::
+        at runtime, and/or pass the ``config`` parameter to override 
+        existing config keys for the time being, eg. after calling ::
 
-            grist.reconfig({'GRIST_TEAM_SITE': 'newteam'})
+            >>> grist.reconfig({'GRIST_TEAM_SITE': 'newteam'})
 
-        now all future api calls will be directed to the new team site. 
+        all future api calls will be directed to the new team site. 
 
         Note: this will re-build your configuration from scratch, then appy 
         the ``config`` parameter on top. To edit your *existent* configuration 
