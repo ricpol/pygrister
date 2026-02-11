@@ -29,8 +29,9 @@ You will find a stub "gryconfig.json" file in the same top directory as
 the Gry executable. Open it, fill in the missing information, and you are 
 ready to go. 
 (Advanced users may also want to edit "gryrequest.json" to pass additional 
-information to the underlying Requests library: if you don't know what 
-this means, it's fine - just ignore this file.)
+information to the underlying Requests library, and the "cliconverters.py" 
+module to add type converters to the mix: if you don't know what this 
+means, it's fine - just ignore these files.)
 
 
 Useful links

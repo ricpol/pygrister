@@ -15,6 +15,8 @@ ZIP_FILE = HERE / 'dist' / 'gry.zip'
 
 def main():
     PyInstaller.__main__.run([str(SPEC_FILE)])
+    copy(BUNDLE_FILES / 'cliconverters.py', 
+         DEST_DIR / 'cliconverters.py')
     copy(BUNDLE_FILES / 'gryconf.json', 
          DEST_DIR / 'gryconf.json')
     copy(BUNDLE_FILES / 'gryrequest.json', 

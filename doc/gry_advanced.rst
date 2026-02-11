@@ -19,7 +19,8 @@ will attempt to *import* it).
 
 **Standalone version**: In the standalone bundle, you may also drop your 
 ``cliconverters.py`` in the top-level directory of the bundle, ie next to the 
-"gry.exe" and readme files. 
+"gry.exe" and readme files. You will find a stub module there, for you 
+to open and edit.
 
 Inside the file, write your converter functions as you need. 
 You must, however, name the final converter dictionaries ``cli_out_converters`` 
