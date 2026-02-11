@@ -10,6 +10,7 @@ New APIS:
   - GET /orgs/{orgId}/usage -> GristApi.see_team_usage / gry team usage
   - POST /workspaces/{workspaceId}/remove|unremove -> 
       GristApi.trash_workspace / gry ws trash
+  - POST /docs/{docId}/remove|unremove -> GristApi.trash_doc / gry doc trash
 
 v0.9.1, 2025.12.08
 ------------------

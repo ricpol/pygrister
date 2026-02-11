@@ -1074,6 +1074,21 @@ def delete_doc(doc_id: Annotated[str, _doc_id_opt] = '',
     st, res = grist_api.delete_doc(doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
+@doc_app.command('trash')
+def trash_doc(
+    remove: Annotated[bool, typer.Option('--remove/--restore', '-R/-r', 
+                      help='Move to trash or restore')] = True, 
+    permanent: Annotated[bool, typer.Option('--permanent', 
+                         help='Remove permanently')] = False,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Move to trash or restore a document"""
+    st, res = grist_api.trash_doc(remove, permanent, doc_id, team_id)
+    _print_done_or_exit(st, res, quiet, verbose, inspect)
+
 @doc_app.command('purge-history')
 def delete_doc_history(
     keep: Annotated[int, typer.Option('--keep', '-k', 

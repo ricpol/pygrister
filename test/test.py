@@ -725,6 +725,24 @@ class TestDocs(BaseTestPyGrister):
         with self.assertRaises(api.GristApiInSafeMode):
             self.g.add_doc(name, self.workspace_id)
 
+    def test_trash_doc(self):
+        name = str(time.time_ns())
+        st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.trash_doc(doc_id=doc_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+        with self.assertRaises(HTTPError):
+            st, res = self.g.see_doc(doc_id=doc_id)
+        st, res = self.g.trash_doc(remove=False, doc_id=doc_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+        st, res = self.g.see_doc(doc_id=doc_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.trash_doc(doc_id=doc_id, permanent=True)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+
     def test_delete_doc_history(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)

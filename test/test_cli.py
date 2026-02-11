@@ -278,7 +278,11 @@ class TestDoc(BaseTestCli):
     def test_delete_doc(self):
         res = self.runner.invoke(app, ['doc', 'delete', '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)
-    
+
+    def test_trash_doc(self):
+        res = self.runner.invoke(app, ['doc', 'trash', '-d', 'bogus_doc'])
+        self.assertEqual(res.exit_code, 3)
+
     def test_purge_history_doc(self):
         res = self.runner.invoke(app, ['doc', 'purge-history'])
         self.assertEqual(res.exit_code, 0)

@@ -299,6 +299,13 @@ Documents
   * Gry: ``gry doc delete``
 
 
+* Grist: ``POST /docs/{docId}/remove|unremove``
+
+  * Pygrister: ``GristApi.trash_doc``
+  
+  * Gry: ``gry doc trash``
+
+
 * Grist: ``PATCH /docs/{docId}/move``
 
   * Pygrister: ``GristApi.move_doc``

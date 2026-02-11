@@ -822,7 +822,30 @@ class GristApi:
         if self.ok and res == doc_id:
             res = None
         return st, res
-    
+
+    @check_safemode
+    def trash_doc(self, remove: bool = True, permanent: bool = False, 
+                  doc_id: str = '', team_id: str = '') -> Apiresp: 
+        """Implement POST ``/docs/{docId}/remove`` and 
+        POST ``/docs/{docId}/unremove``. 
+
+        If ``remove`` and ``permanent``, doc will be deleted instead. 
+        If ``remove=False``, ``permanent`` is ignored and doc will be recovered.
+        
+        If successful, response will be ``None``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        if remove:
+            url = f'{server}/docs/{doc_id}/remove'
+            params = {'permanent': permanent}
+        else:
+            url = f'{server}/docs/{doc_id}/unremove'
+            params = dict()
+        st, res = self.apicaller.apicall(url, method='POST', params=params)
+        if self.ok:
+            res = None
+        return st, res
+
     @check_safemode
     def delete_doc_history(self, keep: int = 0, 
                            doc_id: str = '', team_id: str = '') -> Apiresp:
