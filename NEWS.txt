@@ -7,6 +7,7 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 - Code for a new standalone bundle of Gry, soon available for download.
 New APIS:
   - 7 new "/service-accounts" endpoints added, both in Pygrister and Gry
+  - GET /orgs/{orgId}/usage -> GristApi.see_team_usage / gry team usage
 
 v0.9.1, 2025.12.08
 ------------------

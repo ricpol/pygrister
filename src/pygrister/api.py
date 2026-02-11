@@ -587,6 +587,15 @@ class GristApi:
         url = f'{self.configurator.server}/orgs/{team_id}'
         return self.apicaller.apicall(url)
 
+    def see_team_usage(self, team_id: str = '') -> Apiresp:
+        """Implement GET ``/orgs/{orgId}/usage``.
+        
+        If successful, response will be a ``dict`` of usage details.
+        """
+        team_id = team_id or 'current'
+        url = f'{self.configurator.server}/orgs/{team_id}/usage'
+        return self.apicaller.apicall(url)
+
     @check_safemode
     def update_team(self, new_name: str, team_id: str = '') -> Apiresp:
         """Implement PATCH ``/orgs/{orgId}``.

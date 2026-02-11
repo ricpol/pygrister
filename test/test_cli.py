@@ -183,6 +183,12 @@ class TestTeams(BaseTestCli):
         res = self.runner.invoke(app, ['team', 'see', '-t', 'bogus_team'])
         self.assertEqual(res.exit_code, 3)
 
+    def test_usage_team(self):
+        res = self.runner.invoke(app, ['team', 'usage'])
+        self.assertEqual(res.exit_code, 0)
+        res = self.runner.invoke(app, ['team', 'usage', '-t', 'bogus_team'])
+        self.assertEqual(res.exit_code, 3)
+
     def test_update_team(self):
         res = self.runner.invoke(app, ['team', 'update', 'newname', 
                                        '-t', 'bogus_team'])

@@ -785,6 +785,23 @@ def see_org(team_id: Annotated[str, _team_id_opt] = '',
     content.add_row('owner', row)
     _print_output(content, res, quiet, verbose, inspect)
 
+@org_app.command('usage')
+def usage_org(team_id: Annotated[str, _team_id_opt] = '', 
+              quiet: Annotated[bool, _quiet_opt] = False,
+              verbose: Annotated[int, _verbose_opt] = 0,
+              inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Details a team usage summary"""
+    st, res = grist_api.see_team_usage(team_id)
+    _exit_if_error(st, res, quiet, verbose, inspect) 
+    content = Table('key', 'value')
+    content.add_row('appr. limit', str(res['countsByDataLimitStatus']['approachingLimit']))
+    content.add_row('grace period', str(res['countsByDataLimitStatus']['gracePeriod']))
+    content.add_row('delete only', str(res['countsByDataLimitStatus']['deleteOnly']))
+    content.add_row('att. tot. bytes', str(res['attachments']['totalBytes']))
+    #TODO not yet available?
+    #content.add_row('att. limit exceeded', str(res['attachments']['limitExceeded']))
+    _print_output(content, res, quiet, verbose, inspect)
+
 @org_app.command('update')
 def update_org(name: Annotated[str, typer.Argument(help='The new name')], 
                team_id: Annotated[str, _team_id_opt] = '',

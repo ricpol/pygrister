@@ -174,6 +174,13 @@ Teams (organisations)
   * Gry: ``gry team see``
 
 
+* Grist: ``GET /orgs/{orgId}/usage``
+
+  * Pygrister: ``GristApi.see_team_usage``
+  
+  * Gry: ``gry team usage``
+
+
 * Grist: ``DELETE /orgs/{orgId}/{name}`` (old: ``DELETE /orgs/{orgId}``)
 
   * Pygrister: ``GristApi.delete_team`` (old: ``GristApi.delete_team_old``)

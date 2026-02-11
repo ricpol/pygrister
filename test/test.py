@@ -576,6 +576,15 @@ class TestTeamSites(BaseTestPyGrister):
         with self.assertRaises(HTTPError):
             st, res = self.g.see_team('bogus')
 
+    def test_see_team_usage(self):
+        st, res = self.g.see_team_usage(TestTeamSites.team_id)
+        self.assertEqual(st, 200)
+        self.assertIsInstance(res, dict)
+        with self.assertRaises(HTTPError):
+            st, res = self.g.see_team_usage('bogus')
+        with self.assertRaises(KeyError): # documented by Grist, actually missing
+            _ = res['attachments']['limitExceeded']
+
     def test_update_team(self):
         self.g.update_config({'GRIST_SAFEMODE': 'Y'})
         with self.assertRaises(api.GristApiInSafeMode):
