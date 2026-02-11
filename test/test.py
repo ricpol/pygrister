@@ -832,6 +832,18 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
 
+    def test_pin_doc(self):
+        name = str(time.time_ns())
+        st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertIsInstance(doc_id, str)
+        self.assertEqual(st, 200)
+        st, res = self.g.pin_doc(True, doc_id=doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+        st, res = self.g.enable_doc(False, doc_id=doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+
     def test_recovery_doc(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)

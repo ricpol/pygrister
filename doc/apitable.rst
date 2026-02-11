@@ -327,6 +327,13 @@ Documents
   * Gry: ``gry doc enable``
 
 
+* Grist: ``PATCH /docs/{docId}/pin|unpin``
+  
+  * Pygrister: ``GristApi.pin_doc``
+
+  * Gry: ``gry doc pin``
+
+
 * Grist: ``GET /docs/{docId}/access``
 
   * Pygrister: ``GristApi.list_doc_users``

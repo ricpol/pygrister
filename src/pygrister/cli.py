@@ -1123,6 +1123,18 @@ def enable_doc(enable: Annotated[bool, _enable_opt] = True,
     st, res = grist_api.enable_doc(enable, doc_id, team_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
+@doc_app.command('pin')
+def pin_doc(
+    pin: Annotated[bool, typer.Option('--pin/--unpin', help='Pin/unpin')] = True,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Pin or unpin a document"""
+    st, res = grist_api.pin_doc(pin, doc_id, team_id)
+    _print_done_or_exit(st, res, quiet, verbose, inspect)
+
 @doc_app.command('recovery')
 def doc_recovery(
     mode: Annotated[bool, typer.Option('--set/--unset', '-R/-r', 

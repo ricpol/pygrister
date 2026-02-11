@@ -297,6 +297,12 @@ class TestDoc(BaseTestCli):
         res = self.runner.invoke(app, ['doc', 'enable'])
         self.assertEqual(res.exit_code, 0)
     
+    def test_pin_doc(self):
+        res = self.runner.invoke(app, ['doc', 'pin'])
+        self.assertEqual(res.exit_code, 0)
+        res = self.runner.invoke(app, ['doc', 'pin', '--unpin'])
+        self.assertEqual(res.exit_code, 0)
+
     def test_recovery_doc(self):
         res = self.runner.invoke(app, ['doc', 'recovery', '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)
