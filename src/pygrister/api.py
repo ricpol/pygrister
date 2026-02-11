@@ -720,6 +720,29 @@ class GristApi:
             res = None
         return st, res
 
+    @check_safemode
+    def trash_workspace(self, remove: bool = True, permanent: bool = False, 
+                        ws_id: int = 0) -> Apiresp: 
+        """Implement POST ``/workspaces/{workspaceId}/remove`` and 
+        POST ``/workspaces/{workspaceId}/unremove``. 
+
+        If ``remove`` and ``permanent``, ws will be deleted instead. 
+        If ``remove=False``, ``permanent`` is ignored and ws will be recovered.
+        
+        If successful, response will be ``None``.
+        """
+        ws_id = ws_id or int(self.configurator.config['GRIST_WORKSPACE_ID'])
+        if remove:
+            url = f'{self.configurator.server}/workspaces/{ws_id}/remove'
+            params = {'permanent': permanent}
+        else:
+            url = f'{self.configurator.server}/workspaces/{ws_id}/unremove'
+            params = dict()
+        st, res = self.apicaller.apicall(url, method='POST', params=params)
+        if self.ok:
+            res = None
+        return st, res
+
     def list_workspace_users(self, ws_id: int = 0) -> Apiresp:
         """Implement GET ``/workspaces/{workspaceId}/access``.
         

@@ -234,6 +234,10 @@ class TestWorkspaces(BaseTestCli):
         res = self.runner.invoke(app, ['ws', 'delete', '-w', '10000000'])
         self.assertEqual(res.exit_code, 3)
 
+    def test_trash(self):
+        res = self.runner.invoke(app, ['ws', 'trash', '-w', '10000000'])
+        self.assertEqual(res.exit_code, 3)
+
     def test_users_ws(self):
         res = self.runner.invoke(app, ['ws', 'users'])
         self.assertEqual(res.exit_code, 0)

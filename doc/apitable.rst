@@ -247,6 +247,13 @@ Workspaces
   * Gry: ``gry ws delete``
 
 
+* Grist: ``POST /workspaces/{workspaceId}/remove|unremove``
+
+  * Pygrister: ``GristApi.trash_workspace``
+  
+  * Gry: ``gry ws trash``
+
+
 * Grist: ``GET /workspaces/{workspaceId}/access``
 
   * Pygrister: ``GristApi.list_workspace_users``

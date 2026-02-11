@@ -934,6 +934,20 @@ def delete_ws(ws_id: Annotated[int, _ws_id_opt] = 0,
     st, res = grist_api.delete_workspace(ws_id)
     _print_done_or_exit(st, res, quiet, verbose, inspect)
 
+@ws_app.command('trash')
+def trash_ws(
+    remove: Annotated[bool, typer.Option('--remove/--restore', '-R/-r', 
+                      help='Move to trash or restore')] = True, 
+    permanent: Annotated[bool, typer.Option('--permanent', 
+                         help='Remove permanently')] = False,
+    ws_id: Annotated[int, _ws_id_opt] = 0,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Move to trash or restore a workspace"""
+    st, res = grist_api.trash_workspace(remove, permanent, ws_id)
+    _print_done_or_exit(st, res, quiet, verbose, inspect)
+
 @ws_app.command('users')
 def list_ws_users(ws_id: Annotated[int, _ws_id_opt] = 0,  
                   quiet: Annotated[bool, _quiet_opt] = False,

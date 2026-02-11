@@ -648,7 +648,25 @@ class TestWorkspaces(BaseTestPyGrister):
         st, res = self.g.delete_workspace(ws_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
-        
+
+    def test_trash_workspace(self):
+        name = str(time.time_ns())
+        st, ws_id = self.g.add_workspace(name, self.team_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.trash_workspace(ws_id=ws_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+        with self.assertRaises(HTTPError):
+            st, res = self.g.see_workspace(ws_id)
+        st, res = self.g.trash_workspace(remove=False, ws_id=ws_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+        st, res = self.g.see_workspace(ws_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.trash_workspace(ws_id=ws_id, permanent=True)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+
     def test_update_workspace(self):
         name = str(time.time_ns())
         st, res = self.g.update_workspace(name, self.workspace_id)
