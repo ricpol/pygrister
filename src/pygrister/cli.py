@@ -430,12 +430,9 @@ def grytest() -> None:
 # gry conf -> print the current Grist configuration
 # ----------------------------------------------------------------------
 @app.command('conf')
-def gryconf(
-    showkey: Annotated[bool, 
-                       typer.Option('--show-apikey/--hide-apikey', '-K/-k', 
-                       help='Show in full or obfuscate apikey')] = False,
-    quiet: Annotated[bool, _quiet_opt] = False,
-    verbose: Annotated[int, _verbose_opt] = 0) -> None:
+def gryconf(showkey: Annotated[bool, 
+                typer.Option('--show-apikey/--hide-apikey', '-K/-k', 
+                help='Show in full or obfuscate apikey')] = False) -> None:
     """Print current Gry configuration and additional Requests options"""
     res = grist_api.configurator.config
     if not showkey:
@@ -446,11 +443,7 @@ def gryconf(
     table.add_section()
     for k, v in grist_api.apicaller.request_options.items():
         table.add_row(k, str(v))
-    if not quiet:
-        if verbose == 0:
-            cli_console.print(table)
-        else:
-            cli_console.print(res)
+    cli_console.print(table)
 
 # gry sql -> post SELECT sql queries to Grist
 # ----------------------------------------------------------------------
