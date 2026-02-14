@@ -179,8 +179,13 @@ ERRMSG = '[bold red]Error![/bold red]'
 
 # a few helper functions
 # ----------------------------------------------------------------------
-def _exit_if_error(st: int, res: Any, quiet: bool, 
-                   verbose: int, inspect: bool) -> None:
+
+def _exit_early(st: int, res: Any, quiet: bool, 
+                verbose: int, inspect: bool) -> bool:
+    # prints output in any possibile case, except the fancy formatted one  
+    # that we need when verbose==0 and everything else is fine.
+    # return True if we are done and no further output is required, 
+    # return False if fancy output is needed
     if inspect and not quiet:
         cli_console.print(grist_api.inspect())
         cli_console.rule()
@@ -191,51 +196,33 @@ def _exit_if_error(st: int, res: Any, quiet: bool,
             else:
                 cli_console.print(grist_api.apicaller.response_as_json())
         raise typer.Exit(BADCALL)
+    if quiet:
+        return True
+    if verbose == 1:
+        cli_console.print(res)
+        return True
+    if verbose == 2:
+        cli_console.print(grist_api.apicaller.response_as_json())
+        return True
+    return False # meaning that we still have fancy output to produce
 
-def _print_done_or_exit(st: int, res: Any, quiet: bool, 
-                        verbose: int, inspect: bool) -> None:
-    if inspect and not quiet:
-        cli_console.print(grist_api.inspect())
-        cli_console.rule()
-    if grist_api.ok: 
-        if not quiet:
-            if verbose == 0:
-                cli_console.print(DONEMSG)
-            elif verbose == 1:
-                cli_console.print(res)
-            else:
-                cli_console.print(grist_api.apicaller.response_as_json())
-    else:
-        cli_console.print(ERRMSG, 'Status:', st, res)
-        raise typer.Exit(BADCALL)
+def _exit_early_or_print_done(st: int, res: Any, quiet: bool, 
+                              verbose: int, inspect: bool) -> None:
+    # a shortcut for when the fancy output is just a "Done" message
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        cli_console.print(DONEMSG)
+    
+def _exit_early_or_print_id(st: int, res: Any, quiet: bool, 
+                            verbose: int, inspect: bool) -> None:
+    # a shortcut for when the response is, in fact, an ID
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        cli_console.print(f'{DONEMSG} Id: {res}')
 
-def _print_output(content: Any, res: Any, quiet: bool, 
-                  verbose: int, inspect: bool) -> None:
-    if inspect and not quiet:
-        cli_console.print(grist_api.inspect())
-        cli_console.rule()
-    if not quiet:
-        # we print different things, depending on verbose level
-        # note that we always have the cli output ready, even if we won't use it
-        if verbose == 0: # the nicely formatted cli output (text)
-            cli_console.print(content)
-        elif verbose == 1: # the response from Pygrister (Python object)
-            cli_console.print(res)
-        else: # the original Grist api response (json)
-            cli_console.print(grist_api.apicaller.response_as_json())
-
-def _print_done_and_id(content: Any, res: Any, quiet: bool, 
-                       verbose: int, inspect: bool) -> None:
-    if not quiet:
-        if inspect:
-            cli_console.print(grist_api.inspect())
-            cli_console.rule()
-        if verbose == 0:
-            cli_console.print(DONEMSG, 'Id:', content)
-        elif verbose == 1:
-            cli_console.print(res)
-        else:
-            cli_console.print(grist_api.apicaller.response_as_json())
+def _exit_early_or_print_content(st: int, res: Any, quiet: bool, 
+                                 verbose: int, inspect: bool) -> None:
+    # a shortcut for when the fancy content is, in fact, just the response
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        cli_console.print(res)
 
 def _make_user_table(response: list[dict]) -> Table:
     table = Table('id', 'name', 'email', 'access')
@@ -438,7 +425,7 @@ def grytest() -> None:
             tests['store type'] = str(res)
     for key, value in tests.items():
         content.add_row(key, value)
-    _print_output(content, '', False, 0, False)
+    cli_console.print(content)
 
 # gry conf -> print the current Grist configuration
 # ----------------------------------------------------------------------
@@ -459,7 +446,6 @@ def gryconf(
     table.add_section()
     for k, v in grist_api.apicaller.request_options.items():
         table.add_row(k, str(v))
-    # _print_output is not quite made for this use case!
     if not quiet:
         if verbose == 0:
             cli_console.print(table)
@@ -491,14 +477,14 @@ def run_sql(
                                               doc_id, team_id)
     else:
         st, res = grist_api.run_sql(statement, doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    if res:
-        content = Table(*res[0].keys())
-        for row in res:
-            content.add_row(*[str(v) for v in row.values()])
-    else:
-        content = 'No records found.'
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        if res:
+            content = Table(*res[0].keys())
+            for row in res:
+                content.add_row(*[str(v) for v in row.values()])
+        else:
+            content = 'No records found.'
+        cli_console.print(content)
 
 # gry python -> open a Gry-aware Python shell
 # ----------------------------------------------------------------------
@@ -532,14 +518,14 @@ def list_saccs(quiet: Annotated[bool, _quiet_opt] = False,
                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List all service accounts"""
     st, res = grist_api.list_service_accounts()
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    if res:
-        content = Table('key', 'value')
-        for account in res:
-            content = _make_sacc_data(account, content)
-    else:
-        content = 'No service accounts available.'
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        if res:
+            content = Table('key', 'value')
+            for account in res:
+                content = _make_sacc_data(account, content)
+        else:
+            content = 'No service accounts available.'
+        cli_console.print(content)
 
 @sacc_app.command('see')
 def see_sacc(sacc: Annotated[int, _sacc_id_arg],
@@ -548,10 +534,10 @@ def see_sacc(sacc: Annotated[int, _sacc_id_arg],
              inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Retrieve service account by ID"""
     st, res = grist_api.see_service_account(sacc)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('key', 'value')
-    content = _make_sacc_data(res, content)
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content = _make_sacc_data(res, content)
+        cli_console.print(content)
 
 @sacc_app.command('new')
 def new_sacc(
@@ -563,9 +549,9 @@ def new_sacc(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Add a service account (WARNING: key will be displayed)"""
     st, res = grist_api.add_service_account(expire, label, description)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    output = f'{res[0]} (key: {res[1]})'
-    _print_done_and_id(output, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        output = f'{res[0]} (key: {res[1]})'
+        cli_console.print(DONEMSG, 'Id:', output)
 
 @sacc_app.command('update')
 def update_sacc(
@@ -578,7 +564,7 @@ def update_sacc(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Update a service account"""
     st, res = grist_api.update_service_account(sacc, expire, label, description)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @sacc_app.command('delete')
 def delete_sacc(sacc: Annotated[int, _sacc_id_arg],
@@ -587,7 +573,7 @@ def delete_sacc(sacc: Annotated[int, _sacc_id_arg],
                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Remove a service account"""
     st, res = grist_api.delete_service_account(sacc)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @sacc_app.command('new-key')
 def update_sacc_key(sacc: Annotated[int, _sacc_id_arg],
@@ -596,8 +582,7 @@ def update_sacc_key(sacc: Annotated[int, _sacc_id_arg],
                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Regenerate a service account's key (WARNING: key will be displayed)"""
     st, res = grist_api.update_service_account_key(sacc)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @sacc_app.command('delete-key')
 def delete_sacc_key(sacc: Annotated[int, _sacc_id_arg],
@@ -606,7 +591,7 @@ def delete_sacc_key(sacc: Annotated[int, _sacc_id_arg],
                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a service account's key"""
     st, res = grist_api.delete_service_account_key(sacc)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 # gry user -> for managing users with SCIM apis
 # ----------------------------------------------------------------------
@@ -621,14 +606,14 @@ def list_users(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List users. No filter option available"""
     st, res = grist_api.list_users_raw(start, retrieve)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    if start > res['totalResults']:
-        content = 'No users.'
-    else:
-        content = Table('key', 'value')
-        for user in res['Resources']:
-            content = _make_scim_user_data(user, content)
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        if start > res['totalResults']:
+            content = 'No users.'
+        else:
+            content = Table('key', 'value')
+            for user in res['Resources']:
+                content = _make_scim_user_data(user, content)
+        cli_console.print(content)
 
 @user_app.command('me')
 def see_me(quiet: Annotated[bool, _quiet_opt] = False,
@@ -636,10 +621,10 @@ def see_me(quiet: Annotated[bool, _quiet_opt] = False,
            inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Retrieve information about oneself"""
     st, res = grist_api.see_myself()
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('key', 'value')
-    content = _make_scim_user_data(res, content)
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content = _make_scim_user_data(res, content)
+        cli_console.print(content)
 
 @user_app.command('see')
 def see_user(user: Annotated[int, _user_id_arg],
@@ -648,10 +633,10 @@ def see_user(user: Annotated[int, _user_id_arg],
              inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Retrieve user by ID"""
     st, res = grist_api.see_user(user)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('key', 'value')
-    content = _make_scim_user_data(res, content)
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content = _make_scim_user_data(res, content)
+        cli_console.print(content)
     
 @user_app.command('new')
 def new_user(
@@ -674,8 +659,7 @@ def new_user(
     photos = [picture] if picture else None
     st, res = grist_api.add_user(name, [email], formatted, display, lang, 
                                  locale, photos) 
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_id(st, res, quiet, verbose, inspect)
 
 class _OperationTypes(str, Enum):
     add = 'add'
@@ -695,7 +679,7 @@ def update_user(
     """Update a user. Only one update operation is possible"""
     op = {'op': operation, 'path': op_path, 'value': op_value}
     st, res = grist_api.update_user(user_id, [op])
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @user_app.command('delete')
 def delete_user(user: Annotated[int, _user_id_arg],
@@ -704,7 +688,7 @@ def delete_user(user: Annotated[int, _user_id_arg],
                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Remove a user"""
     st, res = grist_api.delete_user(user)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @user_app.command('enable')
 def enable_user(user: Annotated[int, _user_id_arg],
@@ -714,7 +698,7 @@ def enable_user(user: Annotated[int, _user_id_arg],
                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Enable or disable a user"""
     st, res = grist_api.enable_user(user, enable)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 # TODO we don't implement "search" for now because we don't have a good way 
 # to express filters in the shell. 
@@ -727,8 +711,7 @@ def scim_schemas(quiet: Annotated[bool, _quiet_opt] = False,
                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Retrieve SCIM schemas"""
     st, res = grist_api.see_scim_schemas()
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_output(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
 @scim_app.command('config')
 def scim_config(quiet: Annotated[bool, _quiet_opt] = False,
@@ -736,8 +719,7 @@ def scim_config(quiet: Annotated[bool, _quiet_opt] = False,
                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Retrieve SCIM configuration"""
     st, res = grist_api.see_scim_config()
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_output(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
 @scim_app.command('resources')
 def scim_resources(quiet: Annotated[bool, _quiet_opt] = False,
@@ -745,8 +727,7 @@ def scim_resources(quiet: Annotated[bool, _quiet_opt] = False,
                    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Retrieve SCIM resources"""
     st, res = grist_api.see_scim_resources()
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_output(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
 # gry team -> for managing team sites (organisations)
 # ----------------------------------------------------------------------
@@ -756,15 +737,15 @@ def list_orgs(quiet: Annotated[bool, _quiet_opt] = False,
               inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List the teams you have access to"""
     st, res = grist_api.list_team_sites()
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('id', 'name', 'owner')
-    for org in res:
-        try:
-            owner = org['owner']['name']
-        except TypeError:
-            owner = 'Null'
-        content.add_row(str(org['id']), org['name'], owner)
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('id', 'name', 'owner')
+        for org in res:
+            try:
+                owner = org['owner']['name']
+            except TypeError:
+                owner = 'Null'
+            content.add_row(str(org['id']), org['name'], owner)
+        cli_console.print(content)
 
 @org_app.command('see')
 def see_org(team_id: Annotated[str, _team_id_opt] = '', 
@@ -773,17 +754,17 @@ def see_org(team_id: Annotated[str, _team_id_opt] = '',
             inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Describe a team"""
     st, res = grist_api.see_team(team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect) 
-    content = Table('key', 'value')
-    content.add_row('id', str(res['id']))
-    content.add_row('name', res['name'])
-    content.add_row('domain', res['domain'])
-    try:
-        row = f"{res['owner']['id']} - {res['owner']['name']}"
-    except TypeError:
-        row = 'None'
-    content.add_row('owner', row)
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content.add_row('id', str(res['id']))
+        content.add_row('name', res['name'])
+        content.add_row('domain', res['domain'])
+        try:
+            row = f"{res['owner']['id']} - {res['owner']['name']}"
+        except TypeError:
+            row = 'None'
+        content.add_row('owner', row)
+        cli_console.print(content)
 
 @org_app.command('usage')
 def usage_org(team_id: Annotated[str, _team_id_opt] = '', 
@@ -792,15 +773,19 @@ def usage_org(team_id: Annotated[str, _team_id_opt] = '',
               inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Details a team usage summary"""
     st, res = grist_api.see_team_usage(team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect) 
-    content = Table('key', 'value')
-    content.add_row('appr. limit', str(res['countsByDataLimitStatus']['approachingLimit']))
-    content.add_row('grace period', str(res['countsByDataLimitStatus']['gracePeriod']))
-    content.add_row('delete only', str(res['countsByDataLimitStatus']['deleteOnly']))
-    content.add_row('att. tot. bytes', str(res['attachments']['totalBytes']))
-    #TODO not yet available?
-    #content.add_row('att. limit exceeded', str(res['attachments']['limitExceeded']))
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content.add_row('appr. limit', 
+                        str(res['countsByDataLimitStatus']['approachingLimit']))
+        content.add_row('grace period', 
+                        str(res['countsByDataLimitStatus']['gracePeriod']))
+        content.add_row('delete only', 
+                        str(res['countsByDataLimitStatus']['deleteOnly']))
+        content.add_row('att. tot. bytes', 
+                        str(res['attachments']['totalBytes']))
+        #TODO not yet available?
+        #content.add_row('att. limit exceeded', str(res['attachments']['limitExceeded']))
+        cli_console.print(content)
 
 @org_app.command('update')
 def update_org(name: Annotated[str, typer.Argument(help='The new name')], 
@@ -810,7 +795,7 @@ def update_org(name: Annotated[str, typer.Argument(help='The new name')],
                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Change the team name"""
     st, res = grist_api.update_team(name, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
      
 @org_app.command('delete')
 def delete_org(team_id: Annotated[str, _team_id_opt] = '',
@@ -819,7 +804,7 @@ def delete_org(team_id: Annotated[str, _team_id_opt] = '',
                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a team"""
     st, res = grist_api.delete_team(team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @org_app.command('users')
 def list_org_users(team_id: Annotated[str, _team_id_opt] = '',  
@@ -828,9 +813,9 @@ def list_org_users(team_id: Annotated[str, _team_id_opt] = '',
                    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List users with access to team"""
     st, res = grist_api.list_team_users(team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = _make_user_table(res)
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = _make_user_table(res)
+        cli_console.print(content)
 
 @org_app.command('user-access')
 def change_team_access(uid: Annotated[int, typer.Argument(help='The user ID')], 
@@ -841,20 +826,20 @@ def change_team_access(uid: Annotated[int, typer.Argument(help='The user ID')],
                        inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Change user access level to a team"""
     st, res = grist_api.list_team_users(team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    usr_email = ''
-    for usr in res:
-        if usr['id'] == uid:
-            usr_email = usr['email']
-            break
-    if not usr_email:
-        if inspect:
-            cli_console.print(grist_api.inspect())
-            cli_console.rule()
-        raise typer.BadParameter('User id not found.')
-    users = {usr_email: access}
-    st, res = grist_api.update_team_users(users, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, 0, inspect):
+        usr_email = ''
+        for usr in res:
+            if usr['id'] == uid:
+                usr_email = usr['email']
+                break
+        if not usr_email:
+            if inspect:
+                cli_console.print(grist_api.inspect())
+                cli_console.rule()
+            raise typer.BadParameter('User id not found.')
+        users = {usr_email: access}
+        st, res = grist_api.update_team_users(users, team_id)
+        _exit_early_or_print_done(st, res, quiet, verbose, inspect)
         
 #TODO "change_user_access" is only for existing users, but "update_team_users"
 # allows for adding users too. Maybe add a separate cli endpoint for this?
@@ -868,20 +853,21 @@ def list_ws(team_id: Annotated[str, _team_id_opt] = '',
             inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List workspaces and documents in a team"""
     st, res = grist_api.list_workspaces(team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('id', 'name', 'owner', 'email', 'docs')
-    for ws in res:
-        try:
-            owner = str(ws['owner']['id'])
-        except TypeError:
-            owner = 'Null'
-        try:
-            email = ws['owner']['email']
-        except TypeError:
-            email = ''
-        numdocs = len(ws.get('docs', []))
-        content.add_row(str(ws['id']), ws['name'], owner, email, str(numdocs))
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('id', 'name', 'owner', 'email', 'docs')
+        for ws in res:
+            try:
+                owner = str(ws['owner']['id'])
+            except TypeError:
+                owner = 'Null'
+            try:
+                email = ws['owner']['email']
+            except TypeError:
+                email = ''
+            numdocs = len(ws.get('docs', []))
+            content.add_row(str(ws['id']), ws['name'], 
+                            owner, email, str(numdocs))
+        cli_console.print(content)
 
 @ws_app.command('see')
 def see_ws(ws_id: Annotated[int, _ws_id_opt] = 0,
@@ -890,19 +876,19 @@ def see_ws(ws_id: Annotated[int, _ws_id_opt] = 0,
            inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Describe a workspace"""
     st, res = grist_api.see_workspace(ws_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('key', 'value')
-    content.add_row('id', str(res['id']))
-    content.add_row('name', res['name'])
-    try:
-        row = f"{res['org']['id']} - {res['org']['name']}"
-    except TypeError:
-        row = 'Null'
-    content.add_row('team', row)
-    content.add_section()
-    for doc in res.get('docs', []):
-        content.add_row('doc', f"{doc['id']} - {doc['name']}")
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content.add_row('id', str(res['id']))
+        content.add_row('name', res['name'])
+        try:
+            row = f"{res['org']['id']} - {res['org']['name']}"
+        except TypeError:
+            row = 'Null'
+        content.add_row('team', row)
+        content.add_section()
+        for doc in res.get('docs', []):
+            content.add_row('doc', f"{doc['id']} - {doc['name']}")
+        cli_console.print(content)
 
 @ws_app.command('new')
 def add_ws(name: Annotated[str, typer.Argument(help='The name of new workspace')], 
@@ -912,8 +898,7 @@ def add_ws(name: Annotated[str, typer.Argument(help='The name of new workspace')
            inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Create an empty workspace"""
     st, res = grist_api.add_workspace(name, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_id(st, res, quiet, verbose, inspect)
 
 @ws_app.command('update')
 def update_ws(name: Annotated[str, typer.Argument(help='The new name')], 
@@ -923,7 +908,7 @@ def update_ws(name: Annotated[str, typer.Argument(help='The new name')],
               inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Change the workspace name"""
     st, res = grist_api.update_workspace(name, ws_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @ws_app.command('delete')
 def delete_ws(ws_id: Annotated[int, _ws_id_opt] = 0,
@@ -932,7 +917,7 @@ def delete_ws(ws_id: Annotated[int, _ws_id_opt] = 0,
               inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a workspace"""
     st, res = grist_api.delete_workspace(ws_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @ws_app.command('trash')
 def trash_ws(
@@ -946,7 +931,7 @@ def trash_ws(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Move to trash or restore a workspace"""
     st, res = grist_api.trash_workspace(remove, permanent, ws_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @ws_app.command('users')
 def list_ws_users(ws_id: Annotated[int, _ws_id_opt] = 0,  
@@ -955,9 +940,9 @@ def list_ws_users(ws_id: Annotated[int, _ws_id_opt] = 0,
                   inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List users with access to workspace"""
     st, res = grist_api.list_workspace_users(ws_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = _make_user_table(res)
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = _make_user_table(res)
+        cli_console.print(content)
 
 @ws_app.command('user-access')
 def change_ws_access(uid: Annotated[int, typer.Argument(help='The user ID')], 
@@ -968,20 +953,20 @@ def change_ws_access(uid: Annotated[int, typer.Argument(help='The user ID')],
                      inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Change user access level to a workspace"""
     st, res = grist_api.list_workspace_users(ws_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    usr_email = ''
-    for usr in res:
-        if usr['id'] == uid:
-            usr_email = usr['email']
-            break
-    if not usr_email:
-        if inspect:
-            cli_console.print(grist_api.inspect())
-            cli_console.rule()
-        raise typer.BadParameter('User id not found.')
-    users = {usr_email: access}
-    st, res = grist_api.update_workspace_users(users, ws_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, 0, inspect):
+        usr_email = ''
+        for usr in res:
+            if usr['id'] == uid:
+                usr_email = usr['email']
+                break
+        if not usr_email:
+            if inspect:
+                cli_console.print(grist_api.inspect())
+                cli_console.rule()
+            raise typer.BadParameter('User id not found.')
+        users = {usr_email: access}
+        st, res = grist_api.update_workspace_users(users, ws_id)
+        _exit_early_or_print_done(st, res, quiet, verbose, inspect)
         
 #TODO "change_ws_access" is only for existing users, but "update_team_users"
 # allows for adding users too. Maybe add a separate cli endpoint for this?
@@ -996,22 +981,22 @@ def see_doc(doc_id: Annotated[str, _doc_id_opt] = '',
             inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Describe a document"""
     st, res = grist_api.see_doc(doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('key', 'value')
-    content.add_row('id', res['id'])
-    content.add_row('name', res['name'])
-    content.add_row('pinned', str(res['isPinned']))
-    try:
-        row = f"{res['workspace']['id']} - {res['workspace']['name']}"
-    except TypeError:
-        row = 'Null'
-    content.add_row('workspace', row)
-    try:
-        row = f"{res['workspace']['org']['id']} - {res['workspace']['org']['name']}"
-    except TypeError:
-        row = 'Null'
-    content.add_row('team', row)
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content.add_row('id', res['id'])
+        content.add_row('name', res['name'])
+        content.add_row('pinned', str(res['isPinned']))
+        try:
+            row = f"{res['workspace']['id']} - {res['workspace']['name']}"
+        except TypeError:
+            row = 'Null'
+        content.add_row('workspace', row)
+        try:
+            row = f"{res['workspace']['org']['id']} - {res['workspace']['org']['name']}"
+        except TypeError:
+            row = 'Null'
+        content.add_row('team', row)
+        cli_console.print(content)
 
 @doc_app.command('new')
 def add_doc(name: Annotated[str, typer.Argument(help='The name of new doc')], 
@@ -1022,8 +1007,7 @@ def add_doc(name: Annotated[str, typer.Argument(help='The name of new doc')],
             inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Create an empty document"""
     st, res = grist_api.add_doc(name, pinned, ws_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_id(st, res, quiet, verbose, inspect)
 
 @doc_app.command('update')
 def update_doc(name: Annotated[str, typer.Argument(help='The new name')],
@@ -1035,7 +1019,7 @@ def update_doc(name: Annotated[str, typer.Argument(help='The new name')],
                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Modify document metadata"""
     st, res = grist_api.update_doc(name, pinned, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @ doc_app.command('move')
 def move_doc(dest: Annotated[int, typer.Argument(help='Destination workspace ID')],
@@ -1046,7 +1030,7 @@ def move_doc(dest: Annotated[int, typer.Argument(help='Destination workspace ID'
              inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Move document to another workspace"""
     st, res = grist_api.move_doc(dest, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @ doc_app.command('copy')
 def copy_doc(
@@ -1061,8 +1045,7 @@ def copy_doc(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Copy document to another workspace"""
     st, res = grist_api.copy_doc(dest, name, template, doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_id(st, res, quiet, verbose, inspect)
 
 @doc_app.command('delete')
 def delete_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1072,7 +1055,7 @@ def delete_doc(doc_id: Annotated[str, _doc_id_opt] = '',
                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a document"""
     st, res = grist_api.delete_doc(doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @doc_app.command('trash')
 def trash_doc(
@@ -1087,7 +1070,7 @@ def trash_doc(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Move to trash or restore a document"""
     st, res = grist_api.trash_doc(remove, permanent, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @doc_app.command('purge-history')
 def delete_doc_history(
@@ -1100,7 +1083,7 @@ def delete_doc_history(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete the document action history"""
     st, res = grist_api.delete_doc_history(keep, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @doc_app.command('reload')
 def reload_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1110,7 +1093,7 @@ def reload_doc(doc_id: Annotated[str, _doc_id_opt] = '',
                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Reload a document"""
     st, res = grist_api.reload_doc(doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @doc_app.command('enable')
 def enable_doc(enable: Annotated[bool, _enable_opt] = True,
@@ -1121,7 +1104,7 @@ def enable_doc(enable: Annotated[bool, _enable_opt] = True,
                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Ebable or disable a document"""
     st, res = grist_api.enable_doc(enable, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @doc_app.command('pin')
 def pin_doc(
@@ -1133,7 +1116,7 @@ def pin_doc(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Pin or unpin a document"""
     st, res = grist_api.pin_doc(pin, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @doc_app.command('recovery')
 def doc_recovery(
@@ -1146,7 +1129,7 @@ def doc_recovery(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Controls the recovery mode of a document"""
     st, res = grist_api.set_recovery_mode(mode, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @doc_app.command('download')
 def download_db(
@@ -1164,7 +1147,7 @@ def download_db(
     nohistory = not history
     st, res = grist_api.download_sqlite(filename, nohistory, template, 
                                         doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, 0, inspect) # force verbose=0 in download mode
+    _exit_early_or_print_done(st, res, quiet, 0, inspect) # force verbose=0 in download mode
 
 @doc_app.command('upload')
 def upload_doc(
@@ -1177,8 +1160,7 @@ def upload_doc(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Import a document from an sqlite file"""
     st, res = grist_api.upload_sqlite(filename, docname, ws_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_id(st, res, quiet, verbose, inspect)
 
 @doc_app.command('users')
 def list_doc_users(doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1188,9 +1170,9 @@ def list_doc_users(doc_id: Annotated[str, _doc_id_opt] = '',
                    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List users with access to document"""
     st, res = grist_api.list_doc_users(doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = _make_user_table(res)
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = _make_user_table(res)
+        cli_console.print(content)
 
 @doc_app.command('user-access')
 def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')], 
@@ -1203,20 +1185,20 @@ def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')],
                       inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Change user access level to a document"""
     st, res = grist_api.list_doc_users(doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    usr_email = ''
-    for usr in res:
-        if usr['id'] == uid:
-            usr_email = usr['email']
-            break
-    if not usr_email:
-        if inspect:
-            cli_console.print(grist_api.inspect())
-            cli_console.rule()
-        raise typer.BadParameter('User id not found.')
-    users = {usr_email: access}
-    st, res = grist_api.update_doc_users(users, max_access, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, 0, inspect):
+        usr_email = ''
+        for usr in res:
+            if usr['id'] == uid:
+                usr_email = usr['email']
+                break
+        if not usr_email:
+            if inspect:
+                cli_console.print(grist_api.inspect())
+                cli_console.rule()
+            raise typer.BadParameter('User id not found.')
+        users = {usr_email: access}
+        st, res = grist_api.update_doc_users(users, max_access, doc_id, team_id)
+        _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 #TODO again, this is for existing users only, but the api 
 # allows for adding users too. Maybe add a separate cli endpoint for this?
@@ -1231,14 +1213,14 @@ def list_tables(doc_id: Annotated[str, _doc_id_opt] = '',
                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List tables in a document"""
     st, res = grist_api.list_tables(doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('table id', 'metadata')
-    for t in res:
-        f = t['fields']
-        mdata = '\n'.join([f'{k}: {v}' for k, v in f.items()])
-        content.add_row(t['id'], mdata)
-        content.add_section()
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('table id', 'metadata')
+        for t in res:
+            f = t['fields']
+            mdata = '\n'.join([f'{k}: {v}' for k, v in f.items()])
+            content.add_row(t['id'], mdata)
+            content.add_section()
+        cli_console.print(content)
 
 @table_app.command('new')
 def new_table(
@@ -1261,8 +1243,8 @@ def new_table(
                             'fields': {'type': type_, 'label': label}})
     table = [{'id': tname, 'columns': column_list}]
     st, res = grist_api.add_tables(table, doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res[0], res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        cli_console.print(f'{DONEMSG} Id: {res[0]}')
 
 @table_app.command('update', context_settings={'allow_extra_args': True, 
                                                'ignore_unknown_options': True})
@@ -1295,7 +1277,7 @@ def update_table(ctx: typer.Context,
                 raise typer.BadParameter(f'Option {k} value must be integer')
     table = [{'id': tname, 'fields': fields}]
     st, res = grist_api.update_tables(table, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 class _DownloadTableOption(str, Enum):
     excel = 'excel'
@@ -1323,7 +1305,7 @@ def download_table(
              _DownloadTableOption.excel: grist_api.download_excel,
              _DownloadTableOption.schema: grist_api.download_excel}
     st, res = funcs[output](filename, tname, header, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, 0, inspect) # force verbose=0 in download mode
+    _exit_early_or_print_done(st, res, quiet, 0, inspect) # force verbose=0 in download mode
 
 # gry col -> for managing columns
 # ----------------------------------------------------------------------
@@ -1338,15 +1320,15 @@ def list_columns(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List columns in a table"""
     st, res = grist_api.list_cols(table, hidden, doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('column id', 'metadata')
-    for c in res:
-        f = c['fields']
-        useful_fields = ['label', 'type', 'isFormula', 'formula']
-        mdata = '\n'.join([f'{i}: {str(f[i])}' for i in useful_fields ])
-        content.add_row(c['id'], mdata)
-        content.add_section()
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('column id', 'metadata')
+        for c in res:
+            f = c['fields']
+            useful_fields = ['label', 'type', 'isFormula', 'formula']
+            mdata = '\n'.join([f'{i}: {str(f[i])}' for i in useful_fields ])
+            content.add_row(c['id'], mdata)
+            content.add_section()
+        cli_console.print(content)
 
 @col_app.command('new')
 def add_column(
@@ -1368,8 +1350,7 @@ def add_column(
         columns.append({'id': id_, 
                         'fields': {'type': type_, 'label': label}})
     st, res = grist_api.add_cols(table, columns, doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_id(st, res, quiet, verbose, inspect)
 
 @col_app.command('update')
 def update_column(
@@ -1391,8 +1372,7 @@ def update_column(
         columns.append({'id': id_, 
                         'fields': {'type': type_, 'label': label}})
     st, res = grist_api.update_cols(table, columns, doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_id(st, res, quiet, verbose, inspect)
 
 # Note: we don't cover add_update_cols (the PUT api) because it is too 
 # sophisticated for our very limited way of describing a column in the cli
@@ -1408,7 +1388,7 @@ def delete_column(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a column"""
     st, res = grist_api.delete_column(table, col, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 # gry rec -> for managing records
 # ----------------------------------------------------------------------
@@ -1427,14 +1407,14 @@ def list_records(table: Annotated[str, _table_id_opt],
     No filter option is available here: 'gry sql' may be a better try."""
     st, res = grist_api.list_records(table, sort=sort, limit=limit, 
                             hidden=hidden, doc_id=doc_id, team_id=team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    if res:
-        content = Table(*res[0].keys())
-        for row in res:
-            content.add_row(*[str(v) for v in row.values()])
-    else:
-        content = 'No records found.'
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        if res:
+            content = Table(*res[0].keys())
+            for row in res:
+                content.add_row(*[str(v) for v in row.values()])
+        else:
+            content = 'No records found.'
+        cli_console.print(content)
     
 @rec_app.command('new')
 def add_record(
@@ -1450,8 +1430,8 @@ def add_record(
     """Add one record to a table"""
     record = dict(record) # type: ignore
     st, res = grist_api.add_records(table, [record], noparse, doc_id, team_id) # type: ignore
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res[0], res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        cli_console.print(f'{DONEMSG} Id: {res[0]}')
 
 @rec_app.command('update')
 def update_record(
@@ -1471,7 +1451,7 @@ def update_record(
     except ValueError:
         raise typer.BadParameter('Record ID must be a number')
     st, res = grist_api.update_records(table, [record], noparse, doc_id, team_id) # type: ignore
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 # Note: again, we don't cover add_update_records because it is too 
 # sophisticated for our very limited way of describing a record in the cli
@@ -1488,7 +1468,7 @@ def delete_records(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete records from a table"""
     st, res = grist_api.delete_rows(table, records, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 # gry att -> for managing attachments
 # ----------------------------------------------------------------------
@@ -1503,14 +1483,14 @@ def list_atts(sort: Annotated[str, _sort_opt] = '',
     """List metadata of attachments in a doc. No filter option available"""
     st, res = grist_api.list_attachments(sort=sort, limit=limit, doc_id=doc_id, 
                                          team_id=team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('att. id', 'metadata')
-    for c in res:
-        f = c['fields']
-        mdata = '\n'.join([f'{k}: {str(v)}' for k, v in f.items()])
-        content.add_row(str(c['id']), mdata)
-        content.add_section()
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('att. id', 'metadata')
+        for c in res:
+            f = c['fields']
+            mdata = '\n'.join([f'{k}: {str(v)}' for k, v in f.items()])
+            content.add_row(str(c['id']), mdata)
+            content.add_section()
+        cli_console.print(content)
 
 @att_app.command('see')
 def see_attachment(att_id: Annotated[int, typer.Argument(help='The attachment ID')],
@@ -1521,12 +1501,12 @@ def see_attachment(att_id: Annotated[int, typer.Argument(help='The attachment ID
                    inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Get the metadata for an attachment"""
     st, res = grist_api.see_attachment(att_id, doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    content = Table('key', 'value')
-    content.add_row('ID', str(att_id))
-    for k, v in res.items():
-        content.add_row(k, str(v))
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content.add_row('ID', str(att_id))
+        for k, v in res.items():
+            content.add_row(k, str(v))
+        cli_console.print(content)
 
 @att_app.command('download')
 def download_att(
@@ -1543,7 +1523,7 @@ def download_att(
     """Download one attachment as a file"""
     st, res = grist_api.download_attachment(filename, attachment, 
                                             doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
     
 @att_app.command('upload')
 def upload_atts(
@@ -1556,8 +1536,7 @@ def upload_atts(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Upload one or more attachments to a doc"""
     st, res = grist_api.upload_attachments(filenames, doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_and_id(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_id(st, res, quiet, verbose, inspect)
 
 class _DownloadAttOption(str, Enum):
     tar = 'tar'
@@ -1575,7 +1554,7 @@ def download_atts(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Download all attachments as an archive file"""
     st, res = grist_api.download_attachments(filename, output, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @att_app.command('restore')
 def upload_restore_atts(
@@ -1588,8 +1567,7 @@ def upload_restore_atts(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Upload missing attachments from a local tar archive"""
     st, res = grist_api.upload_restore_attachments(filename, doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_output(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
 @att_app.command('purge')
 def purge_atts(
@@ -1602,7 +1580,7 @@ def purge_atts(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete unused attachments from the document"""
     st, res = grist_api.delete_unused_attachments(old, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @att_app.command('store')
 def see_att_store(doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1612,8 +1590,7 @@ def see_att_store(doc_id: Annotated[str, _doc_id_opt] = '',
                   inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Get the attachments storage type"""
     st, res = grist_api.see_attachment_store(doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_output(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
 @att_app.command('set-store')
 def change_att_store(
@@ -1626,7 +1603,7 @@ def change_att_store(
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Set the attachments storage type"""
     st, res = grist_api.update_attachment_store(internal, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @att_app.command('store-settings')
 def list_store_settings(doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1636,8 +1613,7 @@ def list_store_settings(doc_id: Annotated[str, _doc_id_opt] = '',
                         inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Get the attachments storage settings"""
     st, res = grist_api.list_store_settings(doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_output(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
 @att_app.command('transfer')
 def transfer_atts(doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1647,8 +1623,7 @@ def transfer_atts(doc_id: Annotated[str, _doc_id_opt] = '',
                   inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Start transferring attachments"""
     st, res = grist_api.transfer_attachments(doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_output(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
 @att_app.command('transfer-status')
 def transfer_status(doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1658,8 +1633,7 @@ def transfer_status(doc_id: Annotated[str, _doc_id_opt] = '',
                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Get attachment transfer status"""
     st, res = grist_api.see_transfer_status(doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_output(res, res, quiet, verbose, inspect)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
 # gry hook -> for managing webhooks
 # ----------------------------------------------------------------------
@@ -1671,21 +1645,21 @@ def list_hooks(doc_id: Annotated[str, _doc_id_opt] = '',
                inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """List webhooks associated with a document"""
     st, res = grist_api.list_webhooks(doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    if not res:
-        content = 'No webhooks.'
-    else:
-        content = Table('webhook data')
-        for wh in res:
-            data = f'id: {wh["id"]}\n'
-            data += f'name: {wh["fields"]["name"]}\n'
-            data += f'url: {wh["fields"]["url"]}\n'
-            data += f'enabled: {wh["fields"]["enabled"]}\n'
-            data += f'table: {wh["fields"]["tableId"]}\n'
-            data += f'events: {", ".join(wh["fields"]["eventTypes"])}'
-            content.add_row(data)
-            content.add_section()
-    _print_output(content, res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        if not res:
+            content = 'No webhooks.'
+        else:
+            content = Table('webhook data')
+            for wh in res:
+                data = f'id: {wh["id"]}\n'
+                data += f'name: {wh["fields"]["name"]}\n'
+                data += f'url: {wh["fields"]["url"]}\n'
+                data += f'enabled: {wh["fields"]["enabled"]}\n'
+                data += f'table: {wh["fields"]["tableId"]}\n'
+                data += f'events: {", ".join(wh["fields"]["eventTypes"])}'
+                content.add_row(data)
+                content.add_section()
+        cli_console.print(content)
 
 @hook_app.command('new')
 def add_hook(
@@ -1708,8 +1682,8 @@ def add_hook(
     wh = {'fields': {'name': name, 'memo': '', 'url': url, 'enabled': enabled, 
           'eventTypes': evts, 'isReadyColumn': readycol, 'tableId': table}}
     st, res = grist_api.add_webhooks([wh], doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_output(res[0], res, quiet, verbose, inspect)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        cli_console.print(f'{DONEMSG} Id: {res[0]}')
 
 @hook_app.command('update')
 def update_hook(
@@ -1741,8 +1715,7 @@ def update_hook(
         fields['eventTypes'] = evts
     wh = {'fields': fields}
     st, res = grist_api.update_webhook(hook_id, wh, doc_id, team_id)
-    _exit_if_error(st, res, quiet, verbose, inspect)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @hook_app.command('delete')
 def delete_hook(hook_id: Annotated[str, typer.Argument(help='The webhook ID')],
@@ -1753,7 +1726,7 @@ def delete_hook(hook_id: Annotated[str, typer.Argument(help='The webhook ID')],
                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a webhook"""
     st, res = grist_api.delete_webhook(hook_id, doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @hook_app.command('empty-queue')
 def empty_hook_queue(doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1763,7 +1736,7 @@ def empty_hook_queue(doc_id: Annotated[str, _doc_id_opt] = '',
                      inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Empty a document's queue of undelivered payloads"""
     st, res = grist_api.empty_payloads_queue(doc_id, team_id)
-    _print_done_or_exit(st, res, quiet, verbose, inspect)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 
 if __name__ == '__main__':
