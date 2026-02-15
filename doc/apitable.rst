@@ -157,6 +157,72 @@ Users and SCIM
   * Gry: ``gry scim resources``
 
 
+Active user, session, api key
+-----------------------------
+
+* Grist: GET ``/profile/user``
+
+  * Pygrister: ``GristApi.see_profile``
+  
+  * Gry: ``gry cuser see``
+
+
+* Grist: POST ``/profile/user/name``
+
+  * Pygrister: ``GristApi.update_profile_name``
+  
+  * Gry: ``gry cuser update --name``
+
+
+* Grist: POST ``/profile/user/locale``
+
+  * Pygrister: ``GristApi.update_profile_locale``
+  
+  * Gry: ``gry cuser update --locale``
+
+
+* Grist: GET ``/profile/apikey``
+
+  * Pygrister: ``GristApi.see_apikey``
+  
+  * Gry: ``gry cuser apikey``
+
+
+* Grist: POST ``/profile/apikey``
+
+  * Pygrister: ``GristApi.new_apikey``
+  
+  * Gry: ``gry cuser apikey --new``
+
+
+* Grist: DELETE ``/profile/apikey``
+
+  * Pygrister: ``GristApi.delete_apikey``
+  
+  * Gry: ``gry cuser del-apikey``
+
+
+* Grist: GET ``/session/access/active``
+
+  * Pygrister: ``GristApi.see_session``
+  
+  * Gry: ``gry cuser session``
+
+
+* Grist: POST ``/session/access/active``
+
+  * Pygrister: ``GristApi.update_session_user``
+  
+  * Gry: ``gry cuser set-active``
+
+
+* Grist: GET ``/session/access/all``
+
+  * Pygrister: ``GristApi.see_session_users``
+  
+  * Gry: ``gry cuser users``
+
+
 Teams (organisations)
 ---------------------
 

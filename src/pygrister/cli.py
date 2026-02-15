@@ -352,6 +352,7 @@ _enable_opt = typer.Option('--enable/--disable', help='Enable/disable')
 # Typer sub-commands
 # ----------------------------------------------------------------------
 user_app = typer.Typer(help='Manage users, SCIM must be enabled')
+cuser_app = typer.Typer(help='Manage current user, session and apy key')
 org_app = typer.Typer(help='Manage Grist teams, aka organisations')
 ws_app = typer.Typer(help='Manage workspaces inside a team site')
 doc_app = typer.Typer(help='Manage documents inside a workspace')
@@ -366,6 +367,7 @@ _help = 'Gry, a command line tool for the Grist API - powered by Pygrister'
 _epilog = 'Learn more: https://pygrister.readthedocs.io - https://github.com/ricpol/pygrister '
 app = typer.Typer(no_args_is_help=True, help=_help, epilog=_epilog)
 app.add_typer(sacc_app, name='sacc', no_args_is_help=True)
+app.add_typer(cuser_app, name='cuser', no_args_is_help=True)
 app.add_typer(user_app, name='user', no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
@@ -584,6 +586,89 @@ def delete_sacc_key(sacc: Annotated[int, _sacc_id_arg],
                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Delete a service account's key"""
     st, res = grist_api.delete_service_account_key(sacc)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+
+# gry cuser -> current user, session and api key
+# ----------------------------------------------------------------------
+
+@cuser_app.command('see')
+def see_profile(quiet: Annotated[bool, _quiet_opt] = False,
+                verbose: Annotated[int, _verbose_opt] = 0,
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve information on current user profile"""
+    st, res = grist_api.see_profile()
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+@cuser_app.command('update')
+def update_profile(
+    name: Annotated[str, typer.Option('--name', '-n', 
+                                      help='New user name')] = '', 
+    locale: Annotated[str, typer.Option('--locale', '-l', 
+                      help='New user locale (None to reset)')] = '', 
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Change current user name or locale"""
+    if name and locale:
+        raise typer.BadParameter('You cannot set both name and locale options')
+    if name:
+        st, res = grist_api.update_profile_name(name)
+        _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+        return
+    if locale:
+        if locale in ('None', 'none'): 
+            locale = ''
+        st, res = grist_api.update_profile_locale(locale)
+        _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+        return
+    raise typer.BadParameter('You must set either name or locale option')
+
+@cuser_app.command('session')
+def see_session(quiet: Annotated[bool, _quiet_opt] = False,
+                verbose: Annotated[int, _verbose_opt] = 0,
+                inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve information about current session"""
+    st, res = grist_api.see_session()
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+@cuser_app.command('users')
+def session_users(quiet: Annotated[bool, _quiet_opt] = False,
+                  verbose: Annotated[int, _verbose_opt] = 0,
+                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve information about all session users"""
+    st, res = grist_api.see_session_users()
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+@cuser_app.command('set-active')
+def change_session_user(email: Annotated[str, typer.Argument(help='User email')], 
+                        team_id: Annotated[str, _team_id_opt] = '',
+                        quiet: Annotated[bool, _quiet_opt] = False,
+                        verbose: Annotated[int, _verbose_opt] = 0,
+                        inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Switch active session user"""
+    team = team_id or 'current'
+    st, res = grist_api.update_session_user(email, team)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+
+@cuser_app.command('apikey')
+def see_change_apikey(new: Annotated[bool, typer.Option('--new', '-n', 
+                                            help='Generate new key')] = False, 
+                      quiet: Annotated[bool, _quiet_opt] = False,
+                      verbose: Annotated[int, _verbose_opt] = 0,
+                      inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """See or generate new Api key (WARNING: key will be displayed)"""
+    if new:
+        st, res = grist_api.new_apikey()
+    else:
+        st, res = grist_api.see_apikey()
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+@cuser_app.command('del-apikey')
+def del_apikey(quiet: Annotated[bool, _quiet_opt] = False,
+               verbose: Annotated[int, _verbose_opt] = 0,
+               inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Delete Api key (DANGER: no further Api call will be possible!)"""
+    st, res = grist_api.delete_apikey()
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 # gry user -> for managing users with SCIM apis

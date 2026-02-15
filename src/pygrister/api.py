@@ -275,7 +275,7 @@ class GristApi:
             res = None
         return st, res
 
-    # USERS (/scim/v2 and /user endpoints)
+    # USERS (/scim/v2, /user, /profile and /session endpoints)
     # ------------------------------------------------------------------
 
     def see_user(self, user_id: int) -> Apiresp:
@@ -297,6 +297,98 @@ class GristApi:
         url = f'{self.configurator.server}/scim/v2/Me'
         return self.apicaller.apicall(url,
                     headers={'Content-Type': 'application/scim+json'})
+
+    def see_profile(self) -> Apiresp:
+        """Implement GET ``/profile/user``. 
+        
+        If successful, response will be a ``dict`` of current user profile 
+        data. 
+        """
+        url = f'{self.configurator.server}/profile/user'
+        return self.apicaller.apicall(url)
+
+    def update_profile_name(self, name: str) -> Apiresp:
+        """Implement POST ``/profile/user/name``. 
+        
+        If successful, response will be ``None``.
+        """
+        url = f'{self.configurator.server}/profile/user/name'
+        json = {'name': name}
+        st, res = self.apicaller.apicall(url, 'POST', json=json)
+        if self.ok:
+            res = None
+        return st, res
+
+    def update_profile_locale(self, locale: str) -> Apiresp:
+        """Implement POST ``/profile/user/locale``. 
+        
+        If successful, response will be ``None``.
+        """
+        url = f'{self.configurator.server}/profile/user/locale'
+        json = {'locale': locale}
+        st, res = self.apicaller.apicall(url, 'POST', json=json)
+        if self.ok:
+            res = None
+        return st, res
+
+    def see_apikey(self) -> Apiresp:
+        """Implement GET ``/profile/apikey``. 
+        
+        If successful, response will be the key as ``str``. 
+        """
+        url = f'{self.configurator.server}/profile/apikey'
+        return self.apicaller.apicall(url)
+
+    def new_apikey(self, force: bool = True) -> Apiresp:
+        """Implement POST ``/profile/apikey``. 
+        
+        If successful, response will be the key as ``str``. 
+        """
+        url = f'{self.configurator.server}/profile/apikey'
+        json = {'force': force}
+        return self.apicaller.apicall(url, 'POST', json=json)
+    
+    def delete_apikey(self) -> Apiresp:
+        """Implement DELETE ``/profile/apikey``. 
+        
+        If successful, response will be ``None``. 
+        """
+        url = f'{self.configurator.server}/profile/apikey'
+        st, res = self.apicaller.apicall(url, 'DELETE')
+        if self.ok:
+            res = None
+        return st, res
+
+    def see_session(self) -> Apiresp:
+        """Implement GET ``/session/access/active``. 
+        
+        If successful, response will be a ``dict`` of session info. 
+        """
+        url = f'{self.configurator.server}/session/access/active'
+        st, res = self.apicaller.apicall(url)
+        return st, res
+
+    def see_session_users(self) -> Apiresp:
+        """Implement GET ``/session/access/all``. 
+        
+        If successful, response will be a ``dict`` of session and users info. 
+        """
+        url = f'{self.configurator.server}/session/access/all'
+        st, res = self.apicaller.apicall(url)
+        return st, res
+
+    def update_session_user(self, email: str, team_id: str = '') -> Apiresp:
+        """Implement POST ``/session/access/active``. 
+        
+        If successful, response will be ``None``. 
+        """
+        url = f'{self.configurator.server}/session/access/active'
+        org = team_id or 'current'
+        json = {'email': email, 'org': org}
+        st, res = self.apicaller.apicall(url, 'POST', json=json)
+        if self.ok:
+            res = None
+        return st, res
 
     def list_users(self, start: int = 1, chunk: int = 10, 
                    filter: str = '') -> Paginator:

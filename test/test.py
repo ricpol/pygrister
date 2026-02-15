@@ -434,7 +434,29 @@ class TestUsersNoScim(BaseTestPyGrister):
         self.assertIn(st, (200, 400)) # http400 is for "user not found"
         if st == 200:
             self.assertIsNone(res)
- 
+
+    def test_see_update_profile(self):
+        st, res = self.g.see_profile()
+        self.assertEqual(st, 200)
+        name = res['name']
+        locale = res['locale']
+        st, res = self.g.update_profile_name(name)
+        self.assertEqual(st, 200)
+        st, res = self.g.update_profile_locale(locale)
+        self.assertEqual(st, 200)
+    
+    def test_see_apikey(self):
+        st, res = self.g.see_apikey()
+        self.assertEqual(st, 200)
+        # we do not test changing/deleting apikey, of course
+
+    def test_session(self):
+        st, res = self.g.see_session()
+        self.assertEqual(st, 200)
+        st, res = self.g.see_session_users()
+        self.assertEqual(st, 200)
+        # we do not test changing session's active user, of course
+
 # note: to test scim ops, you need both GRIST_SELF_MANAGED here (because the 
 # regular Grist SaaS does not support scim) and GRIST_ENABLE_SCIM on the server!
 @unittest.skipIf(TEST_CONFIGURATION['GRIST_SELF_MANAGED'] == 'N', '')

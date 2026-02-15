@@ -172,6 +172,26 @@ class TestUser(BaseTestCli):
         res = self.runner.invoke(app, ['user', 'enable', '666666666666666'])
         self.assertEqual(res.exit_code, 3)
 
+class TestSessionProfile(BaseTestCli):
+    def test_profile(self):
+        res = self.runner.invoke(app, ['cuser', 'see'])
+        self.assertEqual(res.exit_code, 0)
+        res = self.runner.invoke(app, ['cuser', 'update', '--locale', 'none'])
+        self.assertEqual(res.exit_code, 0)
+    
+    def test_session(self):
+        res = self.runner.invoke(app, ['cuser', 'session'])
+        self.assertEqual(res.exit_code, 0)
+        res = self.runner.invoke(app, ['cuser', 'users'])
+        self.assertEqual(res.exit_code, 0)
+        res = self.runner.invoke(app, ['cuser', 'set-active', 'bogus@email'])
+        self.assertEqual(res.exit_code, 3)
+    
+    def test_apikey(self):
+        res = self.runner.invoke(app, ['cuser', 'apikey'])
+        self.assertEqual(res.exit_code, 0)
+        # we don't test changing or deleting the Api key, of course
+
 class TestTeams(BaseTestCli):
     def test_list_team(self):
         res = self.runner.invoke(app, ['team', 'list'])
