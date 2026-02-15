@@ -15,6 +15,12 @@ New APIS:
       GristApi.trash_workspace / gry ws trash
   - POST /docs/{docId}/remove|unremove -> GristApi.trash_doc / gry doc trash
   - PATCH /docs/{docId}/pin|unpin -> GristApi.pin_doc / gry doc pin
+  - DELETE /docs/{docId}/webhooks/queue{webhookId} -> 
+      GristApi.empty_payloads_queue / gry hook empty-queue --hook
+  - POST /docs/{docId}/attachments/updateUsed -> 
+      GristApi.verify_attachment_usage / gry att verify-usage
+  - POST /docs/{docId}/attachments/verifyFiles ->
+      GristApi.verify_attachment_files / gry att verify-files
 Deprecated:
   - GristApi.download_excel and GristApi.download_csv are now deprecated, 
     and will be removed soon. Use the new GristApi.download_table and 

@@ -1717,6 +1717,26 @@ def transfer_status(doc_id: Annotated[str, _doc_id_opt] = '',
     st, res = grist_api.see_transfer_status(doc_id, team_id)
     _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
+@att_app.command('verify-usage')
+def verify_att_usage(doc_id: Annotated[str, _doc_id_opt] = '', 
+                     team_id: Annotated[str, _team_id_opt] = '',
+                     quiet: Annotated[bool, _quiet_opt] = False,
+                     verbose: Annotated[int, _verbose_opt] = 0,
+                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Update attachment usage tracking"""
+    st, res = grist_api.verify_attachment_usage(doc_id, team_id)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+
+@att_app.command('verify-files')
+def verify_att_files(doc_id: Annotated[str, _doc_id_opt] = '', 
+                     team_id: Annotated[str, _team_id_opt] = '',
+                     quiet: Annotated[bool, _quiet_opt] = False,
+                     verbose: Annotated[int, _verbose_opt] = 0,
+                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Verify attachment file integrity"""
+    st, res = grist_api.verify_attachment_usage(doc_id, team_id)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+
 # gry hook -> for managing webhooks
 # ----------------------------------------------------------------------
 @hook_app.command('list')
@@ -1811,13 +1831,16 @@ def delete_hook(hook_id: Annotated[str, typer.Argument(help='The webhook ID')],
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 @hook_app.command('empty-queue')
-def empty_hook_queue(doc_id: Annotated[str, _doc_id_opt] = '', 
-                     team_id: Annotated[str, _team_id_opt] = '',
-                     quiet: Annotated[bool, _quiet_opt] = False,
-                     verbose: Annotated[int, _verbose_opt] = 0,
-                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
-    """Empty a document's queue of undelivered payloads"""
-    st, res = grist_api.empty_payloads_queue(doc_id, team_id)
+def empty_hook_queue(
+    hook_id: Annotated[str, typer.Option('--hook', '-h', 
+                       help='Webhook ID (purge wh queue only)')] = '',
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Empty a document or a single webhook payloads queue"""
+    st, res = grist_api.empty_payloads_queue(hook_id, doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 

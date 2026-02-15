@@ -1432,6 +1432,12 @@ class TestAttachments(BaseTestPyGrister):
                                           team_id=self.team_id)
         self.assertEqual(st, 200)
         assert len(res) < att_num # at least one attachment should be gone
+    
+    def test_att_mainteinance(self): # testing mainteinance functions
+        st, res = self.g.verify_attachment_usage(self.doc_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.verify_attachment_files(self.doc_id)
+        self.assertEqual(st, 200)
         
 # to test external attachments, you must run a self-hosted instance of Grist 
 # with "GRIST_EXTERNAL_ATTACHMENTS_MODE=snapshots", and a S3-compatible bucket 
@@ -1527,6 +1533,8 @@ class TestWebhooks(BaseTestPyGrister):
                                               team_id=self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
+        # we don't test this for a specific wh, because we should create one first
+        # and we could occurr in the same ALLOWED_WEBHOOK_DOMAINS problem as before
 
 
 if __name__ == '__main__':

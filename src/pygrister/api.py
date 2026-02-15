@@ -1629,6 +1629,26 @@ class GristApi:
         url = f'{server}/docs/{doc_id}/attachments/transferStatus'
         return self.apicaller.apicall(url)
 
+    def verify_attachment_usage(self, 
+                                doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/attachments/updateUsed``.
+
+        If successful, response will be ``None``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/attachments/updateUsed'
+        return self.apicaller.apicall(url, 'POST')
+
+    def verify_attachment_files(self, 
+                                doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/attachments/verifyFiles``.
+
+        If successful, response will be ``None``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/attachments/verifyFiles'
+        return self.apicaller.apicall(url, 'POST')
+
     # WEBHOOKS
     # ------------------------------------------------------------------
  
@@ -1689,14 +1709,18 @@ class GristApi:
         return st, res
 
     @check_safemode
-    def empty_payloads_queue(self, doc_id: str = '', 
-                             team_id: str = '') -> Apiresp:
-        """Implement DELETE ``/docs/{docId}/webhooks/queue``.
+    def empty_payloads_queue(self, webhook_id: str = '', 
+                             doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement DELETE ``/docs/{docId}/webhooks/queue`` and 
+        DELETE ``/docs/{docId}/webhooks/queue/{webhookId}``.
         
+        Clear all pending payloads, or pass ``webhook_id`` to clear queue 
+        for a specific webhook.
         If successful, response will be ``None``.
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
-        url = f'{server}/docs/{doc_id}/webhooks/queue'
+        specific = f'/{webhook_id}' if webhook_id else ''
+        url = f'{server}/docs/{doc_id}/webhooks/queue{specific}'
         st, res = self.apicaller.apicall(url, 'DELETE')
         if self.ok:
             res = None # Grist api returns "{success: true}" here

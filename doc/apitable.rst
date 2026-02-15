@@ -650,6 +650,20 @@ Attachments
   * Gry: ``gry att transfer-status``
 
 
+* Grist: ``POST /docs/{docId}/attachments/updateUsed``
+
+  * Pygrister: ``GristApi.verify_attachment_usage``
+  
+  * Gry: ``gry att verify-usage``
+
+
+* Grist: ``POST /docs/{docId}/attachments/verifyFiles``
+
+  * Pygrister: ``GristApi.verify_attachment_files``
+  
+  * Gry: ``gry att verify-files``
+
+
 Webhooks
 --------
 
@@ -686,6 +700,13 @@ Webhooks
   * Pygrister: ``GristApi.empty_payloads_queue``
   
   * Gry: ``gry hook empty-queue``
+
+
+* Grist: ``DELETE /docs/{docId}/webhooks/queue/{webhookId}``
+
+  * Pygrister: ``GristApi.empty_payloads_queue``
+  
+  * Gry: ``gry hook empty-queue --hook``
 
 
 Sql
