@@ -1358,8 +1358,10 @@ def update_table(ctx: typer.Context,
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 class _DownloadTableOption(str, Enum):
-    excel = 'excel'
+    xslx = 'xlsx'
     csv = 'csv'
+    tsv = 'tsv'
+    dsv = 'dsv'
     schema = 'schema'
 
 class _HeaderOption(str, Enum):
@@ -1379,10 +1381,12 @@ def download_table(
     quiet: Annotated[bool, _quiet_opt] = False,
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
     """Dumps content or schema of a table to FILENAME"""
-    funcs = {_DownloadTableOption.csv: grist_api.download_csv, 
-             _DownloadTableOption.excel: grist_api.download_excel,
-             _DownloadTableOption.schema: grist_api.download_excel}
-    st, res = funcs[output](filename, tname, header, doc_id, team_id)
+    if output == _DownloadTableOption.schema:
+        st, res = grist_api.download_schema(tname, header, filename, 
+                                            doc_id, team_id)
+    else:
+        st, res = grist_api.download_table(filename, tname, header, 
+                                           output.value, doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, 0, inspect) # force verbose=0 in download mode
 
 # gry col -> for managing columns

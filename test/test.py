@@ -917,26 +917,27 @@ class TestDocs(BaseTestPyGrister):
         self.assertEqual(st, 200)
         self.assertIsInstance(res, str)
 
-    def test_download_excel(self):
+    def test_download_table(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
         self.assertIsInstance(doc_id, str)
         self.assertEqual(st, 200)
-        st, res = self.g.download_excel(Path(f'{name}.xls'), table_id='Table1',
-                                        doc_id=doc_id, team_id=self.team_id)
+        st, res = self.g.download_table(Path(f'{name}.xlsx'), table_id='Table1',
+                            format='xlsx', doc_id=doc_id, team_id=self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
+        st, res = self.g.download_table(Path(f'{name}.csv'), table_id='Table1',
+                            format='csv', doc_id=doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+        st, res = self.g.download_table(Path(f'{name}.tsv'), table_id='Table1',
+                            format='tsv', doc_id=doc_id, team_id=self.team_id)
+        self.assertIsNone(res)
+        self.assertEqual(st, 200)
+        with self.assertRaises(ValueError):
+            self.g.download_table(Path('bogus'), table_id='Table1',
+                            format='bogus', doc_id=doc_id, team_id=self.team_id)
     
-    def test_download_csv(self):
-        name = str(time.time_ns())
-        st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
-        self.assertIsInstance(doc_id, str)
-        self.assertEqual(st, 200)
-        st, res = self.g.download_csv(Path(f'{name}.csv'), table_id='Table1',
-                                      doc_id=doc_id, team_id=self.team_id)
-        self.assertIsNone(res)
-        self.assertEqual(st, 200)
-
     def test_download_schema(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)

@@ -473,18 +473,11 @@ Tables
   * Gry: ``gry table update``
 
 
-* Grist: ``GET /docs/{docId}/download/xlsx``
+* Grist: ``GET /docs/{docId}/download/xlsx|csv|tsv|dsv``
 
-  * Pygrister: ``GristApi.download_excel``
+  * Pygrister: ``GristApi.download_table``
   
-  * Gry: ``gry table download -o excel``
-
-
-* Grist: ``GET /docs/{docId}/download/csv``
-
-  * Pygrister: ``GristApi.download_csv``
-  
-  * Gry: ``gry table download -o csv``
+  * Gry: ``gry table download -o xlsx|csv|tsv|dsv``
 
 
 * Grist: ``GET /docs/{docId}/download/table-schema``

@@ -1093,35 +1093,46 @@ class GristApi:
             res = res['id']
         return st, res
 
+    def download_table(self, filename: Path, table_id: str, 
+                       header: str = 'label', format: str = 'csv', 
+                       doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/download/csv|tsv|dsv|xlsx``.
+
+        ``format`` must be one of csv, tsv, dsv, xlsx. 
+        If successful, response will be ``None``.
+        """
+        if format not in 'csv tsv dsv xlsx'.split():
+            raise ValueError('Format must be one of csv, tsv, dsv, xlsx.')
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/download/{format}'
+        if format == 'xlsx':
+            headers = {'Accept': 
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
+        else:
+            headers = {'Accept': f'text/{format}'}
+        params = {'header': header, 'tableId': table_id}
+        return self.apicaller.apicall(url, headers=headers, params=params, 
+                                      filename=filename)
+
     def download_excel(self, filename: Path, table_id: str, 
                        header: str = 'label', doc_id: str = '', 
                        team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/download/xlsx``.
-        
-        If successful, response will be ``None``.
-        """
-        doc_id, server = self.configurator.select_params(doc_id, team_id)
-        url = f'{server}/docs/{doc_id}/download/xlsx'
-        headers = {'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}
-        params = {'header': header, 'tableId': table_id}
-        return self.apicaller.apicall(url, headers=headers, params=params, 
-                                   filename=filename)
+        """Deprecated, will be removed soon. Use ``download_table`` instead."""
+        line = getframeinfo(currentframe()).lineno + 1 # type: ignore
+        showwarning('Use download_table instead', DeprecationWarning, 
+                    'api.py', line)
+        return self.download_table(filename, table_id, header, 'xlsx', 
+                                   doc_id, team_id)
 
     def download_csv(self, filename: Path, table_id: str, 
                      header: str = 'label', doc_id: str = '', 
                      team_id: str = '') -> Apiresp:
-        """Implement GET ``/docs/{docId}/download/csv``.
-        
-        If successful, response will be ``None``.
-        """
-        # note: the grist api also puts the data in the response body...
-        # we just download the file and return None instead
-        doc_id, server = self.configurator.select_params(doc_id, team_id)
-        url = f'{server}/docs/{doc_id}/download/csv'
-        headers = {'Accept': 'text/csv'}
-        params = {'header': header, 'tableId': table_id}
-        return self.apicaller.apicall(url, headers=headers, params=params, 
-                                   filename=filename)
+        """Deprecated, will be removed soon. Use ``download_table`` instead."""
+        line = getframeinfo(currentframe()).lineno + 1 # type: ignore
+        showwarning('Use download_table instead', DeprecationWarning, 
+                    'api.py', line)
+        return self.download_table(filename, table_id, header, 'csv', 
+                                   doc_id, team_id)
 
     def download_schema(self, table_id: str, header: str = 'label',
                         filename: Path|None = None, doc_id: str = '', 
