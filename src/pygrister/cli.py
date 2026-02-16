@@ -1281,6 +1281,31 @@ def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')],
 #TODO again, this is for existing users only, but the api 
 # allows for adding users too. Maybe add a separate cli endpoint for this?
 
+@doc_app.command('snapshots')
+def list_snapshots(
+    raw: Annotated[bool, typer.Option('--raw', 
+                                help='Not in snapshot inventory too')] = False, 
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List document snapshots"""
+    st, res = grist_api.list_snapshots(raw, doc_id, team_id)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+@doc_app.command('del-snapshots')
+def remove_snapshots(
+    ids: Annotated[List[str], typer.Argument(help='Snapshot IDs')],
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List document snapshots"""
+    st, res = grist_api.delete_snapshots(ids, doc_id, team_id)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+
 @doc_app.command('timing')
 def timing(
     start: Annotated[bool, typer.Option('--start', help='Start timing')] = False,

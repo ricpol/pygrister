@@ -449,6 +449,20 @@ Documents
   * Gry: ``gry doc recovery``
 
 
+* Grist: ``GET /docs/{docId}/snapshots``
+
+  * Pygrister: ``GristApi.list_snapshots``
+  
+  * Gry: ``gry doc snapshots``
+
+
+* Grist: ``POST /docs/{docId}/snapshots/remove``
+
+  * Pygrister: ``GristApi.delete_snapshots``
+  
+  * Gry: ``gry doc del-snapshots``
+
+
 * Grist: ``GET /docs/{docId}/timing``
 
   * Pygrister: ``GristApi.see_timing``

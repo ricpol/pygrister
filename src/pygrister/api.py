@@ -1149,6 +1149,32 @@ class GristApi:
         return self.apicaller.apicall(url, headers=headers, params=params, 
                                    filename=filename)
 
+    def list_snapshots(self, raw: bool = False, 
+                       doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/snapshots``.
+        
+        If successful, response will be a ``list[dict]`` of snapshot data. 
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/snapshots'
+        params = {'raw': raw} if raw else dict()
+        return self.apicaller.apicall(url, params=params)
+
+    @check_safemode
+    def delete_snapshots(self, snapshot_ids: list[str], 
+                         doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/snapshots/remove``.
+        
+        If successful, response will be ``None``. 
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/snapshots/remove'
+        json = {'snapshotIds': snapshot_ids}
+        st, res = self.apicaller.apicall(url, 'POST', json=json)
+        if self.ok:
+            res = None
+        return st, res
+
     def see_timing(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement GET ``/docs/{docId}/timing``.
         

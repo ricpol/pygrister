@@ -952,6 +952,15 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
 
+    def test_snapshots(self):
+        name = str(time.time_ns())
+        st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.list_snapshots(doc_id=doc_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.delete_snapshots(['bogus'], doc_id=doc_id)
+        self.assertEqual(st, 200) # even if snapshot id is bogus :-/
+
     def test_formula_timing(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
