@@ -1367,8 +1367,12 @@ class GristApi:
         return self.upload_attachments([filename], doc_id, team_id)
     
     @check_safemode
-    def upload_attachments(self, filenames: list[Path], doc_id: str = '', 
-                           team_id: str = '') -> Apiresp:
+    def upload_attachments(
+        self,
+        filenames: list[Path] | dict[str, Path],
+        doc_id: str = "",
+        team_id: str = "",
+    ) -> Apiresp:
         """Implement POST ``/docs/{docId}/attachments``.
         
         If successful, response will be a ``list[int]`` of attachments ids.
@@ -1378,7 +1382,11 @@ class GristApi:
         headers = dict()
         self.apicaller.request = None  # we must reset here, in case opening 
         self.apicaller.response = None # files throws an exception now:
-        fileobjs = [('upload', (str(f), open(f, 'rb'))) for f in filenames]
+        fileobjs = (
+            [("upload", (str(f), open(f, "rb"))) for f in filenames]
+            if type(filenames) is list
+            else [("upload", (n, open(f, "rb"))) for n, f in filenames.items()]
+        )
         try:
             st, res = self.apicaller.apicall(url, 'POST', headers=headers, 
                                           upload_files=fileobjs)
