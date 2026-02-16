@@ -1281,6 +1281,29 @@ def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')],
 #TODO again, this is for existing users only, but the api 
 # allows for adding users too. Maybe add a separate cli endpoint for this?
 
+@doc_app.command('timing')
+def timing(
+    start: Annotated[bool, typer.Option('--start', help='Start timing')] = False,
+    stop: Annotated[bool, typer.Option('--stop', 
+                                       help='Stop timing, collect data')] = False, 
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Start/stop formula timing, or display available timing data"""
+    if start and stop:
+        raise typer.BadParameter("You can't pass both start and stop options.")
+    if start:
+        st, res = grist_api.start_timing(doc_id, team_id)
+        _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+    elif stop:
+        st, res = grist_api.stop_timing(doc_id, team_id)
+        _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+    else:
+        st, res = grist_api.see_timing(doc_id, team_id)
+        _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
 # gry table -> for managing tables
 # ----------------------------------------------------------------------
 @table_app.command('list')

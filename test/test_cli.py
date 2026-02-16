@@ -344,6 +344,14 @@ class TestDoc(BaseTestCli):
         res = self.runner.invoke(app, ['doc', 'user-access', '5',
                                        '-a', 'editors', '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)
+    
+    def test_timing_doc(self):
+        res = self.runner.invoke(app, ['doc', 'timing', '-d', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+        res = self.runner.invoke(app, ['doc', 'timing', '--start', '-d', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+        res = self.runner.invoke(app, ['doc', 'timing', '--stop', '-d', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
 
 class TestTable(BaseTestCli):
     def test_list_table(self):

@@ -952,6 +952,17 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
 
+    def test_formula_timing(self):
+        name = str(time.time_ns())
+        st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.start_timing(doc_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.stop_timing(doc_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.see_timing(doc_id)
+        self.assertEqual(st, 200)
+
 class TestRecordAccess(BaseTestPyGrister): 
     # we test "/records", "/data" and "/sql" endpoints here (no converters)
     @classmethod

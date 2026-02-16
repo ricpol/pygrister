@@ -449,6 +449,27 @@ Documents
   * Gry: ``gry doc recovery``
 
 
+* Grist: ``GET /docs/{docId}/timing``
+
+  * Pygrister: ``GristApi.see_timing``
+  
+  * Gry: ``gry doc timing``
+
+
+* Grist: ``POST /docs/{docId}/timing/start``
+
+  * Pygrister: ``GristApi.start_timing``
+  
+  * Gry: ``gry doc timing --start``
+
+
+* Grist: ``POST /docs/{docId}/timing/stop``
+
+  * Pygrister: ``GristApi.stop_timing``
+  
+  * Gry: ``gry doc timing --stop``
+
+
 Tables
 ------
 

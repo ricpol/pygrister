@@ -1149,6 +1149,36 @@ class GristApi:
         return self.apicaller.apicall(url, headers=headers, params=params, 
                                    filename=filename)
 
+    def see_timing(self, doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/timing``.
+        
+        If successful, response will be a ``dict`` of formula timing data. 
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/timing'
+        return self.apicaller.apicall(url)
+    
+    def start_timing(self, doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/timing/start``.
+        
+        If successful, response will be ``None``. 
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/timing/start'
+        st, res = self.apicaller.apicall(url, 'POST')
+        if self.ok:
+            res = None
+        return st, res
+
+    def stop_timing(self, doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/timing/stop``.
+        
+        If successful, response will be a ``dict`` of formula timing data. 
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/timing/stop'
+        return self.apicaller.apicall(url, 'POST')
+
     # RECORDS
     # ------------------------------------------------------------------
 
