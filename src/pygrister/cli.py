@@ -361,6 +361,8 @@ col_app = typer.Typer(help='Manage columns inside a table')
 rec_app = typer.Typer(help='Manage records inside a table')
 att_app = typer.Typer(help='Manage attachments and attachment storage')
 hook_app = typer.Typer(help='Manage document webhooks')
+templ_app = typer.Typer(help='Manages templates, if a template org exist')
+widg_app = typer.Typer(help='Manage custom widgets and forms')
 scim_app = typer.Typer(help='Metadata about SCIM services, if enabled')
 sacc_app = typer.Typer(help='Manage service accounts, if enabled')
 _help = 'Gry, a command line tool for the Grist API - powered by Pygrister'
@@ -377,6 +379,8 @@ app.add_typer(col_app, name='col', no_args_is_help=True)
 app.add_typer(rec_app, name='rec', no_args_is_help=True)
 app.add_typer(att_app, name='att', no_args_is_help=True)
 app.add_typer(hook_app, name='hook', no_args_is_help=True)
+app.add_typer(templ_app, name='template', no_args_is_help=True)
+app.add_typer(widg_app, name='widget', no_args_is_help=True)
 app.add_typer(scim_app, name='scim', no_args_is_help=True)
 
 # gry version
@@ -1891,6 +1895,54 @@ def empty_hook_queue(
     st, res = grist_api.empty_payloads_queue(hook_id, doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
+# gry template -> for managing templates
+# ----------------------------------------------------------------------
+
+@templ_app.command('list')
+def list_template(quiet: Annotated[bool, _quiet_opt] = False,
+                  verbose: Annotated[int, _verbose_opt] = 0,
+                  inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List available templates"""
+    st, res = grist_api.list_templates()
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+@templ_app.command('see')
+def see_template(templ_id: Annotated[str, typer.Argument(help='Template ID')],
+                 quiet: Annotated[bool, _quiet_opt] = False,
+                 verbose: Annotated[int, _verbose_opt] = 0,
+                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve information on a template"""
+    st, res = grist_api.see_template(templ_id)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+# gry widget -> for managing custom widgets and forms
+# ----------------------------------------------------------------------
+
+@widg_app.command('list')
+def list_widgets(quiet: Annotated[bool, _quiet_opt] = False,
+                 verbose: Annotated[int, _verbose_opt] = 0,
+                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List available widgets"""
+    st, res = grist_api.list_widgets()
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        for wdg in res:
+            content.add_row('name', str(wdg['name']))
+            content.add_row('id', str(wdg['widgetId']))
+            content.add_row('url', wdg['url'])
+            content.add_section()
+        cli_console.print(content)
+
+@widg_app.command('form')
+def see_form(section_id: Annotated[int, typer.Argument(help='View section ID')], 
+             doc_id: Annotated[str, _doc_id_opt] = '', 
+             team_id: Annotated[str, _team_id_opt] = '',
+             quiet: Annotated[bool, _quiet_opt] = False,
+             verbose: Annotated[int, _verbose_opt] = 0,
+             inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve form view data"""
+    st, res = grist_api.see_form(section_id, doc_id, team_id)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
 if __name__ == '__main__':
     app()

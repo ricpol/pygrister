@@ -440,6 +440,24 @@ class TestHook(BaseTestCli):
         res = self.runner.invoke(app, ['hook', 'empty-queue'])
         self.assertEqual(res.exit_code, 0)
 
+class TestTemplates(BaseTestCli):
+    def test_list_templates(self):
+        res = self.runner.invoke(app, ['template', 'list'])
+        self.assertEqual(res.exit_code, 3) # because we don't have a template org
+    
+    def test_see_tempates(self):
+        res = self.runner.invoke(app, ['template', 'see', 'foo'])
+        self.assertEqual(res.exit_code, 3) # because we don't have a template org
+
+class TestWidgets(BaseTestCli):
+    def test_list_widgets(self):
+        res = self.runner.invoke(app, ['widget', 'list'])
+        self.assertEqual(res.exit_code, 0)
+    
+    def test_see_form(self):
+        res = self.runner.invoke(app, ['widget', 'form', '1'])
+        self.assertEqual(res.exit_code, 0)
+
 @unittest.skipIf(os.environ['GRIST_TEST_RUN_SCIM_TESTS'] == 'N', '')
 class TestScim(BaseTestCli):
     def test_schemas(self):

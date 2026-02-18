@@ -744,6 +744,40 @@ Webhooks
   * Gry: ``gry hook empty-queue --hook``
 
 
+Templates
+---------
+
+* Grist: ``GET /templates``
+
+  * Pygrister: ``GristApi.list_templates``
+  
+  * Gry: ``gry template list``
+
+
+* Grist: ``GET /templates/{templateId}``
+
+  * Pygrister: ``GristApi.see_template``
+  
+  * Gry: ``gry template see``
+
+
+Widgets and Forms
+-----------------
+
+* Grist: ``GET /widgets``
+
+  * Pygrister: ``GristApi.list_widgets``
+  
+  * Gry: ``gry widget list``
+
+
+* Grist: ``GET /docs/{docId}/forms/{viewSectionId}``
+
+  * Pygrister: ``GristApi.see_form``
+  
+  * Gry: ``gry widget form``
+
+
 Sql
 ---
 

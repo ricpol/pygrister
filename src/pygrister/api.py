@@ -1782,6 +1782,47 @@ class GristApi:
             res = None # Grist api returns "{success: true}" here
         return st, res
 
+    # TEMPLATES
+    # ------------------------------------------------------------------
+
+    def list_templates(self) -> Apiresp:
+        """Implement GET ``/templates``.
+        
+        If successful, response will be a ``list[dict]`` of workspaces 
+        with templates.
+        """
+        url = f'{self.configurator.server}/templates'
+        return self.apicaller.apicall(url)
+
+    def see_template(self, template_id: str) -> Apiresp:
+        """Implement GET ``/templates/{templateId}``.
+        
+        If successful, response will be a ``dict`` of template details.
+        """
+        url = f'{self.configurator.server}/templates/{template_id}'
+        return self.apicaller.apicall(url)
+
+    # WIDGETS, FORMS
+    # ------------------------------------------------------------------
+
+    def list_widgets(self) -> Apiresp:
+        """Implement GET ``/widgets``.
+        
+        If successful, response will be a ``list[dict]`` of widgets data.
+        """
+        url = f'{self.configurator.server}/widgets'
+        return self.apicaller.apicall(url)
+
+    def see_form(self, section_id: int, 
+                 doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/forms/{viewSectionId}``. 
+
+        If successful, response will be a ``dict`` of form details.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/forms/{section_id}'
+        return self.apicaller.apicall(url)
+
     # SQL
     # ------------------------------------------------------------------
  

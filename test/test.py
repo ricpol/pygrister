@@ -1557,5 +1557,18 @@ class TestWebhooks(BaseTestPyGrister):
         # and we could occurr in the same ALLOWED_WEBHOOK_DOMAINS problem as before
 
 
+#TODO we should set up a template org for this... maybe later ;-)
+class TestTemplates(BaseTestPyGrister): pass
+
+class TestWidgets(BaseTestPyGrister):
+    @classmethod
+    def setUpClass(cls):
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
+    
+    def test_list_widgets(self):
+        st, res = self.g.list_widgets()
+        self.assertEqual(st, 200)
+
+
 if __name__ == '__main__':
     unittest.main()
