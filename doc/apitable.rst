@@ -428,11 +428,25 @@ Documents
   * Gry: ``gry doc upload``
 
 
+* Grist: ``GET /docs/{docId}/states``
+
+  * Pygrister: ``GristApi.list_doc_history``
+  
+  * Gry: ``gry doc history``
+
+
 * Grist: ``POST /docs/{docId}/states/remove``
 
   * Pygrister: ``GristApi.delete_doc_history``
   
   * Gry: ``gry doc purge-history``
+
+
+* Grist: ``GET /docs/{docId}/compare``
+
+  * Pygrister: ``GristApi.compare_doc_history``
+  
+  * Gry: ``gry doc compare``
 
 
 * Grist: ``POST /docs/{docId}/force-reload``

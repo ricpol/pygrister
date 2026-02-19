@@ -938,8 +938,37 @@ class GristApi:
             res = None
         return st, res
 
+    def list_doc_history(self, doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/states``.
+        
+        If successful, response will be a ``list[dict]`` of history states.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/states'
+        st, res = self.apicaller.apicall(url)
+        if self.ok:
+            res = res.get('states', [])
+        return st, res
+
+    def compare_doc_history(self, 
+                            left: str = '', right: str = '', max_rows: int = 10,
+                            doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/compare``.
+        
+        ``left``, ``right``, if left empty, default to ``HEAD``. 
+        If successful, response will be a ``dict`` of comparision results.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/compare'
+        params = {'maxRows': str(max_rows)}
+        if left:
+            params['left'] = left
+        if right:
+            params['right'] = right
+        return self.apicaller.apicall(url, params=params)
+
     @check_safemode
-    def delete_doc_history(self, keep: int = 0, 
+    def delete_doc_history(self, keep: int = 1, 
                            doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/states/remove``.
         

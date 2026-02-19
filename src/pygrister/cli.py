@@ -1154,6 +1154,40 @@ def trash_doc(
     st, res = grist_api.trash_doc(remove, permanent, doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
+@doc_app.command('history')
+def list_doc_history(doc_id: Annotated[str, _doc_id_opt] = '', 
+                     team_id: Annotated[str, _team_id_opt] = '',
+                     quiet: Annotated[bool, _quiet_opt] = False,
+                     verbose: Annotated[int, _verbose_opt] = 0,
+                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List the document action history states"""
+    st, res = grist_api.list_doc_history(doc_id, team_id)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        if res: 
+            content = Table('num', 'hash')
+            for row in res:
+                content.add_row(str(row['n']), row['h'])
+        else:
+            content = 'No records found.'
+        cli_console.print(content)
+
+@doc_app.command('compare')
+def compare_doc_history(
+    left: Annotated[str, typer.Option('--left', '-l', 
+                        help='Left side history state hash [default: HEAD]')] = '',
+    right: Annotated[str, typer.Option('--left', '-l', 
+                        help='Right side history state hash [default: HEAD]')] = '',
+    maxrow: Annotated[int, typer.Option('--max', 
+                        help='Max row changes to include')] = 10,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Compare two versions of document by state history hashes"""
+    st, res = grist_api.compare_doc_history(left, right, maxrow, doc_id, team_id)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
 @doc_app.command('purge-history')
 def delete_doc_history(
     keep: Annotated[int, typer.Option('--keep', '-k', 

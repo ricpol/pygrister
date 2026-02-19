@@ -303,6 +303,14 @@ class TestDoc(BaseTestCli):
         res = self.runner.invoke(app, ['doc', 'trash', '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)
 
+    def test_list_history_doc(self):
+        res = self.runner.invoke(app, ['doc', 'history'])
+        self.assertEqual(res.exit_code, 0)
+    
+    def test_compare_history_doc(self):
+        res = self.runner.invoke(app, ['doc', 'compare'])
+        self.assertEqual(res.exit_code, 0)
+
     def test_purge_history_doc(self):
         res = self.runner.invoke(app, ['doc', 'purge-history'])
         self.assertEqual(res.exit_code, 0)

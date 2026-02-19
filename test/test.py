@@ -765,15 +765,31 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
 
-    def test_delete_doc_history(self):
+    def test_doc_history_endpoints(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
         self.assertIsInstance(doc_id, str)
         self.assertEqual(st, 200)
+        st, res = self.g.list_doc_history(doc_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.compare_doc_history()
+        self.assertEqual(st, 200)
         st, res = self.g.delete_doc_history(0, doc_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
-
+    
+    @unittest.expectedFailure
+    def test_delete_all_doc_history(self):
+        # apparently, you can't delete *all* doc history!
+        name = str(time.time_ns())
+        st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.delete_doc_history(0, doc_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.list_doc_history(doc_id)
+        self.assertEqual(st, 200)
+        self.assertListEqual(res, [])
+    
     @unittest.expectedFailure
     def test_create_delete_doc_cross_site(self):
         # fun fact: cross-site doc creation is allowed...
