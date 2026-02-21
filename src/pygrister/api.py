@@ -1077,6 +1077,20 @@ class GristApi:
         return self.apicaller.apicall(url, method='POST', json=json)
 
     @check_safemode
+    def replace_doc(self, source_doc: str = '', source_snapshot: str = '', 
+                    reset_tutorial: bool = False, 
+                    doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/replace``.
+        
+        If successful, response will be ``None``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/replace'
+        json = {'sourceDocId': source_doc, 'snapshotId': source_snapshot, 
+                'resetTutorialMetadata': modjson.dumps(reset_tutorial)}
+        return self.apicaller.apicall(url, method='POST', json=json)
+
+    @check_safemode
     def reload_doc(self, doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/force-reload``.
         
@@ -1084,6 +1098,25 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/force-reload'
+        return self.apicaller.apicall(url, method='POST')
+
+    def flush_doc(self, doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/flush``.
+        
+        If successful, response will be a ``bool`` of the flush outcome.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/flush'
+        return self.apicaller.apicall(url, method='POST')
+
+    @check_safemode
+    def assign_doc(self, doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/assign``.
+        
+        If successful, response will be a ``bool`` of the outcome.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/assign'
         return self.apicaller.apicall(url, method='POST')
 
     @check_safemode

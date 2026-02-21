@@ -1129,6 +1129,26 @@ def copy_doc(
     st, res = grist_api.copy_doc(dest, name, template, doc_id, team_id)
     _exit_early_or_print_id(st, res, quiet, verbose, inspect)
 
+@doc_app.command('replace')
+def replace_doc(
+    source_doc: Annotated[str, typer.Option('--source-doc', 
+                            help='Source document ID')] = '',
+    source_snap: Annotated[str, typer.Option('--source-snap', 
+                            help='Source snapshot ID')] = '',
+    reset_tutorial: Annotated[bool, typer.Option('--tutorial', 
+                            help='Reset tutorial progress')] = False,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Replace document content from another doc or snapshot"""
+    if (source_doc and source_snap) or (not source_doc and not source_snap):
+        raise typer.BadParameter('Pass either source-doc or source-snap options')
+    st, res = grist_api.replace_doc(source_doc, source_snap, reset_tutorial, 
+                                    doc_id, team_id)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+
 @doc_app.command('delete')
 def delete_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
                team_id: Annotated[str, _team_id_opt] = '',
@@ -1210,6 +1230,26 @@ def reload_doc(doc_id: Annotated[str, _doc_id_opt] = '',
     """Reload a document"""
     st, res = grist_api.reload_doc(doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+
+@doc_app.command('flush')
+def flush_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
+              team_id: Annotated[str, _team_id_opt] = '',
+              quiet: Annotated[bool, _quiet_opt] = False,
+              verbose: Annotated[int, _verbose_opt] = 0,
+              inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Flush a document to storage"""
+    st, res = grist_api.flush_doc(doc_id, team_id)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+@doc_app.command('assign')
+def assign_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
+              team_id: Annotated[str, _team_id_opt] = '',
+              quiet: Annotated[bool, _quiet_opt] = False,
+              verbose: Annotated[int, _verbose_opt] = 0,
+              inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Free document if assigned to wrong worker group"""
+    st, res = grist_api.assign_doc(doc_id, team_id)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
 @doc_app.command('enable')
 def enable_doc(enable: Annotated[bool, _enable_opt] = True,

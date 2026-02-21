@@ -871,13 +871,31 @@ class TestDocs(BaseTestPyGrister):
         st, res = self.g.copy_doc(ws_id, 'new'+name, True, doc_id, self.team_id)
         self.assertEqual(st, 200)
 
-    def test_reload_doc(self):
+    def test_replace_doc(self):
+        name = str(time.time_ns())
+        st, source = self.g.add_doc('source'+name, ws_id=self.workspace_id)
+        self.assertEqual(st, 200)
+        st, dest = self.g.add_doc('dest'+name, ws_id=self.workspace_id)
+        self.assertEqual(st, 200)
+        tables = [{'id': 'newtable', 'columns': 
+                   [{'id': 'col1', 'fields': {'label': 'Col 1'}}]}]
+        st, res = self.g.add_tables(tables, doc_id=source)
+        self.assertEqual(st, 200)
+        st, res = self.g.replace_doc(source_doc=source, doc_id=dest)
+        self.assertEqual(st, 200)
+
+    def test_flush_reload_assign_doc(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
         self.assertIsInstance(doc_id, str)
         self.assertEqual(st, 200)
         st, res = self.g.reload_doc(doc_id)
         self.assertIsNone(res)
+        self.assertEqual(st, 200)
+        st, res = self.g.flush_doc(doc_id)
+        self.assertEqual(st, 200)
+        self.assertFalse(res) # should be False since we didn't touch it
+        st, res = self.g.assign_doc(doc_id)
         self.assertEqual(st, 200)
     
     def test_enable_doc(self):

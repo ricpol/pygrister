@@ -295,6 +295,11 @@ class TestDoc(BaseTestCli):
         res = self.runner.invoke(app, ['doc', 'copy', '10000000', 'bogus'])
         self.assertEqual(res.exit_code, 3)
 
+    def test_replace_doc(self):
+        res = self.runner.invoke(app, 
+                    ['doc', 'replace', '--source-doc', 'bogus', '-d', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+
     def test_delete_doc(self):
         res = self.runner.invoke(app, ['doc', 'delete', '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)
@@ -319,6 +324,14 @@ class TestDoc(BaseTestCli):
         res = self.runner.invoke(app, ['doc', 'reload'])
         self.assertEqual(res.exit_code, 0)
     
+    def test_flush_doc(self):
+        res = self.runner.invoke(app, ['doc', 'flush', '-d', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+    
+    def test_assign_doc(self):
+        res = self.runner.invoke(app, ['doc', 'assign', '-d', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+
     def test_enable_doc(self):
         res = self.runner.invoke(app, ['doc', 'enable', '--disable'])
         self.assertEqual(res.exit_code, 0)

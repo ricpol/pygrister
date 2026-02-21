@@ -9,6 +9,7 @@ New APIS:
   - 7 new "/service-accounts" endpoints added, both in Pygrister and Gry
   - 9 new "/session" and "/profile" endpoints added, both in Pygrister and Gry
   - 5 new "/doc" apis added to fork, compare and work with change proposals
+  - 2 admin endpoints added: "/doc/{docId}/flush" and "/doc/{docId}/assign" 
   - new endpoints for Templates (2), Widgets (1) and Forms (1) added
   - GET /docs/{docId}/states -> GristApi.list_doc_history / gry doc history
   - GET /docs/{docId}/compare -> 
@@ -20,6 +21,7 @@ New APIS:
       GristApi.trash_workspace / gry ws trash
   - POST /docs/{docId}/remove|unremove -> GristApi.trash_doc / gry doc trash
   - PATCH /docs/{docId}/pin|unpin -> GristApi.pin_doc / gry doc pin
+  - POST /docs/{docId}/replace -> GristApi.replace_doc / gry doc replace
   - DELETE /docs/{docId}/webhooks/queue{webhookId} -> 
       GristApi.empty_payloads_queue / gry hook empty-queue --hook
   - POST /docs/{docId}/attachments/updateUsed -> 

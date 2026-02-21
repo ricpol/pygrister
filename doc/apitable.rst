@@ -386,6 +386,13 @@ Documents
   * Gry: ``gry doc copy``
 
 
+* Grist: ``POST /docs/{docId}/replace``
+
+  * Pygrister: ``GristApi.replace_doc``
+  
+  * Gry: ``gry doc replace``
+
+
 * Grist: ``POST /docs/{docId}/enable|disable``
   
   * Pygrister: ``GristApi.enable_doc``
@@ -489,6 +496,20 @@ Documents
   * Pygrister: ``GristApi.reload_doc``
   
   * Gry: ``gry doc reload``
+
+
+* Grist: ``POST /docs/{docId}/flush``
+
+  * Pygrister: ``GristApi.flush_doc``
+  
+  * Gry: ``gry doc flush``
+
+
+* Grist: ``POST /docs/{docId}/assign``
+
+  * Pygrister: ``GristApi.assign_doc``
+  
+  * Gry: ``gry doc assign``
 
 
 * Grist: ``POST /docs/{docId}/recover``
