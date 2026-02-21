@@ -826,6 +826,28 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
 
+    def test_fork_compare_propose_doc(self):
+        name = str(time.time_ns())
+        st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.fork_doc(doc_id)
+        self.assertEqual(st, 200)
+        fork_id = res['docId']
+        st, res = self.g.compare_docs(fork_id, doc_id=doc_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.list_proposals(doc_id=doc_id)
+        self.assertEqual(st, 200)
+        self.assertEqual(res, [])
+        st, res = self.g.add_records('Table1', [{'A': 'a'}], doc_id=fork_id)
+        self.assertEqual(st, 200)
+        st, proposal_id = self.g.add_proposal(doc_id=fork_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.list_proposals(doc_id=doc_id)
+        self.assertEqual(st, 200)
+        self.assertEqual(len(res), 1)
+        st, res = self.g.apply_proposal(proposal_id, doc_id=doc_id)
+        self.assertEqual(st, 200)
+
     def test_move_doc(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)

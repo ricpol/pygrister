@@ -8,9 +8,11 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 New APIS:
   - 7 new "/service-accounts" endpoints added, both in Pygrister and Gry
   - 9 new "/session" and "/profile" endpoints added, both in Pygrister and Gry
+  - 5 new "/doc" apis added to fork, compare and work with change proposals
   - new endpoints for Templates (2), Widgets (1) and Forms (1) added
   - GET /docs/{docId}/states -> GristApi.list_doc_history / gry doc history
-  - GET /docs/{docId}/compare -> GristApi.compare_doc_history / gry doc compare
+  - GET /docs/{docId}/compare -> 
+      GristApi.compare_doc_history / gry doc comp-history
   - GET /docs/{docId}/download/tsv|dsv -> 
       GristApi.download_table / gry table download
   - GET /orgs/{orgId}/usage -> GristApi.see_team_usage / gry team usage

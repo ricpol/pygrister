@@ -446,7 +446,42 @@ Documents
 
   * Pygrister: ``GristApi.compare_doc_history``
   
+  * Gry: ``gry doc comp-history``
+
+
+* Grist: ``POST /docs/{docId}/fork``
+
+  * Pygrister: ``GristApi.fork_doc``
+  
+  * Gry: ``gry doc fork``
+
+
+* Grist: ``GET /docs/{docId}/compare/{docId2}``
+
+  * Pygrister: ``GristApi.compare_docs``
+  
   * Gry: ``gry doc compare``
+
+
+* Grist: ``GET /docs/{docId}/proposals``
+
+  * Pygrister: ``GristApi.list_proposals``
+  
+  * Gry: ``gry doc proposals``
+
+
+* Grist: ``POST /docs/{docId}/propose``
+
+  * Pygrister: ``GristApi.add_proposal``
+  
+  * Gry: ``gry doc propose``
+
+
+* Grist: ``POST docs/{docId}/proposals/{proposalId}/apply``
+
+  * Pygrister: ``GristApi.apply_proposal``
+  
+  * Gry: ``gry doc apply-propose``
 
 
 * Grist: ``POST /docs/{docId}/force-reload``

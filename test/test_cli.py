@@ -367,6 +367,26 @@ class TestDoc(BaseTestCli):
         res = self.runner.invoke(app, ['doc', 'timing', '--stop', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
 
+    def test_fork_doc(self):
+        res = self.runner.invoke(app, ['doc', 'fork', '-d', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+    
+    def test_compare_docs(self):
+        res = self.runner.invoke(app, ['doc', 'compare', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+
+    def test_list_proposals(self):
+        res = self.runner.invoke(app, ['doc', 'proposals', '-d', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+    
+    def test_propose(self):
+        res = self.runner.invoke(app, ['doc', 'propose', '-d', 'bogus'])
+        self.assertEqual(res.exit_code, 3)
+    
+    def test_apply_propose(self):
+        res = self.runner.invoke(app, ['doc', 'apply-propose', '10000'])
+        self.assertEqual(res.exit_code, 3)
+
 class TestTable(BaseTestCli):
     def test_list_table(self):
         res = self.runner.invoke(app, ['table', 'list'])

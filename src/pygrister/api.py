@@ -980,6 +980,73 @@ class GristApi:
         return self.apicaller.apicall(url, method='POST', json=json)
 
     @check_safemode
+    def fork_doc(self, doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/fork``.
+        
+        If successful, response will be a ``dict`` of fork identifiers.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/fork'
+        return self.apicaller.apicall(url, 'POST')
+
+    def compare_docs(self, 
+                     other: str, details: bool = False, max_rows: int = 10,
+                     doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/compare/{docId2}``.
+        
+        If successful, response will be a ``dict`` of comparision results.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/compare/{other}'
+        params = {'maxRows': str(max_rows), 
+                  'detail': modjson.dumps(details)}
+        return self.apicaller.apicall(url, params=params)
+
+    def list_proposals(self, outgoing: bool = False, 
+                       doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/proposals``.
+        
+        Note: if ``outgoing=False``, list change proposals to ``doc_id`` 
+        from its forks, which should make more sense in Pygrister.  
+        If successful, response will be a ``list`` of proposals.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/proposals'
+        params = {'outgoing': modjson.dumps(outgoing)}
+        st, res = self.apicaller.apicall(url, params=params)
+        if self.ok:
+            res = res['proposals']
+        return st, res
+    
+    def add_proposal(self, retracted: bool = False, 
+                     doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/propose``.
+        
+        Note that ``doc_id`` must be a fork for this to work. 
+        If successful, response will be the proposal Id as an ``int``.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/propose'
+        json = {'retracted': retracted}
+        st, res = self.apicaller.apicall(url, 'POST', json=json)
+        if self.ok:
+            res = res['shortId'] # "id" in Grist api docs
+        return st, res
+
+    def apply_proposal(self, proposal_id: int, 
+                       doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement POST ``/docs/{docId}/proposals/{proposalId}/apply``.
+
+        If successful, response will be a ``dict`` of applied changes.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/proposals/{proposal_id}/apply'
+        st, res = self.apicaller.apicall(url, 'POST')
+        if self.ok:
+            res = res['changes']
+        return st, res
+
+    @check_safemode
     def move_doc(self, ws_id: int, doc_id: str = '', 
                  team_id: str = '') -> Apiresp:
         """Implement PATCH ``/docs/{docId}/move``.

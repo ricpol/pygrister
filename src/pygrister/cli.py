@@ -1171,7 +1171,7 @@ def list_doc_history(doc_id: Annotated[str, _doc_id_opt] = '',
             content = 'No records found.'
         cli_console.print(content)
 
-@doc_app.command('compare')
+@doc_app.command('comp-history')
 def compare_doc_history(
     left: Annotated[str, typer.Option('--left', '-l', 
                         help='Left side history state hash [default: HEAD]')] = '',
@@ -1366,6 +1366,76 @@ def timing(
     else:
         st, res = grist_api.see_timing(doc_id, team_id)
         _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+@doc_app.command('fork')
+def fork_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
+             team_id: Annotated[str, _team_id_opt] = '',
+             quiet: Annotated[bool, _quiet_opt] = False,
+             verbose: Annotated[int, _verbose_opt] = 0,
+             inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Fork a document"""
+    st, res = grist_api.fork_doc(doc_id, team_id)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content.add_row('fork id', res['forkId'])
+        content.add_row('doc id', res['docId'])
+        content.add_row('url id', res['urlId'])
+        cli_console.print(content)
+
+@doc_app.command('compare')
+def compare_docs(
+    other: Annotated[str, typer.Argument(help='Other document Id')],
+    maxrow: Annotated[int, typer.Option('--max', 
+                        help='Max row changes to include')] = 10,
+    details: Annotated[bool, typer.Option('--details/--no-details', 
+                        help='Include comparision details')] = False,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Compare two documents"""
+    st, res = grist_api.compare_docs(other, details, maxrow, doc_id, team_id)
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+@doc_app.command('proposals')
+def list_doc_proposals(
+    outgoing: Annotated[bool, typer.Option('--out/--in', 
+                help='[Out]going or [in]going proposals')] = False,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List change proposals from or to a document"""
+    st, res = grist_api.list_proposals(outgoing, doc_id, team_id)
+    res = res or 'No proposals.'
+    _exit_early_or_print_content(st, res, quiet, verbose, inspect)
+
+@doc_app.command('propose')
+def add_doc_proposal(
+    retracted: Annotated[bool, typer.Option('--retract/--no-retract', 
+                         help='If proposal is retracted')] = False,
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Create a change proposal for a document from a fork"""
+    st, res = grist_api.add_proposal(retracted, doc_id, team_id)
+    _exit_early_or_print_id(st, res, quiet, verbose, inspect)
+
+@doc_app.command('apply-propose')
+def apply_doc_proposal(
+    prop_id: Annotated[int, typer.Argument(help='Proposal ID')], 
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Apply a proposal to a document"""
+    st, res = grist_api.apply_proposal(prop_id, doc_id, team_id)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 # gry table -> for managing tables
 # ----------------------------------------------------------------------
