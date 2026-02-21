@@ -1018,6 +1018,7 @@ class GristApi:
             res = res['proposals']
         return st, res
     
+    @check_safemode
     def add_proposal(self, retracted: bool = False, 
                      doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/propose``.
@@ -1033,6 +1034,7 @@ class GristApi:
             res = res['shortId'] # "id" in Grist api docs
         return st, res
 
+    @check_safemode
     def apply_proposal(self, proposal_id: int, 
                        doc_id: str = '', team_id: str = '') -> Apiresp:
         """Implement POST ``/docs/{docId}/proposals/{proposalId}/apply``.
