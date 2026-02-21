@@ -1340,7 +1340,7 @@ def remove_snapshots(
     quiet: Annotated[bool, _quiet_opt] = False,
     verbose: Annotated[int, _verbose_opt] = 0,
     inspect: Annotated[bool, _inspect_opt] = False) -> None:
-    """List document snapshots"""
+    """Remove a document snapshot"""
     st, res = grist_api.delete_snapshots(ids, doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
