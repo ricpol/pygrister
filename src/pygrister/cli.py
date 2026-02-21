@@ -1330,6 +1330,26 @@ def list_doc_users(doc_id: Annotated[str, _doc_id_opt] = '',
         content = _make_user_table(res)
         cli_console.print(content)
 
+@doc_app.command('user-as')
+def viewas_doc_users(doc_id: Annotated[str, _doc_id_opt] = '', 
+                     team_id: Annotated[str, _team_id_opt] = '',
+                     quiet: Annotated[bool, _quiet_opt] = False,
+                     verbose: Annotated[int, _verbose_opt] = 0,
+                     inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List users for document View As feature"""
+    st, res = grist_api.list_viewas_users(doc_id, team_id)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('group', 'id', 'name')
+        for usr in res['users']:
+            content.add_row('users', str(usr['id']), usr['name'])
+        content.add_section()
+        for usr in res['attributeTableUsers']:
+            content.add_row('attr table', str(usr['id']), usr['name'])
+        content.add_section()
+        for usr in res['exampleUsers']:
+            content.add_row('example', str(usr['id']), usr['name'])
+        cli_console.print(content)
+
 @doc_app.command('user-access')
 def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')], 
                       access: Annotated[str, _access_opt],

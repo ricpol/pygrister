@@ -414,6 +414,13 @@ Documents
   * Gry: ``gry doc users``
 
 
+* Grist: ``GET /docs/{docId}/usersForViewAs``
+
+  * Pygrister: ``GristApi.list_viewas_users``
+  
+  * Gry: ``gry doc user-as``
+
+
 * Grist: ``PATCH /docs/{docId}/access``
 
   * Pygrister: ``GristApi.update_doc_users``

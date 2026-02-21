@@ -36,6 +36,8 @@ New APIS:
   - GET /docs/{docId}/snapshots -> GristApi.list_snapshots / gry doc snapshots
   - POST /docs/{docId}/snapshots/remove -> 
       GristApi.delete_snapshots / gry doc del-snapshots
+  - GET /docs/{docId}/usersForViewAs -> 
+      GristApi.list_viewas_users / gry doc user-as
 Deprecated:
   - GristApi.download_excel and GristApi.download_csv are now deprecated, 
     and will be removed soon. Use the new GristApi.download_table and 

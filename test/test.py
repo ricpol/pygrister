@@ -934,13 +934,15 @@ class TestDocs(BaseTestPyGrister):
         self.assertIsNone(res)
         self.assertEqual(st, 200)
 
-    def test_list_doc_users(self):
+    def test_list_doc_users_viewas(self):
         name = str(time.time_ns())
         st, doc_id = self.g.add_doc(name, ws_id=self.workspace_id)
         self.assertIsInstance(doc_id, str)
         self.assertEqual(st, 200)
         st, res = self.g.list_doc_users(doc_id, self.team_id)
         self.assertIsInstance(res, list)
+        self.assertEqual(st, 200)
+        st, res = self.g.list_viewas_users(doc_id, self.team_id)
         self.assertEqual(st, 200)
 
     @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_USER_TESTS'] == 'N', '')

@@ -366,6 +366,10 @@ class TestDoc(BaseTestCli):
                                        '-a', 'editors', '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)
     
+    def test_useras_doc(self):
+        res = self.runner.invoke(app, ['doc', 'user-as', '-d', 'bogus_doc'])
+        self.assertEqual(res.exit_code, 3)
+
     def test_snapshots(self):
         res = self.runner.invoke(app, ['doc', 'snapshots', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)

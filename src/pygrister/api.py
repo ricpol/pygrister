@@ -1174,6 +1174,16 @@ class GristApi:
         else:
             return st, res
 
+    def list_viewas_users(self, doc_id: str = '', team_id: str = '') -> Apiresp:
+        """Implement GET ``/docs/{docId}/usersForViewAs``.
+        
+        If successful, response will be a ``dict`` with ``list``s of users 
+        divided by category.
+        """
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/usersForViewAs'
+        return self.apicaller.apicall(url)
+
     @check_safemode
     def update_doc_users(self, users: dict[str, str], max: str = 'owners', 
                          doc_id: str = '', team_id: str = '') -> Apiresp:
