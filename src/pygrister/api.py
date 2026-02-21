@@ -826,7 +826,7 @@ class GristApi:
         ws_id = ws_id or int(self.configurator.config['GRIST_WORKSPACE_ID'])
         if remove:
             url = f'{self.configurator.server}/workspaces/{ws_id}/remove'
-            params = {'permanent': permanent}
+            params = {'permanent': modjson.dumps(permanent)}
         else:
             url = f'{self.configurator.server}/workspaces/{ws_id}/unremove'
             params = dict()
@@ -929,7 +929,7 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         if remove:
             url = f'{server}/docs/{doc_id}/remove'
-            params = {'permanent': permanent}
+            params = {'permanent': modjson.dumps(permanent)}
         else:
             url = f'{server}/docs/{doc_id}/unremove'
             params = dict()
@@ -1161,7 +1161,8 @@ class GristApi:
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/download'
         headers = {'Accept': 'application/x-sqlite3'}
-        params = {'nohistory': nohistory, 'template': template}
+        params = {'nohistory': modjson.dumps(nohistory), 
+                  'template': modjson.dumps(template)}
         return self.apicaller.apicall(url, headers=headers, params=params, 
                                    filename=filename)
 
@@ -1253,7 +1254,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/snapshots'
-        params = {'raw': raw} if raw else dict()
+        params = {'raw': modjson.dumps(raw)}
         return self.apicaller.apicall(url, params=params)
 
     @check_safemode
@@ -1380,7 +1381,7 @@ class GristApi:
             records = self._apply_in_converter(records, converter)
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
-        params = {'noparse': noparse}
+        params = {'noparse': modjson.dumps(noparse)}
         json = {'records': [{'fields': r} for r in records]}
         st, res = self.apicaller.apicall(url, 'POST', params=params, json=json)
         if self.ok:
@@ -1403,7 +1404,7 @@ class GristApi:
             records = self._apply_in_converter(records, converter)
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
-        params = {'noparse': noparse}
+        params = {'noparse': modjson.dumps(noparse)}
         json = {'records': [{'id': rec.pop('id'), 'fields': rec} 
                             for rec in records]}
         return self.apicaller.apicall(url, 'PATCH', params=params, json=json)
@@ -1424,8 +1425,10 @@ class GristApi:
             records = self._apply_in_converter(records, converter, True)
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/records'
-        params = {'noparse': noparse, 'onmany': onmany, 'noadd': noadd, 
-                  'noupdate': noupdate, 'allow_empty_require': allow_empty_require}
+        params = {'noparse': modjson.dumps(noparse), 'onmany': onmany, 
+                  'noadd': modjson.dumps(noadd), 
+                  'noupdate': modjson.dumps(noupdate), 
+                  'allow_empty_require': modjson.dumps(allow_empty_require)}
         json = {'records': records}
         return self.apicaller.apicall(url, 'PUT', params=params, json=json)
 
@@ -1484,7 +1487,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns'
-        params = {'hidden': hidden}
+        params = {'hidden': modjson.dumps(hidden)}
         st, res = self.apicaller.apicall(url, params=params)
         if self.ok:
             return st, res['columns']
@@ -1545,7 +1548,9 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/tables/{table_id}/columns'
-        params = {'noadd': noadd, 'noupdate': noupdate, 'replaceall': replaceall}
+        params = {'noadd': modjson.dumps(noadd), 
+                  'noupdate': modjson.dumps(noupdate), 
+                  'replaceall': modjson.dumps(replaceall)}
         cols = self._jsonize_col_options(cols)
         json = {'columns': cols}
         return self.apicaller.apicall(url, 'PUT', params=params, json=json)
@@ -1593,7 +1598,7 @@ class GristApi:
         if sort:
             params.update({'sort': sort})
         if limit:
-            params.update({'limit': limit})
+            params.update({'limit': str(limit)})
         if filter:
             # Requests will *form*-encode the filter, Grist want it *url*-encoded
             # instead, so we need to skip Request and manually compose the url
@@ -1710,7 +1715,7 @@ class GristApi:
         """
         doc_id, server = self.configurator.select_params(doc_id, team_id)
         url = f'{server}/docs/{doc_id}/attachments/removeUnused'
-        params = {'expiredOnly': expired_only}
+        params = {'expiredOnly': modjson.dumps(expired_only)}
         return self.apicaller.apicall(url, method='POST', params=params)
 
     def see_attachment_store(self, 
