@@ -157,6 +157,58 @@ Users and SCIM
   * Gry: ``gry scim resources``
 
 
+Groups (Scim)
+-------------
+
+* Grist: ``GET /scim/v2/Groups``  
+
+  * Pygrister: ``GristApi.list_groups_raw``, ``GristApi.list_groups`` 
+  
+  * Gry: ``gry group list``
+
+
+* Grist: ``POST /scim/v2/Groups``  
+
+  * Pygrister: ``GristApi.add_group`` 
+  
+  * Gry: ``gry group new``
+
+
+* Grist: ``GET /scim/v2/Groups/{groupId}``  
+
+  * Pygrister: ``GristApi.see_group`` 
+  
+  * Gry: ``gry group see``
+
+
+* Grist: ``PUT /scim/v2/Groups/{groupId}``  
+
+  * Pygrister: ``GristApi.update_group_override`` 
+  
+  * Gry: *not implemented*
+
+
+* Grist: ``PATCH /scim/v2/Groups/{groupId}``  
+
+  * Pygrister: ``GristApi.update_group`` 
+  
+  * Gry: ``gry group update``
+
+
+* Grist: ``DELETE /scim/v2/Groups/{groupId}``  
+
+  * Pygrister: ``GristApi.delete_group`` 
+  
+  * Gry: ``gry group delete``
+
+
+* Grist: ``POST /scim/v2/Groups/.search``  
+
+  * Pygrister: ``GristApi.search_groups``, ``GristApi.search_groups_raw`` 
+  
+  * Gry: *not implemented*
+
+
 Active user, session, api key
 -----------------------------
 

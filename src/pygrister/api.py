@@ -659,6 +659,180 @@ class GristApi:
         return self.apicaller.apicall(url, 
                     headers={'Content-Type': 'application/scim+json'})
 
+    # GROUPS (/scim/v2/Groups endpoints)
+    # ------------------------------------------------------------------
+
+    def see_group(self, group_id: int) -> Apiresp:
+        """Implement GET ``/scim/v2/Groups/{groupId}``. 
+        
+        If successful, response will be a ``dict`` of group details. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.configurator.server}/scim/v2/Groups/{group_id}'
+        return self.apicaller.apicall(url, 
+                    headers={'Content-Type': 'application/scim+json'})
+
+    def list_groups(self, start: int = 1, chunk: int = 10, 
+                    filter: str = '') -> Paginator:
+        """Implement GET ``/scim/v2/Groups``. 
+        
+        This is a paginated api: return an iterable object which, in turn, 
+        will retrieve ``chunk`` groups at a time, as a ``list[dict]``. 
+        """
+        return Paginator(self.list_groups_raw, start, chunk, 'totalResults', 
+                          lambda res: res['Resources'], filter=filter)
+
+    def list_groups_raw(self, start: int = 1, chunk: int = 10, 
+                        filter: str = '') -> Apiresp:
+        """Implement GET ``/scim/v2/Groups``. 
+        
+        If successful, response will be a ``dict`` of groups data. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.configurator.server}/scim/v2/Groups'
+        headers = {'Content-Type': 'application/scim+json'}
+        if filter:
+            # Requests will *form*-encode the filter, Grist want it *url*-encoded
+            # instead, so we need to skip Request and manually compose the url
+            params = {'startIndex': start, 'count': chunk, 
+                      'filter': modjson.dumps(filter)}
+            encoded_params = urlencode(params, quote_via=quote)
+            st, res = self.apicaller.apicall(url+'?'+encoded_params, 
+                                             headers=headers)
+        else:
+            # the usual way
+            st, res = self.apicaller.apicall(url, headers=headers, 
+                            params={'startIndex': start, 'count': chunk})
+        return st, res
+
+    @check_safemode
+    def add_group(self, name: str, members: list|None = None,
+                  schemas: list[str]|None = None) -> Apiresp:
+        """Implement POST ``/scim/v2/Groups``. 
+
+        Note: ``schemas`` defaults to 
+        ``['urn:ietf:params:scim:schemas:core:2.0:Group']``
+
+        If successful, response will be the group id as an ``int``. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.configurator.server}/scim/v2/Groups'
+        schemas = schemas or ['urn:ietf:params:scim:schemas:core:2.0:Group']
+        members = members or []
+        json = {'schemas': schemas, 'displayName': name, 'members': members}
+        st, res = self.apicaller.apicall(url, 'POST', json=json, 
+                        headers={'Content-Type': 'application/scim+json'})
+        if self.ok:
+            return st, int(res['id'])
+        else:
+            return st, res
+
+    @check_safemode
+    def update_group_override(self, group_id: int, name: str, 
+                              members: list|None = None,
+                              schemas: list[str]|None = None) -> Apiresp:
+        """Implement PUT ``/scim/v2/Groups/{userId}``. 
+        
+        Note: ``schemas`` defaults to 
+        ``['urn:ietf:params:scim:schemas:core:2.0:Group']``
+
+        If successful, response will be ``None``. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.configurator.server}/scim/v2/Groups/{group_id}'
+        schemas = schemas or ['urn:ietf:params:scim:schemas:core:2.0:Group']
+        members = members or []
+        json = {'schemas': schemas, 'displayName': name, 'members': members}
+        st, res = self.apicaller.apicall(url, 'PUT', json=json, 
+                        headers={'Content-Type': 'application/scim+json'})
+        if self.ok:
+            res = None
+        return st, res
+
+    @check_safemode
+    def update_group(self, group_id: int, operations: list[dict], 
+                     schemas: list[str]|None = None) -> Apiresp:
+        """Implement PATCH ``/scim/v2/Groups/{userId}``. 
+        
+        Note: ``schemas`` defaults to 
+        ``['urn:ietf:params:scim:api:messages:2.0:PatchOp']``
+
+        If successful, response will be ``None``. 
+        If scim is not enabled, will return Http 501.
+        """
+        if schemas is None:
+            schemas = ['urn:ietf:params:scim:api:messages:2.0:PatchOp']
+        json = {'Operations': operations, 'schemas': schemas}
+        url = f'{self.configurator.server}/scim/v2/Groups/{group_id}'
+        st, res = self.apicaller.apicall(url, 'PATCH', json=json, 
+                        headers={'Content-Type': 'application/scim+json'})
+        if self.ok:
+            return st, None
+        else:
+            return st, res
+
+    @check_safemode
+    def delete_group(self, group_id: int):
+        """Implement DELETE ``/scim/v2/Groups/{groupId}``. 
+        
+        If successful, response will be ``None``. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.configurator.server}/scim/v2/Groups/{group_id}'
+        st, res = self.apicaller.apicall(url, 'DELETE', 
+                    headers={'Content-Type': 'application/scim+json'})
+        if self.ok:
+            res = None
+        return st, res
+
+    def search_groups(self, start: int = 1, chunk: int = 10, 
+                      sort: str = '', asc: bool = True, filter: str = '', 
+                      attrib: list[str]|None = None, 
+                      no_attrib: list[str]|None = None, 
+                      schemas: list[str]|None = None) -> Paginator:
+        """Implement POST ``/scim/v2/Groups/.search``. 
+        
+        Note: ``schemas`` defaults to 
+        ``['urn:ietf:params:scim:api:messages:2.0:SearchRequest']``
+
+        This is a paginated api: return an iterable object which, in turn, 
+        will retrieve ``chunk`` groups at a time, as a ``list[dict]``. 
+        """
+        return Paginator(self.search_groups_raw, start, chunk, 'totalResults', 
+                          lambda res: res['Resources'],
+                          sort=sort, asc=asc, filter=filter, attrib=attrib, 
+                          no_attrib=no_attrib, schemas=schemas)
+
+    def search_groups_raw(self, start: int = 1, chunk: int = 10, 
+                          sort: str = '', asc: bool = True, filter: str = '', 
+                          attrib: list[str]|None = None, 
+                          no_attrib: list[str]|None = None, 
+                          schemas: list[str]|None = None) -> Apiresp:
+        """Implement POST ``/scim/v2/Users/.search``. 
+        
+        Note: ``schemas`` defaults to 
+        ``['urn:ietf:params:scim:api:messages:2.0:SearchRequest']``
+
+        If successful, response will be a ``dict`` of group data. 
+        If scim is not enabled, will return Http 501. 
+        """
+        url = f'{self.configurator.server}/scim/v2/Users/.search'
+        headers = {'Content-Type': 'application/scim+json'}
+        if schemas is None:
+            schemas = ['urn:ietf:params:scim:api:messages:2.0:SearchRequest']
+        json = {'startIndex': start, 'count': chunk, 'schemas': schemas}
+        if filter:
+            json['filter'] = filter
+        if sort:
+            sortorder = ('descending', 'ascending')[int(asc)]
+            json['sortBy'] = sort
+            json['sortOrder'] = sortorder
+        if attrib is not None:
+            json['attributes'] = attrib
+        if no_attrib is not None:
+            json['excludedAttributes'] = no_attrib
+        return self.apicaller.apicall(url, 'POST', headers=headers, json=json)
+
     # TEAM SITES (organisations)
     # ------------------------------------------------------------------
 

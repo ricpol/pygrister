@@ -581,6 +581,41 @@ class TestUsersScim(BaseTestPyGrister):
         st, res = self.g.see_scim_resources()
         self.assertEqual(st, 200)
 
+# again, to run these tests you must enable Scim on your server
+@unittest.skipIf(TEST_CONFIGURATION['GRIST_SELF_MANAGED'] == 'N', '')
+@unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_SCIM_TESTS'] == 'N', '')
+class TestGroupsScim(BaseTestPyGrister):
+    @classmethod
+    def setUpClass(cls):
+        cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
+
+    # since there are likely no groups to begin with, 
+    # we test a little bit of everything in a single function... 
+    @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_USER_TESTS'] == 'N', '')
+    def test_groups(self):
+        # create a group
+        name = 'gr'+str(time.time_ns())
+        st, gr_id = self.g.add_group(name, [{'value': '1', 'type': 'User'}])
+        self.assertEqual(st, 201)
+        # list groups
+        st, res = self.g.list_groups_raw() # the raw version
+        self.assertEqual(st, 200)
+        for st, res in self.g.list_groups(): # the paginated version
+            self.assertEqual(st, 200)
+        # see group
+        st, res = self.g.see_group(gr_id)
+        self.assertEqual(st, 200)
+        # modify group (let's try to change the name)
+        st, res = self.g.update_group(gr_id, 
+            [{'op': 'replace', 'path': 'displayName', 'value': 'new_'+name}])
+        self.assertEqual(st, 200)
+        # modify group, the brutal way (here we change name, erase members)
+        st, res = self.g.update_group_override(gr_id, 'newer_'+name)
+        self.assertEqual(st, 200)
+        # search groups
+        for st, res in self.g.search_groups():
+            self.assertEqual(st, 200)
+
 class TestTeamSites(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):

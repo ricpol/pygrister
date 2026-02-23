@@ -245,6 +245,18 @@ def _make_scim_user_data(user: dict, table: Table) -> Table:
     table.add_section()
     return table
 
+def _make_scim_group_data(group: dict, table: Table) -> Table:
+    table.add_row('id', group['id'])
+    table.add_row('name', group['displayName'])
+    table.add_row('location', group['meta']['location'])
+    if group['members']:
+        for member in group['members']:
+            table.add_row('member', f'{member["value"]} - {member["display"]}')
+    else:
+        table.add_row('member', 'no members')
+    table.add_section()
+    return table
+
 def _make_sacc_data(sacc: dict, table: Table) -> Table:
     table.add_row('id', str(sacc['id']))
     table.add_row('login', sacc['login'])
@@ -321,6 +333,7 @@ _quiet_opt = typer.Option('--quiet', '-q', help='All output will be suppressed')
 _inspect_opt = typer.Option('--inspect', '-i', 
                             help = 'Print inspect output after api call')
 _user_id_arg = typer.Argument(help='The user ID')
+_group_id_arg = typer.Argument(help='The group ID')
 _sacc_id_arg = typer.Argument(help='The service account ID')
 _team_id_opt = typer.Option('--team', '-t', 
                             help='The team ID [default: current]')
@@ -353,6 +366,7 @@ _enable_opt = typer.Option('--enable/--disable', help='Enable/disable')
 # ----------------------------------------------------------------------
 user_app = typer.Typer(help='Manage users, SCIM must be enabled')
 cuser_app = typer.Typer(help='Manage current user, session and apy key')
+group_app = typer.Typer(help='Manage user groups, SCIM must be enabled')
 org_app = typer.Typer(help='Manage Grist teams, aka organisations')
 ws_app = typer.Typer(help='Manage workspaces inside a team site')
 doc_app = typer.Typer(help='Manage documents inside a workspace')
@@ -371,6 +385,7 @@ app = typer.Typer(no_args_is_help=True, help=_help, epilog=_epilog)
 app.add_typer(sacc_app, name='sacc', no_args_is_help=True)
 app.add_typer(cuser_app, name='cuser', no_args_is_help=True)
 app.add_typer(user_app, name='user', no_args_is_help=True)
+app.add_typer(group_app, name='group', no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
 app.add_typer(doc_app, name='doc', no_args_is_help=True)
@@ -750,7 +765,7 @@ class _OperationTypes(str, Enum):
 
 @user_app.command('update')
 def update_user(
-    user_id: Annotated[int, typer.Argument(help="User ID")],
+    user_id: Annotated[int, _user_id_arg],
     op_path: Annotated[str, typer.Argument(help="Operation path")],
     op_value: Annotated[str, typer.Argument(help="Operation value")],
     operation: Annotated[_OperationTypes, typer.Option('--operation', '-o',         
@@ -784,6 +799,89 @@ def enable_user(user: Annotated[int, _user_id_arg],
 
 # TODO we don't implement "search" for now because we don't have a good way 
 # to express filters in the shell. 
+
+# gry group -> for managing user groups with SCIM apis
+# ----------------------------------------------------------------------
+
+@group_app.command('list')
+def list_groups(
+    start: Annotated[int, typer.Option('--start', '-s', 
+                     help='First ID to retrieve')] = 1,
+    retrieve: Annotated[int, typer.Option('--retrieve', '-r', 
+                        help='Max groups to retrieve')] = 10,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List groups. No filter option available"""
+    st, res = grist_api.list_groups_raw(start, retrieve)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        if start > res['totalResults']:
+            content = 'No groups.'
+        else:
+            content = Table('key', 'value')
+            for group in res['Resources']:
+                content = _make_scim_group_data(group, content)
+        cli_console.print(content)
+
+@group_app.command('see')
+def see_group(group: Annotated[int, _group_id_arg],
+              quiet: Annotated[bool, _quiet_opt] = False,
+              verbose: Annotated[int, _verbose_opt] = 0,
+              inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve group by ID"""
+    st, res = grist_api.see_group(group)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content = _make_scim_group_data(res, content)
+        cli_console.print(content)
+
+@group_app.command('new')
+def new_group(
+    name: Annotated[str, typer.Argument(help="Group name")],
+    users: Annotated[List[str]|None, typer.Option('--user', '-u', 
+                     help='User ID to include in the group')] = None,
+    groups: Annotated[List[str]|None, typer.Option('--group', '-g', 
+                      help='Group ID to include in the group')] = None,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Add a group, including users/groups inside it
+    
+    Usage: % gry group add mygroup -u 2 -u 34 -u 15"""
+    users = users or []
+    groups = groups or []
+    members = [{'value': u, 'type': 'User'} for u in users]
+    members += [{'value': g, 'type': 'Group'} for g in groups]
+    st, res = grist_api.add_group(name, members) 
+    _exit_early_or_print_id(st, res, quiet, verbose, inspect)
+
+# see _OperationTypes as defined above in Users section
+@group_app.command('update')
+def update_group(
+    group_id: Annotated[int, _group_id_arg],
+    op_path: Annotated[str, typer.Argument(help="Operation path")],
+    op_value: Annotated[str, typer.Argument(help="Operation value")],
+    operation: Annotated[_OperationTypes, typer.Option('--operation', '-o',         
+                         help="Operation to perform")] = _OperationTypes.repl,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Update a group. Only one update operation is possible"""
+    op = {'op': operation, 'path': op_path, 'value': op_value}
+    st, res = grist_api.update_group(group_id, [op])
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+
+@group_app.command('delete')
+def delete_group(group: Annotated[int, _group_id_arg],
+                 quiet: Annotated[bool, _quiet_opt] = False,
+                 verbose: Annotated[int, _verbose_opt] = 0,
+                 inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Remove a group"""
+    st, res = grist_api.delete_group(group)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+
+# TODO again, we don't implement "search" because we can't easily
+# express filters in the shell. 
 
 # gry scim -> metadata about SCIM service
 # ----------------------------------------------------------------------
