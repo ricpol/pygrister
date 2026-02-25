@@ -209,6 +209,37 @@ Groups (Scim)
   * Gry: *not implemented*
 
 
+Roles (Scim)
+------------
+
+* Grist: ``GET /scim/v2/Roles``  
+
+  * Pygrister: ``GristApi.list_roles_raw``, ``GristApi.list_roles`` 
+  
+  * Gry: ``gry role list``
+
+
+* Grist: ``GET /scim/v2/Roles/{roleId}``  
+
+  * Pygrister: ``GristApi.see_role`` 
+  
+  * Gry: ``gry role see``
+
+
+* Grist: ``PUT /scim/v2/Roles/{roleId}``  
+
+  * Pygrister: ``GristApi.update_role_override`` 
+  
+  * Gry: *not implemented*
+
+
+* Grist: ``PATCH /scim/v2/Roles/{roleId}``  
+
+  * Pygrister: ``GristApi.update_role`` 
+  
+  * Gry: ``gry role update``
+
+
 Active user, session, api key
 -----------------------------
 

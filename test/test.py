@@ -584,7 +584,7 @@ class TestUsersScim(BaseTestPyGrister):
 # again, to run these tests you must enable Scim on your server
 @unittest.skipIf(TEST_CONFIGURATION['GRIST_SELF_MANAGED'] == 'N', '')
 @unittest.skipIf(TEST_CONFIGURATION['GRIST_TEST_RUN_SCIM_TESTS'] == 'N', '')
-class TestGroupsScim(BaseTestPyGrister):
+class TestGroupsRolesScim(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):
         cls.team_id = TEST_CONFIGURATION['GRIST_TEAM_SITE']
@@ -615,6 +615,18 @@ class TestGroupsScim(BaseTestPyGrister):
         # search groups
         for st, res in self.g.search_groups():
             self.assertEqual(st, 200)
+
+    def test_roles(self):
+        # right now we can't add/delete roles, so we'll do what we can
+        # list roles
+        st, res = self.g.list_roles_raw() # the raw version
+        self.assertEqual(st, 200)
+        roles = self.g.list_roles() # the paginated version
+        st, res = next(roles)
+        self.assertEqual(st, 200)
+        # see role
+        st, res = self.g.see_role(1)
+        self.assertEqual(st, 200)
 
 class TestTeamSites(BaseTestPyGrister):
     @classmethod

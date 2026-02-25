@@ -174,7 +174,7 @@ class TestUser(BaseTestCli):
 
 @unittest.skipIf(os.environ['GRIST_SELF_MANAGED'] == 'N', '')
 @unittest.skipIf(os.environ['GRIST_TEST_RUN_SCIM_TESTS'] == 'N', '')
-class TestGroup(BaseTestCli):
+class TestGroupRole(BaseTestCli):
     def test_list_group(self):
         res = self.runner.invoke(app, ['group', 'list'])
         self.assertEqual(res.exit_code, 0)
@@ -186,7 +186,7 @@ class TestGroup(BaseTestCli):
     @unittest.skipIf(default_config['GRIST_TEST_RUN_USER_TESTS'] == 'N', '')
     def test_new_group(self):
         res = self.runner.invoke(app, ['group', 'new', 'test'])
-        self.assertEqual(res.exit_code, 0)
+        self.assertIn(res.exit_code, (0, 3)) # 3 if group already exist
     
     def test_update_group(self):
         res = self.runner.invoke(app, ['group', 'update', '10000000', 
@@ -196,6 +196,20 @@ class TestGroup(BaseTestCli):
     def test_delete_group(self):
         res = self.runner.invoke(app, ['group', 'delete', '10000000'])
         self.assertEqual(res.exit_code, 3)
+    
+    def test_list_roles(self):
+        res = self.runner.invoke(app, ['role', 'list'])
+        self.assertEqual(res.exit_code, 0)
+    
+    def test_see_role(self):
+        res = self.runner.invoke(app, ['role', 'see', '1'])
+        self.assertEqual(res.exit_code, 0)
+    
+    def test_update_role(self):
+        res = self.runner.invoke(app, ['role', 'update', '10000000', 
+                                       'displayName', 'some_name'])
+        self.assertEqual(res.exit_code, 3)
+
 
 class TestSessionProfile(BaseTestCli):
     def test_profile(self):

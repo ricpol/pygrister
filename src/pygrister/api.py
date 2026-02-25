@@ -833,6 +833,96 @@ class GristApi:
             json['excludedAttributes'] = no_attrib
         return self.apicaller.apicall(url, 'POST', headers=headers, json=json)
 
+    # ROLES
+    # ------------------------------------------------------------------
+
+    def see_role(self, role_id: int) -> Apiresp:
+        """Implement GET ``/scim/v2/Roles/{roleId}``. 
+        
+        If successful, response will be a ``dict`` of group details. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.configurator.server}/scim/v2/Roles/{role_id}'
+        return self.apicaller.apicall(url, 
+                    headers={'Content-Type': 'application/scim+json'})
+
+    def list_roles(self, start: int = 1, chunk: int = 10, 
+                   filter: str = '') -> Paginator:
+        """Implement GET ``/scim/v2/Roles``. 
+        
+        This is a paginated api: return an iterable object which, in turn, 
+        will retrieve ``chunk`` groups at a time, as a ``list[dict]``. 
+        """
+        return Paginator(self.list_roles_raw, start, chunk, 'totalResults', 
+                          lambda res: res['Resources'], filter=filter)
+
+    def list_roles_raw(self, start: int = 1, chunk: int = 10, 
+                       filter: str = '') -> Apiresp:
+        """Implement GET ``/scim/v2/Roles``. 
+        
+        If successful, response will be a ``dict`` of groups data. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.configurator.server}/scim/v2/Roles'
+        headers = {'Content-Type': 'application/scim+json'}
+        if filter:
+            # Requests will *form*-encode the filter, Grist want it *url*-encoded
+            # instead, so we need to skip Request and manually compose the url
+            params = {'startIndex': start, 'count': chunk, 
+                      'filter': modjson.dumps(filter)}
+            encoded_params = urlencode(params, quote_via=quote)
+            st, res = self.apicaller.apicall(url+'?'+encoded_params, 
+                                             headers=headers)
+        else:
+            # the usual way
+            st, res = self.apicaller.apicall(url, headers=headers, 
+                            params={'startIndex': start, 'count': chunk})
+        return st, res
+
+    @check_safemode
+    def update_role_override(self, role_id: int, 
+                             members: list|None = None,
+                             schemas: list[str]|None = None) -> Apiresp:
+        """Implement PUT ``/scim/v2/Roles/{rolesId}``. 
+        
+        Note: ``schemas`` defaults to 
+        ``['urn:ietf:params:scim:schemas:Grist:1.0:Role']``
+
+        If successful, response will be ``None``. 
+        If scim is not enabled, will return Http 501.
+        """
+        url = f'{self.configurator.server}/scim/v2/Roles/{role_id}'
+        schemas = schemas or ['urn:ietf:params:scim:schemas:Grist:1.0:Role']
+        members = members or []
+        json = {'schemas': schemas, 'members': members}
+        st, res = self.apicaller.apicall(url, 'PUT', json=json, 
+                        headers={'Content-Type': 'application/scim+json'})
+        if self.ok:
+            res = None
+        return st, res
+
+    @check_safemode
+    def update_role(self, role_id: int, operations: list[dict], 
+                     schemas: list[str]|None = None) -> Apiresp:
+        """Implement PATCH ``/scim/v2/Roles/{roleId}``. 
+        
+        Note: ``schemas`` defaults to 
+        ``['urn:ietf:params:scim:api:messages:2.0:PatchOp']``
+
+        If successful, response will be ``None``. 
+        If scim is not enabled, will return Http 501.
+        """
+        if schemas is None:
+            schemas = ['urn:ietf:params:scim:api:messages:2.0:PatchOp']
+        json = {'Operations': operations, 'schemas': schemas}
+        url = f'{self.configurator.server}/scim/v2/Roles/{role_id}'
+        st, res = self.apicaller.apicall(url, 'PATCH', json=json, 
+                        headers={'Content-Type': 'application/scim+json'})
+        if self.ok:
+            return st, None
+        else:
+            return st, res
+
     # TEAM SITES (organisations)
     # ------------------------------------------------------------------
 

@@ -11,6 +11,7 @@ New APIS:
   - 5 new "/doc" apis added to fork, compare and work with change proposals
   - 2 admin endpoints added: "/doc/{docId}/flush" and "/doc/{docId}/assign" 
   - 7 new Groups (Scim) endpoints added
+  - 4 new Roles (Scim) endpoints added
   - new endpoints for Templates (2), Widgets (1) and Forms (1) added
   - GET /docs/{docId}/states -> GristApi.list_doc_history / gry doc history
   - GET /docs/{docId}/compare -> 

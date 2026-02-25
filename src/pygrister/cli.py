@@ -257,6 +257,24 @@ def _make_scim_group_data(group: dict, table: Table) -> Table:
     table.add_section()
     return table
 
+def _make_scim_role_data(role: dict, table: Table) -> Table:
+    table.add_row('id', role['id'])
+    table.add_row('name', role['displayName'])
+    table.add_row('location', role['meta']['location'])
+    if role.get('docId', ''):
+        table.add_row('document', role['docId'])
+    elif role.get('workspaceId', ''):
+        table.add_row('workspace', str(role['workspaceId']))
+    elif role.get('orgId', ''):
+        table.add_row('team', str(role['orgId']))
+    if role['members']:
+        for member in role['members']:
+            table.add_row('member', f'{member["value"]} - {member["display"]}')
+    else:
+        table.add_row('member', 'no members')
+    table.add_section()
+    return table
+
 def _make_sacc_data(sacc: dict, table: Table) -> Table:
     table.add_row('id', str(sacc['id']))
     table.add_row('login', sacc['login'])
@@ -334,6 +352,7 @@ _inspect_opt = typer.Option('--inspect', '-i',
                             help = 'Print inspect output after api call')
 _user_id_arg = typer.Argument(help='The user ID')
 _group_id_arg = typer.Argument(help='The group ID')
+_role_id_arg = typer.Argument(help='The role ID')
 _sacc_id_arg = typer.Argument(help='The service account ID')
 _team_id_opt = typer.Option('--team', '-t', 
                             help='The team ID [default: current]')
@@ -367,6 +386,7 @@ _enable_opt = typer.Option('--enable/--disable', help='Enable/disable')
 user_app = typer.Typer(help='Manage users, SCIM must be enabled')
 cuser_app = typer.Typer(help='Manage current user, session and apy key')
 group_app = typer.Typer(help='Manage user groups, SCIM must be enabled')
+role_app = typer.Typer(help='Manage user roles, SCIM must be enabled')
 org_app = typer.Typer(help='Manage Grist teams, aka organisations')
 ws_app = typer.Typer(help='Manage workspaces inside a team site')
 doc_app = typer.Typer(help='Manage documents inside a workspace')
@@ -386,6 +406,7 @@ app.add_typer(sacc_app, name='sacc', no_args_is_help=True)
 app.add_typer(cuser_app, name='cuser', no_args_is_help=True)
 app.add_typer(user_app, name='user', no_args_is_help=True)
 app.add_typer(group_app, name='group', no_args_is_help=True)
+app.add_typer(role_app, name='role', no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
 app.add_typer(doc_app, name='doc', no_args_is_help=True)
@@ -882,6 +903,57 @@ def delete_group(group: Annotated[int, _group_id_arg],
 
 # TODO again, we don't implement "search" because we can't easily
 # express filters in the shell. 
+
+# gry role -> for managing user roles with SCIM apis
+# ----------------------------------------------------------------------
+
+@role_app.command('list')
+def list_role(
+    start: Annotated[int, typer.Option('--start', '-s', 
+                     help='First ID to retrieve')] = 1,
+    retrieve: Annotated[int, typer.Option('--retrieve', '-r', 
+                        help='Max roles to retrieve')] = 10,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """List roles. No filter option available"""
+    st, res = grist_api.list_roles_raw(start, retrieve)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        if start > res['totalResults']:
+            content = 'No roles.'
+        else:
+            content = Table('key', 'value')
+            for role in res['Resources']:
+                content = _make_scim_role_data(role, content)
+        cli_console.print(content)
+
+@role_app.command('see')
+def see_role(role: Annotated[int, _role_id_arg],
+             quiet: Annotated[bool, _quiet_opt] = False,
+             verbose: Annotated[int, _verbose_opt] = 0,
+             inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Retrieve role by ID"""
+    st, res = grist_api.see_role(role)
+    if not _exit_early(st, res, quiet, verbose, inspect):
+        content = Table('key', 'value')
+        content = _make_scim_role_data(res, content)
+        cli_console.print(content)
+
+# see _OperationTypes as defined above in Users section
+@role_app.command('update')
+def update_role(
+    role_id: Annotated[int, _role_id_arg],
+    op_path: Annotated[str, typer.Argument(help="Operation path")],
+    op_value: Annotated[str, typer.Argument(help="Operation value")],
+    operation: Annotated[_OperationTypes, typer.Option('--operation', '-o',         
+                         help="Operation to perform")] = _OperationTypes.repl,
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Update a role. Only one update operation is possible"""
+    op = {'op': operation, 'path': op_path, 'value': op_value}
+    st, res = grist_api.update_role(role_id, [op])
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
 # gry scim -> metadata about SCIM service
 # ----------------------------------------------------------------------
