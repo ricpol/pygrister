@@ -644,6 +644,20 @@ Documents
   * Gry: ``gry doc timing --stop``
 
 
+* Grist: ``POST /docs``
+
+  * Pygrister: *not implemented*
+  
+  * Gry: *not implemented*
+
+
+* Grist: ``POST /docs/{docId}/apply``
+
+  * Pygrister: *not implemented*
+  
+  * Gry: *not implemented*
+
+
 Tables
 ------
 
