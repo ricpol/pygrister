@@ -44,6 +44,8 @@ Deprecated:
   - GristApi.download_excel and GristApi.download_csv are now deprecated, 
     and will be removed soon. Use the new GristApi.download_table and 
     specify the desired download format (xlsx, csv, tsv, dsv).
+Other/fix:
+  - remove not needed import from typing_extensions in cli.py
 
 v0.9.1, 2025.12.08
 ------------------

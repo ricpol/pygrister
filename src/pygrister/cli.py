@@ -63,8 +63,7 @@ import subprocess
 import json as modjson
 from pathlib import Path
 from enum import Enum
-from typing import Any, List, Optional
-from typing_extensions import Annotated
+from typing import Any, List, Optional, Annotated
 
 import typer
 from rich.console import Console
