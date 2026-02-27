@@ -46,7 +46,11 @@ Deprecated:
     specify the desired download format (xlsx, csv, tsv, dsv).
 Other/fix:
   - remove not needed import from typing_extensions in cli.py
-
+  - officially remove support for Python 3.9, which has always been 
+    "in name only" anyway. In fact, Pygrister's code works just fine 
+    with Py39 too, if not for our relying on the "pipe" syntax 
+    in type checking (as in "foo: int|str"). 
+    
 v0.9.1, 2025.12.08
 ------------------
 A quick fix for a regression in "gry python". Also, PyPI was 

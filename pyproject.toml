@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "Pygrister"
 version = "0.9.1"
 dependencies = ["requests>=2.31.0", "typer>=0.15.0"]
-requires-python = ">= 3.9"
+requires-python = ">= 3.10"
 authors = [{name = "Riccardo Polignieri"},]
 description = "A Python client for the Grist API."
 readme = "readme.rst"
@@ -18,7 +18,6 @@ classifiers = [
   "Topic :: Software Development :: Libraries",
   "Topic :: Database",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.9",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",

@@ -74,7 +74,9 @@ Basic usage goes as follows::
 Python version required.
 ------------------------
 
-Pygrister (and Gry) will work with any Python>=3.9. 
+Pygrister (and Gry) will work with any Python>=3.10 (the code itself  
+works against Py3.9 too, if not for our use of the "pipe" syntax ``type|type`` 
+in type checking: backporting should be trivial.)
 
 Note that Grist itself may have 
 `stricter Python requirements <https://support.getgrist.com/python/#supported-python-versions>`_ 
