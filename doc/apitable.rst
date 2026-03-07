@@ -243,63 +243,63 @@ Roles (Scim)
 Active user, session, api key
 -----------------------------
 
-* Grist: GET ``/profile/user``
+* Grist: ``GET /profile/user``
 
   * Pygrister: ``GristApi.see_profile``
   
   * Gry: ``gry cuser see``
 
 
-* Grist: POST ``/profile/user/name``
+* Grist: ``POST /profile/user/name``
 
   * Pygrister: ``GristApi.update_profile_name``
   
   * Gry: ``gry cuser update --name``
 
 
-* Grist: POST ``/profile/user/locale``
+* Grist: ``POST /profile/user/locale``
 
   * Pygrister: ``GristApi.update_profile_locale``
   
   * Gry: ``gry cuser update --locale``
 
 
-* Grist: GET ``/profile/apikey``
+* Grist: ``GET /profile/apikey``
 
   * Pygrister: ``GristApi.see_apikey``
   
   * Gry: ``gry cuser apikey``
 
 
-* Grist: POST ``/profile/apikey``
+* Grist: ``POST /profile/apikey``
 
   * Pygrister: ``GristApi.new_apikey``
   
   * Gry: ``gry cuser apikey --new``
 
 
-* Grist: DELETE ``/profile/apikey``
+* Grist: ``DELETE /profile/apikey``
 
   * Pygrister: ``GristApi.delete_apikey``
   
   * Gry: ``gry cuser del-apikey``
 
 
-* Grist: GET ``/session/access/active``
+* Grist: ``GET /session/access/active``
 
   * Pygrister: ``GristApi.see_session``
   
   * Gry: ``gry cuser session``
 
 
-* Grist: POST ``/session/access/active``
+* Grist: ``POST /session/access/active``
 
   * Pygrister: ``GristApi.update_session_user``
   
   * Gry: ``gry cuser set-active``
 
 
-* Grist: GET ``/session/access/all``
+* Grist: ``GET /session/access/all``
 
   * Pygrister: ``GristApi.see_session_users``
   
@@ -358,14 +358,14 @@ Teams (organisations)
   * Gry: ``gry team user-access``
 
 
-* Grist: ``GET /{orgId}/workspaces``
+* Grist: ``GET orgs/{orgId}/workspaces``
 
   * Pygrister: ``GristApi.list_workspaces``
   
   * Gry: ``gry ws list``
 
 
-* Grist: ``POST /{orgId}/workspaces``
+* Grist: ``POST orgs/{orgId}/workspaces``
 
   * Pygrister: ``GristApi.add_workspace``
   
@@ -462,7 +462,7 @@ Documents
   * Gry: ``gry doc move``
 
 
-* Grist: ``PATCH /docs/{docId}/copy``
+* Grist: ``POST /docs/{docId}/copy``
 
   * Pygrister: ``GristApi.copy_doc``
   
@@ -574,7 +574,7 @@ Documents
   * Gry: ``gry doc propose``
 
 
-* Grist: ``POST docs/{docId}/proposals/{proposalId}/apply``
+* Grist: ``POST /docs/{docId}/proposals/{proposalId}/apply``
 
   * Pygrister: ``GristApi.apply_proposal``
   
@@ -968,3 +968,33 @@ Sql
   
   * Gry: ``gry sql --param``
 
+
+Deprecated / not implemented
+----------------------------
+
+* Grist: ``GET /docs/{docId}/tables/{tableId}/data``
+
+  * Pygrister: *not implemented* (deprecated in Grist)
+  
+  * Gry: *not implemented* (deprecated in Grist)
+
+
+* Grist: ``POST /docs/{docId}/tables/{tableId}/data``
+
+  * Pygrister: *not implemented* (deprecated in Grist)
+  
+  * Gry: *not implemented* (deprecated in Grist)
+
+
+* Grist: ``PATCH /docs/{docId}/tables/{tableId}/data``
+
+  * Pygrister: *not implemented* (deprecated in Grist)
+  
+  * Gry: *not implemented* (deprecated in Grist)
+
+
+* Grist: ``POST /docs/{docId}/tables/{tableId}/records/delete``
+
+  * Pygrister: *not implemented* (still using the old /data/delete)
+  
+  * Gry: *not implemented* (still using the old /data/delete)
