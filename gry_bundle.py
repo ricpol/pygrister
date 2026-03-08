@@ -24,8 +24,9 @@ def main():
     copy(BUNDLE_FILES / 'readme.txt', 
          DEST_DIR / 'readme.txt')
     with zipfile.ZipFile(ZIP_FILE, 'w') as zip:
-       for f in DEST_DIR.iterdir():
-           zip.write(f, arcname=f.name)
+       for root, dirs, files in DEST_DIR.walk():
+           for file in files:
+               zip.write(root / file, arcname=(root / file).relative_to(DEST_DIR))
 
 if __name__ == '__main__':
     main()
