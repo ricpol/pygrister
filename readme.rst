@@ -38,7 +38,14 @@ Gry is a command line tool to query the Grist Api. Gry is based on Pygrister,
 but you can use/vendor it as a stand-alone tool, with no prior Python/Pygrister 
 knowledge needed. 
 
-Gry is installed with Pygrister: to try it out, just type ::
+In fact, **Gry is also available as a stand-alone bundle**: you may download 
+the "gry.zip" file (right now, Windows only) from the 
+`latest release page on GitHub <https://github.com/ricpol/pygrister/releases>`_. 
+The stand-alone version of Gry doesn't need Python pre-installed on your machine: 
+just unzip the file, and you are ready to use Gry. 
+
+Or, if you have installed Pygrister (see below), you will find that Gry 
+is also included: to try it out, just type ::
 
     % gry --help    # % is your shell prompt
 
