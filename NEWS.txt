@@ -3,7 +3,9 @@ NEWS
 
 Bleeding edge: committed to the repo, not yet released on PyPI
 --------------------------------------------------------------
-Nothing right now.
+New APIs:
+  - GristApi.delete_tables / gry table delete: since there's no dedicated 
+    documented endpoint in Grist, we use /doc/{docId}/apply internally
 
 v0.10.0, 2026.03.08
 -------------------

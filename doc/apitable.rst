@@ -682,6 +682,13 @@ Tables
   * Gry: ``gry table update``
 
 
+* Grist: delete tables via ``POST /docs/{docId}/apply``
+
+  * Pygrister: ``GristApi.delete_tables``
+  
+  * Gry: ``gry table delete``
+
+
 * Grist: ``GET /docs/{docId}/download/xlsx|csv|tsv|dsv``
 
   * Pygrister: ``GristApi.download_table``

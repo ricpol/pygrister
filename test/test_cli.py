@@ -457,6 +457,10 @@ class TestTable(BaseTestCli):
         res = self.runner.invoke(app, ['table', 'update', '-b', 'bogus_table'])
         self.assertEqual(res.exit_code, 3)
     
+    def test_delete_table(self):
+        res = self.runner.invoke(app, ['table', 'delete', 'bogus_table'])
+        self.assertEqual(res.exit_code, 3)
+    
     def test_download_table(self):
         res = self.runner.invoke(app, ['table', 'download', 'fname', 
                                        '-b', 'bogus_table'])

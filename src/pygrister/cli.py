@@ -1742,6 +1742,18 @@ def update_table(ctx: typer.Context,
     st, res = grist_api.update_tables(table, doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
+@table_app.command('delete')
+def delete_table(
+    tname: Annotated[str, typer.Argument(help='ID of the table to delete')], 
+    doc_id: Annotated[str, _doc_id_opt] = '', 
+    team_id: Annotated[str, _team_id_opt] = '',
+    quiet: Annotated[bool, _quiet_opt] = False,
+    verbose: Annotated[int, _verbose_opt] = 0,
+    inspect: Annotated[bool, _inspect_opt] = False) -> None:
+    """Delete one table."""
+    st, res = grist_api.delete_tables([tname], doc_id, team_id)
+    _exit_early_or_print_done(st, res, quiet, verbose, inspect)
+
 class _DownloadTableOption(str, Enum):
     xslx = 'xlsx'
     csv = 'csv'

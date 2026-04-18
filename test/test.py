@@ -1394,7 +1394,19 @@ class TestTables(BaseTestPyGrister):
         st, res = self.g.update_tables(tables, self.doc_id, self.team_id)
         self.assertIsNone(res)
         self.assertEqual(st, 200)
-
+    
+    def test_delete_tables(self):
+        name = str(time.time_ns())
+        tables = [{'id': 'T1'+name, 'columns': 
+                   [{'id': 'col1', 'fields': {'label': 'Col 1'}}]},
+                  {'id': 'T2'+name, 'columns': 
+                   [{'id': 'col1', 'fields': {'label': 'Col 1'}}]}]
+        st, res = self.g.add_tables(tables, self.doc_id, self.team_id)
+        self.assertEqual(st, 200)
+        st, res = self.g.delete_tables(['T1'+name, 'T2'+name], 
+                                       self.doc_id, self.team_id)
+        self.assertEqual(st, 200)
+        
 class TestCols(BaseTestPyGrister):
     @classmethod
     def setUpClass(cls):

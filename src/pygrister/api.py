@@ -1785,6 +1785,23 @@ class GristApi:
         json = {'tables': tables}
         return self.apicaller.apicall(url, 'PATCH', json=json)
 
+    @check_safemode
+    def delete_tables(self, tables: list[str], doc_id: str = '', 
+                      team_id: str = '') -> Apiresp:
+        """Delete tables via POST ``/docs/{docId}/apply``.
+        
+        If successful, response will be ``None``.
+        """
+        #TODO Grist has no dedicated documented endpoint for removing tables!
+        doc_id, server = self.configurator.select_params(doc_id, team_id)
+        url = f'{server}/docs/{doc_id}/apply'
+        json = [['RemoveTable', table] for table in tables]
+        # exceptionally, json must be a list in the "apply" endpoint
+        st, res = self.apicaller.apicall(url, 'POST', json=json) #type: ignore
+        if self.ok:
+            res = None
+        return st, res
+        
     # COLUMNS
     # ------------------------------------------------------------------
 
