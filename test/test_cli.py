@@ -348,27 +348,27 @@ class TestDoc(BaseTestCli):
         self.assertEqual(res.exit_code, 3)
 
     def test_list_history_doc(self):
-        res = self.runner.invoke(app, ['doc', 'history'])
+        res = self.runner.invoke(app, ['doc-adv', 'history'])
         self.assertEqual(res.exit_code, 0)
     
     def test_compare_history_doc(self):
-        res = self.runner.invoke(app, ['doc', 'compare', '-d', 'bogusdoc'])
+        res = self.runner.invoke(app, ['doc-adv', 'compare', '-d', 'bogusdoc'])
         self.assertEqual(res.exit_code, 2)
 
     def test_purge_history_doc(self):
-        res = self.runner.invoke(app, ['doc', 'purge-history'])
+        res = self.runner.invoke(app, ['doc-adv', 'purge-history'])
         self.assertEqual(res.exit_code, 0)
     
     def test_reload_doc(self):
-        res = self.runner.invoke(app, ['doc', 'reload'])
+        res = self.runner.invoke(app, ['doc-adv', 'reload'])
         self.assertEqual(res.exit_code, 0)
     
     def test_flush_doc(self):
-        res = self.runner.invoke(app, ['doc', 'flush', '-d', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'flush', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
     
     def test_assign_doc(self):
-        res = self.runner.invoke(app, ['doc', 'assign', '-d', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'assign', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
 
     def test_enable_doc(self):
@@ -384,7 +384,7 @@ class TestDoc(BaseTestCli):
         self.assertEqual(res.exit_code, 0)
 
     def test_recovery_doc(self):
-        res = self.runner.invoke(app, ['doc', 'recovery', '-d', 'bogus_doc'])
+        res = self.runner.invoke(app, ['doc-adv', 'recovery', '-d', 'bogus_doc'])
         self.assertEqual(res.exit_code, 3)
 
     def test_download_doc(self):
@@ -410,37 +410,37 @@ class TestDoc(BaseTestCli):
         self.assertEqual(res.exit_code, 3)
 
     def test_snapshots(self):
-        res = self.runner.invoke(app, ['doc', 'snapshots', '-d', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'snapshots', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
-        res = self.runner.invoke(app, ['doc', 'del-snapshots', 'foo', '-d', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'del-snapshots', 'foo', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
 
     def test_timing_doc(self):
-        res = self.runner.invoke(app, ['doc', 'timing', '-d', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'timing', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
-        res = self.runner.invoke(app, ['doc', 'timing', '--start', '-d', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'timing', '--start', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
-        res = self.runner.invoke(app, ['doc', 'timing', '--stop', '-d', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'timing', '--stop', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
 
     def test_fork_doc(self):
-        res = self.runner.invoke(app, ['doc', 'fork', '-d', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'fork', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
     
     def test_compare_docs(self):
-        res = self.runner.invoke(app, ['doc', 'compare', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'compare', 'bogus'])
         self.assertEqual(res.exit_code, 3)
 
     def test_list_proposals(self):
-        res = self.runner.invoke(app, ['doc', 'proposals', '-d', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'proposals', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
     
     def test_propose(self):
-        res = self.runner.invoke(app, ['doc', 'propose', '-d', 'bogus'])
+        res = self.runner.invoke(app, ['doc-adv', 'propose', '-d', 'bogus'])
         self.assertEqual(res.exit_code, 3)
     
     def test_apply_propose(self):
-        res = self.runner.invoke(app, ['doc', 'apply-propose', '10000'])
+        res = self.runner.invoke(app, ['doc-adv', 'apply-propose', '10000'])
         self.assertEqual(res.exit_code, 3)
 
 class TestTable(BaseTestCli):

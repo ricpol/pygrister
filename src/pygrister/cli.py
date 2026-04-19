@@ -389,6 +389,7 @@ role_app = typer.Typer(help='Manage user roles, SCIM must be enabled')
 org_app = typer.Typer(help='Manage Grist teams, aka organisations')
 ws_app = typer.Typer(help='Manage workspaces inside a team site')
 doc_app = typer.Typer(help='Manage documents inside a workspace')
+doc2_app = typer.Typer(help='Advanced document operations')
 table_app = typer.Typer(help='Manage tables inside a document')
 col_app = typer.Typer(help='Manage columns inside a table')
 rec_app = typer.Typer(help='Manage records inside a table')
@@ -409,6 +410,7 @@ app.add_typer(role_app, name='role', no_args_is_help=True)
 app.add_typer(org_app, name='team', no_args_is_help=True)
 app.add_typer(ws_app, name='ws', no_args_is_help=True)
 app.add_typer(doc_app, name='doc', no_args_is_help=True)
+app.add_typer(doc2_app, name='doc-adv', no_args_is_help=True)
 app.add_typer(table_app, name='table', no_args_is_help=True)
 app.add_typer(col_app, name='col', no_args_is_help=True)
 app.add_typer(rec_app, name='rec', no_args_is_help=True)
@@ -1222,7 +1224,7 @@ def change_ws_access(uid: Annotated[int, typer.Argument(help='The user ID')],
 #TODO "change_ws_access" is only for existing users, but "update_team_users"
 # allows for adding users too. Maybe add a separate cli endpoint for this?
 
-# gry doc -> for managing documents
+# gry doc / gry doc-adv -> for managing documents
 # ----------------------------------------------------------------------
 @doc_app.command('see')
 def see_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1343,7 +1345,7 @@ def trash_doc(
     st, res = grist_api.trash_doc(remove, permanent, doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
-@doc_app.command('history')
+@doc2_app.command('history')
 def list_doc_history(doc_id: Annotated[str, _doc_id_opt] = '', 
                      team_id: Annotated[str, _team_id_opt] = '',
                      quiet: Annotated[bool, _quiet_opt] = False,
@@ -1360,7 +1362,7 @@ def list_doc_history(doc_id: Annotated[str, _doc_id_opt] = '',
             content = 'No records found.'
         cli_console.print(content)
 
-@doc_app.command('comp-history')
+@doc2_app.command('comp-history')
 def compare_doc_history(
     left: Annotated[str, typer.Option('--left', '-l', 
                         help='Left side history state hash [default: HEAD]')] = '',
@@ -1377,7 +1379,7 @@ def compare_doc_history(
     st, res = grist_api.compare_doc_history(left, right, maxrow, doc_id, team_id)
     _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
-@doc_app.command('purge-history')
+@doc2_app.command('purge-history')
 def delete_doc_history(
     keep: Annotated[int, typer.Option('--keep', '-k', 
                     help='Latest actions to keep')] = 0,
@@ -1390,7 +1392,7 @@ def delete_doc_history(
     st, res = grist_api.delete_doc_history(keep, doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
-@doc_app.command('reload')
+@doc2_app.command('reload')
 def reload_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
                team_id: Annotated[str, _team_id_opt] = '',
                quiet: Annotated[bool, _quiet_opt] = False,
@@ -1400,7 +1402,7 @@ def reload_doc(doc_id: Annotated[str, _doc_id_opt] = '',
     st, res = grist_api.reload_doc(doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
-@doc_app.command('flush')
+@doc2_app.command('flush')
 def flush_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
               team_id: Annotated[str, _team_id_opt] = '',
               quiet: Annotated[bool, _quiet_opt] = False,
@@ -1410,7 +1412,7 @@ def flush_doc(doc_id: Annotated[str, _doc_id_opt] = '',
     st, res = grist_api.flush_doc(doc_id, team_id)
     _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
-@doc_app.command('assign')
+@doc2_app.command('assign')
 def assign_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
               team_id: Annotated[str, _team_id_opt] = '',
               quiet: Annotated[bool, _quiet_opt] = False,
@@ -1443,7 +1445,7 @@ def pin_doc(
     st, res = grist_api.pin_doc(pin, doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
-@doc_app.command('recovery')
+@doc2_app.command('recovery')
 def doc_recovery(
     mode: Annotated[bool, typer.Option('--set/--unset', '-R/-r', 
                     help='Set/unset recovery mode')] = True,
@@ -1548,7 +1550,7 @@ def change_doc_access(uid: Annotated[int, typer.Argument(help='The user ID')],
 #TODO again, this is for existing users only, but the api 
 # allows for adding users too. Maybe add a separate cli endpoint for this?
 
-@doc_app.command('snapshots')
+@doc2_app.command('snapshots')
 def list_snapshots(
     raw: Annotated[bool, typer.Option('--raw', 
                                 help='Not in snapshot inventory too')] = False, 
@@ -1561,7 +1563,7 @@ def list_snapshots(
     st, res = grist_api.list_snapshots(raw, doc_id, team_id)
     _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
-@doc_app.command('del-snapshots')
+@doc2_app.command('del-snapshots')
 def remove_snapshots(
     ids: Annotated[List[str], typer.Argument(help='Snapshot IDs')],
     doc_id: Annotated[str, _doc_id_opt] = '', 
@@ -1573,7 +1575,7 @@ def remove_snapshots(
     st, res = grist_api.delete_snapshots(ids, doc_id, team_id)
     _exit_early_or_print_done(st, res, quiet, verbose, inspect)
 
-@doc_app.command('timing')
+@doc2_app.command('timing')
 def timing(
     start: Annotated[bool, typer.Option('--start', help='Start timing')] = False,
     stop: Annotated[bool, typer.Option('--stop', 
@@ -1596,7 +1598,7 @@ def timing(
         st, res = grist_api.see_timing(doc_id, team_id)
         _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
-@doc_app.command('fork')
+@doc2_app.command('fork')
 def fork_doc(doc_id: Annotated[str, _doc_id_opt] = '', 
              team_id: Annotated[str, _team_id_opt] = '',
              quiet: Annotated[bool, _quiet_opt] = False,
@@ -1611,7 +1613,7 @@ def fork_doc(doc_id: Annotated[str, _doc_id_opt] = '',
         content.add_row('url id', res['urlId'])
         cli_console.print(content)
 
-@doc_app.command('compare')
+@doc2_app.command('compare')
 def compare_docs(
     other: Annotated[str, typer.Argument(help='Other document Id')],
     maxrow: Annotated[int, typer.Option('--max', 
@@ -1627,7 +1629,7 @@ def compare_docs(
     st, res = grist_api.compare_docs(other, details, maxrow, doc_id, team_id)
     _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
-@doc_app.command('proposals')
+@doc2_app.command('proposals')
 def list_doc_proposals(
     outgoing: Annotated[bool, typer.Option('--out/--in', 
                 help='[Out]going or [in]going proposals')] = False,
@@ -1641,7 +1643,7 @@ def list_doc_proposals(
     res = res or 'No proposals.'
     _exit_early_or_print_content(st, res, quiet, verbose, inspect)
 
-@doc_app.command('propose')
+@doc2_app.command('propose')
 def add_doc_proposal(
     retracted: Annotated[bool, typer.Option('--retract/--no-retract', 
                          help='If proposal is retracted')] = False,
@@ -1654,7 +1656,7 @@ def add_doc_proposal(
     st, res = grist_api.add_proposal(retracted, doc_id, team_id)
     _exit_early_or_print_id(st, res, quiet, verbose, inspect)
 
-@doc_app.command('apply-propose')
+@doc2_app.command('apply-propose')
 def apply_doc_proposal(
     prop_id: Annotated[int, typer.Argument(help='Proposal ID')], 
     doc_id: Annotated[str, _doc_id_opt] = '', 

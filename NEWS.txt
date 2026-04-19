@@ -6,6 +6,11 @@ Bleeding edge: committed to the repo, not yet released on PyPI
 New APIs:
   - GristApi.delete_tables / gry table delete: since there's no dedicated 
     documented endpoint in Grist, we use /doc/{docId}/apply internally
+Changed APIs:
+  - moved 15 of the less common "gry doc" subcommands into a new "gry doc-adv" 
+    section, as "gry doc" was growing beyond control. For instance, 
+    "gry doc propose" is now "gry doc-adv propose". Type "gry doc-adv" to 
+    see which subcommands have been moved there. 
 
 v0.10.0, 2026.03.08
 -------------------

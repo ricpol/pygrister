@@ -529,119 +529,119 @@ Documents
 
   * Pygrister: ``GristApi.list_doc_history``
   
-  * Gry: ``gry doc history``
+  * Gry: ``gry doc-adv history``
 
 
 * Grist: ``POST /docs/{docId}/states/remove``
 
   * Pygrister: ``GristApi.delete_doc_history``
   
-  * Gry: ``gry doc purge-history``
+  * Gry: ``gry doc-adv purge-history``
 
 
 * Grist: ``GET /docs/{docId}/compare``
 
   * Pygrister: ``GristApi.compare_doc_history``
   
-  * Gry: ``gry doc comp-history``
+  * Gry: ``gry doc-adv comp-history``
 
 
 * Grist: ``POST /docs/{docId}/fork``
 
   * Pygrister: ``GristApi.fork_doc``
   
-  * Gry: ``gry doc fork``
+  * Gry: ``gry doc-adv fork``
 
 
 * Grist: ``GET /docs/{docId}/compare/{docId2}``
 
   * Pygrister: ``GristApi.compare_docs``
   
-  * Gry: ``gry doc compare``
+  * Gry: ``gry doc-adv compare``
 
 
 * Grist: ``GET /docs/{docId}/proposals``
 
   * Pygrister: ``GristApi.list_proposals``
   
-  * Gry: ``gry doc proposals``
+  * Gry: ``gry doc-adv proposals``
 
 
 * Grist: ``POST /docs/{docId}/propose``
 
   * Pygrister: ``GristApi.add_proposal``
   
-  * Gry: ``gry doc propose``
+  * Gry: ``gry doc-adv propose``
 
 
 * Grist: ``POST /docs/{docId}/proposals/{proposalId}/apply``
 
   * Pygrister: ``GristApi.apply_proposal``
   
-  * Gry: ``gry doc apply-propose``
+  * Gry: ``gry doc-adv apply-propose``
 
 
 * Grist: ``POST /docs/{docId}/force-reload``
 
   * Pygrister: ``GristApi.reload_doc``
   
-  * Gry: ``gry doc reload``
+  * Gry: ``gry doc-adv reload``
 
 
 * Grist: ``POST /docs/{docId}/flush``
 
   * Pygrister: ``GristApi.flush_doc``
   
-  * Gry: ``gry doc flush``
+  * Gry: ``gry doc-adv flush``
 
 
 * Grist: ``POST /docs/{docId}/assign``
 
   * Pygrister: ``GristApi.assign_doc``
   
-  * Gry: ``gry doc assign``
+  * Gry: ``gry doc-adv assign``
 
 
 * Grist: ``POST /docs/{docId}/recover``
 
   * Pygrister: ``GristApi.set_recovery_mode``
   
-  * Gry: ``gry doc recovery``
+  * Gry: ``gry doc-adv recovery``
 
 
 * Grist: ``GET /docs/{docId}/snapshots``
 
   * Pygrister: ``GristApi.list_snapshots``
   
-  * Gry: ``gry doc snapshots``
+  * Gry: ``gry doc-adv snapshots``
 
 
 * Grist: ``POST /docs/{docId}/snapshots/remove``
 
   * Pygrister: ``GristApi.delete_snapshots``
   
-  * Gry: ``gry doc del-snapshots``
+  * Gry: ``gry doc-adv del-snapshots``
 
 
 * Grist: ``GET /docs/{docId}/timing``
 
   * Pygrister: ``GristApi.see_timing``
   
-  * Gry: ``gry doc timing``
+  * Gry: ``gry doc-adv timing``
 
 
 * Grist: ``POST /docs/{docId}/timing/start``
 
   * Pygrister: ``GristApi.start_timing``
   
-  * Gry: ``gry doc timing --start``
+  * Gry: ``gry doc-adv timing --start``
 
 
 * Grist: ``POST /docs/{docId}/timing/stop``
 
   * Pygrister: ``GristApi.stop_timing``
   
-  * Gry: ``gry doc timing --stop``
+  * Gry: ``gry doc-adv timing --stop``
 
 
 * Grist: ``POST /docs``
